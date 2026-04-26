@@ -1,0 +1,67 @@
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: initial ingest service
+status: planning
+stopped_at: GSD initialization complete
+last_updated: "2026-04-26T15:45:12+07:00"
+last_activity: "2026-04-26 - Initialized replays-fetcher planning"
+progress:
+  total_phases: 5
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
+---
+
+# Project State
+
+## Project Reference
+
+See: .planning/PROJECT.md (updated 2026-04-26)
+
+**Core value:** Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
+**Current focus:** Phase 1 - Project Foundation and Integration Contract
+
+## Current Position
+
+Phase: 1 (project-foundation-and-integration-contract)
+Plan: Not created
+Status: Ready to plan
+Last activity: 2026-04-26 - Initialized replays-fetcher planning
+
+Progress: [░░░░░░░░░░] 0%
+
+## Accumulated Context
+
+### Decisions
+
+Decisions are logged in PROJECT.md Key Decisions table.
+Recent decisions affecting current work:
+
+- `replays-fetcher` is a separate ingest service.
+- v1 runtime is TypeScript.
+- v1 runtime shape is scheduled job, not always-on crawler.
+- Fetcher writes S3 raw objects and staging/outbox records only.
+- `server-2` owns canonical replay records, parse jobs, retry policy, RabbitMQ parse request publication, duplicate conflict handling, and admin visibility.
+- `replay-parser-2` owns parsing and parser artifact/failure production.
+- `replays-fetcher` `.planning/config.json` must stay identical to `/home/afgan0r/Projects/SolidGames/replay-parser-2/.planning/config.json` unless explicitly changed product-wide.
+- Raw replay identity uses checksum plus source identity where available.
+- Ambiguous duplicate conflicts go to manual review.
+- Production historical import from `~/sg_stats` is out of scope for v1.
+- v1 replay submission sources are admin/ingest only.
+
+### Pending Todos
+
+None yet.
+
+### Blockers/Concerns
+
+- Exact external replay source URL/API/HTML shape is not documented yet.
+- Exact staging table/schema and whether it lives in the `server-2` database or separate schema still need to be planned with `server-2`.
+- Exact raw replay S3 object key format is not locked yet.
+- GSD subagents are not installed in this runtime, so new-project research/roadmap generation was performed inline.
+
+## Next Step
+
+Run `$gsd-plan-phase 1` in this repository to create executable plans for the project foundation and integration contract.
