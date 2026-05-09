@@ -1,6 +1,6 @@
 # Requirements: replays-fetcher
 
-**Defined:** 2026-04-26  
+**Defined:** 2026-05-09  
 **Core Value:** Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
 
 ## v1 Requirements
@@ -144,5 +144,5 @@ Which phases cover which requirements. Updated during roadmap creation.
 - Unmapped: 0
 
 ---
-*Requirements defined: 2026-04-26*
-*Last updated: 2026-04-26 after GSD initialization*
+*Requirements defined: 2026-05-09*
+*Last updated: 2026-05-09 after GSD initialization*
