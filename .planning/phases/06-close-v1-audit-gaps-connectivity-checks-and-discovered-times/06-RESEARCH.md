@@ -446,7 +446,9 @@ export async function checkPostgresConnectivity(databaseUrl: string) {
 // Source: Testcontainers MinIO module [CITED: https://node.testcontainers.org/modules/minio/]
 import { MinioContainer } from "@testcontainers/minio";
 
-await using container = await new MinioContainer("minio/minio:latest")
+await using container = await new MinioContainer(
+  "minio/minio:RELEASE.2025-09-07T16-13-09Z",
+)
   .withUsername("solid")
   .withPassword("solidsecret")
   .start();
@@ -509,20 +511,20 @@ const promotionEvidence = {
 | A1 | Many test suites treat Docker absence as an optional local skip. [ASSUMED] | Common Pitfalls | Low; Phase 06 has an explicit no-skip decision, so planner should enforce hard failure anyway. |
 | A2 | Network/library error objects often include request metadata. [ASSUMED] | Common Pitfalls | Medium; if false, leakage tests still protect output and do not harm behavior. |
 | A3 | Test files calling `test.skip`, returning early on Docker connection failure, snapshotting raw `error` objects, or stringifying untrusted exceptions are warning signs. [ASSUMED] | Common Pitfalls | Low; these are heuristic review cues, not locked implementation requirements. |
-| A4 | Pinning a MinIO release instead of using `minio/minio:latest` may improve determinism if matching `server-2` compose is not the priority. [ASSUMED] | Open Questions | Medium; the planner should decide or add a task to pin an image deliberately. |
+| A4 | Phase 06 uses pinned MinIO image `minio/minio:RELEASE.2025-09-07T16-13-09Z` for deterministic Testcontainers runs. [RESOLVED] | Open Questions (RESOLVED) | Low; if `server-2` later requires exact compose parity with `minio/minio:latest`, update both repos deliberately. |
 | A5 | The research validity windows are estimates. [ASSUMED] | Metadata | Low; package versions should be rechecked before implementation if planning is delayed. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Should Phase 06 use `postgres:17-alpine` and `minio/minio:latest` in Testcontainers?** [VERIFIED: /home/afgan0r/Projects/SolidGames/server-2/docker-compose.yml]
+1. **Resolved: Phase 06 uses `postgres:17-alpine` and pinned `minio/minio:RELEASE.2025-09-07T16-13-09Z` in Testcontainers.** [VERIFIED: /home/afgan0r/Projects/SolidGames/server-2/docker-compose.yml]
    - What we know: Adjacent `server-2` compose uses `postgres:17-alpine` and `minio/minio:latest`. [VERIFIED: /home/afgan0r/Projects/SolidGames/server-2/docker-compose.yml]
-   - What's unclear: Whether this repo wants to pin MinIO to a dated immutable release instead of mirroring `server-2`'s `latest`. [VERIFIED: /home/afgan0r/Projects/SolidGames/server-2/docker-compose.yml]
-   - Recommendation: Mirror `postgres:17-alpine`; use `minio/minio:latest` only if matching `server-2` is more important than deterministic historical images, otherwise pin a MinIO release during implementation with a short comment. [VERIFIED: /home/afgan0r/Projects/SolidGames/server-2/docker-compose.yml] [ASSUMED]
+   - Decision: Mirror `server-2` for PostgreSQL with `postgres:17-alpine`; do not mirror MinIO `latest` because deterministic audit validation is more important than matching a moving compose tag for this repo's isolated adapter tests. [RESOLVED]
+   - Planner default: instantiate MinIO with `new MinioContainer("minio/minio:RELEASE.2025-09-07T16-13-09Z")`. [RESOLVED]
 
-2. **Should integration tests use a separate Vitest project or a direct file-pattern script?** [CITED: https://main.vitest.dev/guide/projects]
+2. **Resolved: integration tests use a direct file-pattern script first, not Vitest projects.** [CITED: https://main.vitest.dev/guide/projects]
    - What we know: Current `vitest.config.ts` includes all `src/**/*.test.ts` and `verify` runs `pnpm test`, coverage, typecheck, lint, and build. [VERIFIED: vitest.config.ts] [VERIFIED: package.json]
-   - What's unclear: Whether planner prefers a second config/project for slower Docker tests or a script such as `vitest run 'src/**/*.integration.test.ts' --no-file-parallelism`. [VERIFIED: package.json]
-   - Recommendation: Use a direct `test:integration` script first, include it in `verify`, and avoid Vitest projects unless unit/integration isolation becomes necessary. [VERIFIED: package.json] [CITED: https://main.vitest.dev/guide/projects]
+   - Decision: Add a direct package script: `vitest run "src/**/*.integration.test.ts" --no-file-parallelism --testTimeout 120000 --hookTimeout 120000`. Exclude `src/**/*.integration.test.ts` from the fast unit suite in `vitest.config.ts`. [RESOLVED]
+   - Planner default: include `pnpm run test:integration` in `verify`; avoid Vitest projects unless implementation later proves config-level isolation is necessary. [RESOLVED]
 
 ## Environment Availability
 
@@ -553,7 +555,7 @@ const promotionEvidence = {
 | Framework | Vitest 4.1.5 with V8 coverage. [VERIFIED: pnpm exec vitest --version] [VERIFIED: vitest.config.ts] |
 | Config file | `vitest.config.ts`; includes `src/**/*.test.ts` and 100% coverage thresholds. [VERIFIED: vitest.config.ts] |
 | Quick run command | `pnpm test` [VERIFIED: package.json] |
-| Integration command | Add `pnpm run test:integration` and include it in `pnpm run verify`. [VERIFIED: package.json] [VERIFIED: .planning/phases/06-close-v1-audit-gaps-connectivity-checks-and-discovered-times/06-CONTEXT.md] |
+| Integration command | Add direct script `vitest run "src/**/*.integration.test.ts" --no-file-parallelism --testTimeout 120000 --hookTimeout 120000` as `pnpm run test:integration`, and include it in `pnpm run verify`. [VERIFIED: package.json] [VERIFIED: .planning/phases/06-close-v1-audit-gaps-connectivity-checks-and-discovered-times/06-CONTEXT.md] |
 | Full suite command | `pnpm run verify` after adding integration command. [VERIFIED: package.json] |
 
 ### Phase Requirements -> Test Map
