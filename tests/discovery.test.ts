@@ -74,6 +74,35 @@ test("discoverReplaysDryRun should rethrow unexpected source errors", async () =
   ).rejects.toThrow("unexpected source crash");
 });
 
+test("discoverReplaysDryRun should read source through the injected SourceClient", async () => {
+  const requestedUrls: string[] = [];
+  const sourceClient: SourceClient = {
+    async fetchText(url) {
+      requestedUrls.push(url.toString());
+
+      return JSON.stringify({
+        candidates: [
+          {
+            filename: "source-client-only.json",
+            url: "https://example.test/replays/200",
+          },
+        ],
+      });
+    },
+  };
+
+  const report = await discoverReplaysDryRun({
+    requestDelayMs: 0,
+    sourceClient,
+    sourceUrl: new URL("https://example.test/replays"),
+  });
+
+  expect(requestedUrls).toStrictEqual(["https://example.test/replays"]);
+  expect(report.candidates[0]?.identity.filename).toBe(
+    "source-client-only.json",
+  );
+});
+
 test("discoverReplaysDryRun should parse HTML list and detail pages with stable identity", async () => {
   const responses = new Map([
     [

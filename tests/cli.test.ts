@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+
 import { afterEach, expect, test, vi } from "vitest";
 
 import { buildCli } from "../src/cli.js";
@@ -29,12 +31,32 @@ interface CliOutput {
   readonly ok: boolean;
 }
 
+const dryRunSourceFiles = [
+  "src/cli.ts",
+  "src/discovery/discover.ts",
+  "src/discovery/types.ts",
+] as const;
+
+const dryRunMutationTokens = [
+  ["S3", "Client"].join(""),
+  ["Pool", "("].join(""),
+  ["write", "File"].join(""),
+  ["parse", ".completed"].join(""),
+  ["parse", ".failed"].join(""),
+  ["parse", "_jobs"].join(""),
+  ["replays", "List"].join(""),
+] as const;
+
 function parseCheckOutput(writes: readonly string[]): CheckOutput {
   return JSON.parse(writes.join("")) as CheckOutput;
 }
 
 function parseCliOutput(writes: readonly string[]): CliOutput {
   return JSON.parse(writes.join("")) as CliOutput;
+}
+
+async function readProjectFile(filePath: string): Promise<string> {
+  return readFile(new URL(`../${filePath}`, import.meta.url), "utf8");
 }
 
 afterEach(() => {
@@ -134,6 +156,46 @@ test("buildCli should write dry-run discovery output", async () => {
   });
 });
 
+test("buildCli dry-run should only read from the configured source", async () => {
+  for (const [key, value] of Object.entries(validEnvironment)) {
+    vi.stubEnv(key, value);
+  }
+  const sourceFetch = vi.fn(async () => ({
+    ok: true,
+    text: async () =>
+      JSON.stringify({
+        candidates: [
+          {
+            filename: "replay-a.json",
+            url: "https://example.test/replays/100",
+          },
+        ],
+      }),
+  }));
+  vi.stubGlobal("fetch", sourceFetch);
+  const writes: string[] = [];
+  vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+    writes.push(String(chunk));
+    return true;
+  });
+
+  await buildCli().parseAsync([
+    "node",
+    "replays-fetcher",
+    "discover",
+    "--dry-run",
+  ]);
+
+  expect(sourceFetch).toHaveBeenCalledTimes(1);
+  expect(sourceFetch).toHaveBeenCalledWith(
+    new URL("https://example.test/replays"),
+  );
+  expect(parseCliOutput(writes)).toMatchObject({
+    mode: "dry-run",
+    ok: true,
+  });
+});
+
 test("buildCli should set a failing exit code for source-level dry-run failures", async () => {
   for (const [key, value] of Object.entries(validEnvironment)) {
     vi.stubEnv(key, value);
@@ -187,4 +249,15 @@ test("buildCli should throw explicit planned-phase errors when future commands a
   await expect(
     buildCli().parseAsync(["node", "replays-fetcher", "run-once"]),
   ).rejects.toThrow("run-once is planned for Phase 5");
+});
+
+test("dry-run command source should not include mutation surfaces", async () => {
+  const sourceTexts = await Promise.all(
+    dryRunSourceFiles.map((filePath) => readProjectFile(filePath)),
+  );
+  const sourceText = sourceTexts.join("\n");
+
+  for (const token of dryRunMutationTokens) {
+    expect(sourceText).not.toContain(token);
+  }
 });
