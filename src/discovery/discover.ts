@@ -43,6 +43,13 @@ interface MutableReplaySource {
   url: string;
 }
 
+interface BuildReportOptions {
+  readonly candidates: readonly ReplayCandidate[];
+  readonly diagnostics: readonly DiscoveryDiagnostic[];
+  readonly ok: boolean;
+  readonly options: DiscoverReplaysDryRunOptions;
+}
+
 export async function discoverReplaysDryRun(
   options: DiscoverReplaysDryRunOptions,
 ): Promise<DiscoveryReport> {
@@ -57,29 +64,14 @@ export async function discoverReplaysDryRun(
       // eslint-disable-next-line no-await-in-loop
       const sourceText = await options.sourceClient.fetchText(pageUrl);
       const fixture = parseSourceFixture(sourceText);
-
-      if (fixture === undefined) {
-        const rows = extractReplayRows(sourceText, page, pageUrl);
-
-        for (const row of rows) {
-          // Source requests are intentionally sequential to avoid aggressive polling.
-          // eslint-disable-next-line no-await-in-loop
-          const candidate = await discoverRowCandidate(
-            options.sourceClient,
-            row,
-          );
-
-          if (candidate !== undefined) {
-            candidates.push(candidate);
-          }
-        }
-      } else {
-        candidates.push(
-          ...fixture.candidates.map((candidate) =>
-            toReplayCandidate(candidate),
-          ),
-        );
-      }
+      const pageCandidates = await discoverPageCandidates({
+        fixture,
+        page,
+        pageUrl,
+        sourceClient: options.sourceClient,
+        sourceText,
+      });
+      candidates.push(...pageCandidates);
     }
   } catch (error) {
     if (!(error instanceof SourceFetchError)) {
@@ -93,40 +85,64 @@ export async function discoverReplaysDryRun(
       sourceUrl: options.sourceUrl.toString(),
     });
 
-    return buildReport(options, candidates, diagnostics, false);
+    return buildReport({ candidates, diagnostics, ok: false, options });
   }
 
-  return buildReport(options, candidates, diagnostics, true);
+  return buildReport({ candidates, diagnostics, ok: true, options });
 }
 
-function buildReport(
-  options: DiscoverReplaysDryRunOptions,
-  candidates: readonly ReplayCandidate[],
-  diagnostics: readonly DiscoveryDiagnostic[],
-  ok: boolean,
-): DiscoveryReport {
+function buildReport(input: BuildReportOptions): DiscoveryReport {
   const report: DiscoveryReport = {
-    candidates,
+    candidates: input.candidates,
     counts: {
-      candidates: candidates.length,
-      diagnostics: diagnostics.length,
-      discovered: candidates.length,
+      candidates: input.candidates.length,
+      diagnostics: input.diagnostics.length,
+      discovered: input.candidates.length,
     },
-    diagnostics,
-    generatedAt: options.generatedAt ?? new Date(0).toISOString(),
+    diagnostics: input.diagnostics,
+    generatedAt: input.options.generatedAt ?? new Date(0).toISOString(),
     mode: "dry-run",
-    ok,
-    sourceUrl: options.sourceUrl.toString(),
+    ok: input.ok,
+    sourceUrl: input.options.sourceUrl.toString(),
   };
 
-  if (options.maxPages !== undefined) {
+  if (input.options.maxPages !== undefined) {
     return {
       ...report,
-      maxPages: options.maxPages,
+      maxPages: input.options.maxPages,
     };
   }
 
   return report;
+}
+
+async function discoverPageCandidates(input: {
+  readonly fixture: SourceFixture | undefined;
+  readonly page: number;
+  readonly pageUrl: URL;
+  readonly sourceClient: SourceClient;
+  readonly sourceText: string;
+}): Promise<readonly ReplayCandidate[]> {
+  if (input.fixture !== undefined) {
+    return input.fixture.candidates.map((candidate) =>
+      toReplayCandidate(candidate),
+    );
+  }
+
+  const candidates: ReplayCandidate[] = [];
+  const rows = extractReplayRows(input.sourceText, input.page, input.pageUrl);
+
+  for (const row of rows) {
+    // Source requests are intentionally sequential to avoid aggressive polling.
+    // eslint-disable-next-line no-await-in-loop
+    const candidate = await discoverRowCandidate(input.sourceClient, row);
+
+    if (candidate !== undefined) {
+      candidates.push(candidate);
+    }
+  }
+
+  return candidates;
 }
 
 async function discoverRowCandidate(
