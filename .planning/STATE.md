@@ -66,4 +66,4 @@ None yet.
 
 ## Next Step
 
-Run `$gsd-plan-phase 2` in this repository to create executable plans for source discovery and dry-run behavior.
+Execute `.planning/phases/02-source-discovery-and-dry-run/02-01-PLAN.md`.

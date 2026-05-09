@@ -53,7 +53,7 @@ This roadmap builds `replays-fetcher` as a narrow TypeScript scheduled ingest se
 4. Missing, malformed, duplicate, and changed source metadata produce structured diagnostics.
 5. Source adapter behavior is covered by fixtures or mocked responses.
 
-**Plans:** TBD
+**Plans:** 1/4 complete
 
 ### Phase 3: Raw Replay Storage
 
@@ -117,7 +117,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Project Foundation and Integration Contract | 1/1 | Complete | 2026-05-09 |
-| 2. Source Discovery and Dry Run | 0/TBD | Ready to plan | - |
+| 2. Source Discovery and Dry Run | 1/4 | In Progress | - |
 | 3. Raw Replay Storage | 0/TBD | Not started | - |
 | 4. Staging and Promotion Handoff | 0/TBD | Not started | - |
 | 5. Scheduled Operations and Validation | 0/TBD | Not started | - |
