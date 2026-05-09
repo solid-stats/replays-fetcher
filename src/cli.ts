@@ -64,7 +64,7 @@ export function buildCli(): Command {
       }
 
       const config = loadConfig();
-      const sourceClient = createSourceClient();
+      const sourceClient = createSourceClient(config);
       const report = await discoverReplaysDryRun({
         sourceClient,
         sourceUrl: new URL(config.sourceUrl),
