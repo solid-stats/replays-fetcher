@@ -102,6 +102,7 @@ test("discoverReplaysDryRun should parse HTML list and detail pages with stable 
   };
   const options = {
     generatedAt: "2026-05-09T00:00:00.000Z",
+    requestDelayMs: 0,
     sourceClient,
     sourceUrl: new URL("https://example.test/replays"),
   };
@@ -204,6 +205,7 @@ test("discoverReplaysDryRun should support maxPages and skip incomplete HTML can
   const report = await discoverReplaysDryRun({
     generatedAt: "2026-05-09T00:00:00.000Z",
     maxPages: 2,
+    requestDelayMs: 0,
     sourceClient,
     sourceUrl: new URL("https://example.test/replays"),
   });
@@ -256,6 +258,7 @@ test("discoverReplaysDryRun should report malformed rows and missing filenames a
   };
 
   const report = await discoverReplaysDryRun({
+    requestDelayMs: 0,
     sourceClient,
     sourceUrl: new URL("https://example.test/replays"),
   });
@@ -321,9 +324,7 @@ test("discoverReplaysDryRun should report duplicate filenames and changed metada
   });
 
   expect(report.ok).toBe(true);
-  expect(report.candidates).toHaveLength(
-    ["alpha.json", "alpha.json", "alpha.json"].length,
-  );
+  expect(report.candidates).toHaveLength(3);
   expect(report.diagnostics.map((diagnostic) => diagnostic.code)).toStrictEqual(
     [
       "duplicate_filename",
@@ -348,6 +349,51 @@ test("discoverReplaysDryRun should report duplicate filenames and changed metada
       sourceUrl: "https://example.test/replays/100",
     }),
   );
+});
+
+test("discoverReplaysDryRun should apply default pacing between source requests", async () => {
+  const sleeps: number[] = [];
+  const responses = new Map([
+    [
+      "https://example.test/replays",
+      `
+        <table class="common-table">
+          <tbody>
+            <tr><td><a href="/replays/100">first</a></td><td>Altis</td><td>1</td></tr>
+            <tr><td><a href="/replays/101">second</a></td><td>Altis</td><td>1</td></tr>
+          </tbody>
+        </table>
+      `,
+    ],
+    [
+      "https://example.test/replays/100",
+      `<html><body data-ocap="first.json"></body></html>`,
+    ],
+    [
+      "https://example.test/replays/101",
+      `<html><body data-ocap="second.json"></body></html>`,
+    ],
+  ]);
+  const sourceClient: SourceClient = {
+    async fetchText(url) {
+      return responses.get(url.toString()) ?? "";
+    },
+  };
+
+  const report = await discoverReplaysDryRun({
+    sleep(milliseconds: number) {
+      sleeps.push(milliseconds);
+
+      return Promise.resolve();
+    },
+    sourceClient,
+    sourceUrl: new URL("https://example.test/replays"),
+  });
+
+  expect(
+    report.candidates.map((candidate) => candidate.identity.filename),
+  ).toStrictEqual(["first.json", "second.json"]);
+  expect(sleeps).toStrictEqual([2000, 2000]);
 });
 
 test("discoverReplaysDryRun should return an empty report for non-fixture non-table text", async () => {

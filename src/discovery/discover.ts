@@ -12,6 +12,8 @@ import type {
 interface DiscoverReplaysDryRunOptions {
   readonly generatedAt?: string;
   readonly maxPages?: number;
+  readonly requestDelayMs?: number;
+  readonly sleep?: (milliseconds: number) => Promise<void>;
   readonly sourceClient: SourceClient;
   readonly sourceUrl: URL;
 }
@@ -61,19 +63,22 @@ interface CandidateRegistryEntry {
   readonly serialized: string;
 }
 
+const defaultRequestDelayMs = 2000;
+
 export async function discoverReplaysDryRun(
   options: DiscoverReplaysDryRunOptions,
 ): Promise<DiscoveryReport> {
   const maxPages = options.maxPages ?? 1;
   const candidates: ReplayCandidate[] = [];
   const diagnostics: DiscoveryDiagnostic[] = [];
+  const sourceClient = createPacedSourceClient(options);
 
   try {
     for (let page = 1; page <= maxPages; page += 1) {
       const pageUrl = toPageUrl(options.sourceUrl, page);
       // Source requests are intentionally sequential to preserve source order.
       // eslint-disable-next-line no-await-in-loop
-      const sourceText = await options.sourceClient.fetchText(pageUrl);
+      const sourceText = await sourceClient.fetchText(pageUrl);
       const fixture = parseSourceFixture(sourceText);
       // Page detail fetches are part of the same source-order sequence.
       // eslint-disable-next-line no-await-in-loop
@@ -81,7 +86,7 @@ export async function discoverReplaysDryRun(
         fixture,
         page,
         pageUrl,
-        sourceClient: options.sourceClient,
+        sourceClient,
         sourceText,
       });
       candidates.push(...pageCandidates.candidates);
@@ -103,6 +108,26 @@ export async function discoverReplaysDryRun(
   }
 
   return buildReport({ candidates, diagnostics, ok: true, options });
+}
+
+function createPacedSourceClient(
+  options: DiscoverReplaysDryRunOptions,
+): SourceClient {
+  const requestDelayMs = options.requestDelayMs ?? defaultRequestDelayMs;
+  const sleep = options.sleep ?? defaultSleep;
+  let requestCount = 0;
+
+  return {
+    async fetchText(url: URL): Promise<string> {
+      if (requestCount > 0 && requestDelayMs > 0) {
+        await sleep(requestDelayMs);
+      }
+
+      requestCount += 1;
+
+      return options.sourceClient.fetchText(url);
+    },
+  };
 }
 
 function buildReport(input: BuildReportOptions): DiscoveryReport {
@@ -162,14 +187,20 @@ async function discoverPageCandidates(input: {
       const candidate = await discoverRowCandidate(input.sourceClient, row);
 
       if (candidate === undefined) {
-        diagnostics.push({
-          code: "missing_filename",
-          externalId: row.source.externalId,
-          message: "Replay detail page did not include a filename",
-          page: row.page,
-          severity: "warning",
-          sourceUrl: row.source.url,
-        });
+        diagnostics.push(
+          withOptionalDiagnosticEvidence(
+            {
+              code: "missing_filename",
+              message: "Replay detail page did not include a filename",
+              severity: "warning",
+              sourceUrl: row.source.url,
+            },
+            {
+              externalId: row.source.externalId,
+              page: row.page,
+            },
+          ),
+        );
       } else {
         candidates.push(candidate);
       }
@@ -217,27 +248,39 @@ function collectCandidateDiagnostics(
     const exactCandidateExists = emittedExactCandidates.has(serialized);
 
     if (existingEntries.length > 0) {
-      diagnostics.push({
-        candidateIndex: outputCandidates.length,
-        code: "duplicate_filename",
-        externalId: candidate.source.externalId,
-        message: "Filename appeared more than once in source discovery",
-        page: candidate.source.page,
-        severity: "warning",
-        sourceUrl: candidate.source.url,
-      });
+      diagnostics.push(
+        withOptionalDiagnosticEvidence(
+          {
+            candidateIndex: outputCandidates.length,
+            code: "duplicate_filename",
+            message: "Filename appeared more than once in source discovery",
+            severity: "warning",
+            sourceUrl: candidate.source.url,
+          },
+          {
+            externalId: candidate.source.externalId,
+            page: candidate.source.page,
+          },
+        ),
+      );
 
       if (hasChangedMetadata(existingEntries, candidate)) {
-        diagnostics.push({
-          candidateIndex: outputCandidates.length,
-          code: "changed_metadata",
-          externalId: candidate.source.externalId,
-          message:
-            "Filename/source ID metadata changed within one discovery run",
-          page: candidate.source.page,
-          severity: "warning",
-          sourceUrl: candidate.source.url,
-        });
+        diagnostics.push(
+          withOptionalDiagnosticEvidence(
+            {
+              candidateIndex: outputCandidates.length,
+              code: "changed_metadata",
+              message:
+                "Filename/source ID metadata changed within one discovery run",
+              severity: "warning",
+              sourceUrl: candidate.source.url,
+            },
+            {
+              externalId: candidate.source.externalId,
+              page: candidate.source.page,
+            },
+          ),
+        );
       }
     }
 
@@ -251,6 +294,34 @@ function collectCandidateDiagnostics(
   }
 
   return { candidates: outputCandidates, diagnostics };
+}
+
+function withOptionalDiagnosticEvidence(
+  diagnostic: DiscoveryDiagnostic,
+  evidence: {
+    readonly externalId?: string;
+    readonly page?: number;
+  },
+): DiscoveryDiagnostic {
+  const nextDiagnostic: {
+    candidateIndex?: number;
+    code: DiscoveryDiagnostic["code"];
+    externalId?: string;
+    message: string;
+    page?: number;
+    severity: DiscoveryDiagnostic["severity"];
+    sourceUrl?: string;
+  } = { ...diagnostic };
+
+  if (evidence.externalId !== undefined) {
+    nextDiagnostic.externalId = evidence.externalId;
+  }
+
+  if (evidence.page !== undefined) {
+    nextDiagnostic.page = evidence.page;
+  }
+
+  return nextDiagnostic;
 }
 
 function hasChangedMetadata(
@@ -357,4 +428,10 @@ function toPageUrl(sourceUrl: URL, page: number): URL {
   pageUrl.searchParams.set("p", String(page));
 
   return pageUrl;
+}
+
+async function defaultSleep(milliseconds: number): Promise<void> {
+  await new Promise((resolve) => {
+    setTimeout(resolve, milliseconds);
+  });
 }
