@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: initial ingest service
-status: ready_to_execute
-last_updated: "2026-05-09T12:45:00.000Z"
+status: ready_to_plan
+last_updated: "2026-05-09T13:05:30.000Z"
 last_activity: 2026-05-09
 progress:
   total_phases: 5
-  completed_phases: 2
-  total_plans: 5
-  completed_plans: 5
-  percent: 40
+  completed_phases: 3
+  total_plans: 9
+  completed_plans: 9
+  percent: 60
 ---
 
 # Project State
@@ -20,16 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-09)
 
 **Core value:** Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
-**Current focus:** Phase 3 - Raw Replay Storage
+**Current focus:** Phase 4 - Staging and Promotion Handoff
 
 ## Current Position
 
-Phase: 3
+Phase: 4
 Plan: Not started
-Status: Ready to execute planned Phase 3 work
+Status: Ready to plan Phase 4 work
 Last activity: 2026-05-09
 
-Progress: [████░░░░░░] 40%
+Progress: [██████░░░░] 60%
 
 ## Accumulated Context
 
@@ -59,12 +59,21 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 02]: Dry-run remains read-only with test and docs guards against S3, PostgreSQL, parser artifact, local replay-list, and run-once mutation surfaces.
 - [Phase 02]: README documents the Phase 2 operator dry-run command and SSH source transport as operator-managed, not the old relay service.
 - [Phase 02]: Live direct-source dry-run validation against `https://sg.zone/replays` returned `ok: true`, 30 candidates, and 0 diagnostics without S3/staging configuration.
+- [Phase 03]: Raw replay object keys use `raw/sha256/<sha256>.ocap`.
+- [Phase 03]: Checksum and object key are computed before the S3 storage adapter call.
+- [Phase 03]: S3 raw storage performs HEAD-before-PUT, skips matching existing objects, and reports conflict on mismatched evidence without overwrite.
+- [Phase 03]: `discover --store-raw` is the operator command for raw storage; it emits structured per-candidate evidence and stored/skipped/conflict/failed counts.
+- [Phase 03]: Raw storage remains boundary-safe: no parsing, no parser artifacts, no staging/outbox rows, no `server-2` business-table writes, and no scheduled `run-once`.
 
 ### Execution Metrics
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
 | 02 | 03 | 4min | 2 | 5 |
+| 03 | 01 | complete | 2 | 6 |
+| 03 | 02 | complete | 2 | 4 |
+| 03 | 03 | complete | 2 | 8 |
+| 03 | 04 | complete | 3 | 4 |
 
 ### Pending Todos
 
@@ -73,10 +82,9 @@ None yet.
 ### Blockers/Concerns
 
 - Exact staging table/schema and whether it lives in the `server-2` database or separate schema still need to be planned with `server-2`.
-- Exact raw replay S3 object key format is locked in Phase 3 context as `raw/sha256/<sha256>.ocap`.
 - Rate-limit/backoff expectations for the external source are not locked yet.
 - GSD subagents are not installed in this runtime, so new-project research/roadmap generation was performed inline.
 
 ## Next Step
 
-Run `$gsd-execute-phase 3` to execute raw replay storage plans.
+Run `$gsd-plan-phase 4` to plan staging/outbox integration with `server-2` compatibility evidence.
