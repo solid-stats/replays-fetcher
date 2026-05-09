@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- Phase 2 dry-run discovery scenarios are kept together for report-contract readability. */
 import { expect, test } from "vitest";
 
 import { discoverReplaysDryRun } from "../src/discovery/discover.js";
@@ -226,6 +227,127 @@ test("discoverReplaysDryRun should support maxPages and skip incomplete HTML can
     "https://example.test/replays/102",
     "https://example.test/downloads/custom",
   ]);
+});
+
+test("discoverReplaysDryRun should report malformed rows and missing filenames as warnings", async () => {
+  const responses = new Map([
+    [
+      "https://example.test/replays",
+      `
+        <table class="common-table">
+          <tbody>
+            <tr><td>missing link</td><td>Altis</td><td>1</td></tr>
+            <tr><td><a href="/replays/101">missing filename</a></td><td>Malden</td><td>2</td></tr>
+            <tr><td><a href="/replays/102">sg@test</a></td><td>Altis</td><td>3</td></tr>
+          </tbody>
+        </table>
+      `,
+    ],
+    ["https://example.test/replays/101", `<html><body></body></html>`],
+    [
+      "https://example.test/replays/102",
+      `<html><body data-ocap="valid.json"></body></html>`,
+    ],
+  ]);
+  const sourceClient: SourceClient = {
+    async fetchText(url) {
+      return responses.get(url.toString()) ?? "";
+    },
+  };
+
+  const report = await discoverReplaysDryRun({
+    sourceClient,
+    sourceUrl: new URL("https://example.test/replays"),
+  });
+
+  expect(report.ok).toBe(true);
+  expect(report.candidates).toHaveLength(1);
+  expect(report.diagnostics).toStrictEqual([
+    {
+      code: "malformed_row",
+      message: "Source row did not include a replay link",
+      page: 1,
+      severity: "warning",
+      sourceUrl: "https://example.test/replays",
+    },
+    {
+      code: "missing_filename",
+      externalId: "101",
+      message: "Replay detail page did not include a filename",
+      page: 1,
+      severity: "warning",
+      sourceUrl: "https://example.test/replays/101",
+    },
+  ]);
+});
+
+test("discoverReplaysDryRun should report duplicate filenames and changed metadata", async () => {
+  const sourceClient: SourceClient = {
+    async fetchText() {
+      return JSON.stringify({
+        candidates: [
+          {
+            externalId: "100",
+            filename: "duplicate.json",
+            missionText: "original",
+            url: "https://example.test/replays/100",
+          },
+          {
+            externalId: "101",
+            filename: "duplicate.json",
+            missionText: "other source row",
+            url: "https://example.test/replays/101",
+          },
+          {
+            externalId: "100",
+            filename: "duplicate.json",
+            missionText: "changed",
+            url: "https://example.test/replays/100",
+          },
+          {
+            externalId: "100",
+            filename: "duplicate.json",
+            missionText: "changed",
+            url: "https://example.test/replays/100",
+          },
+        ],
+      });
+    },
+  };
+
+  const report = await discoverReplaysDryRun({
+    sourceClient,
+    sourceUrl: new URL("https://example.test/replays"),
+  });
+
+  expect(report.ok).toBe(true);
+  expect(report.candidates).toHaveLength(
+    ["alpha.json", "alpha.json", "alpha.json"].length,
+  );
+  expect(report.diagnostics.map((diagnostic) => diagnostic.code)).toStrictEqual(
+    [
+      "duplicate_filename",
+      "duplicate_filename",
+      "changed_metadata",
+      "duplicate_filename",
+      "changed_metadata",
+    ],
+  );
+  expect(report.diagnostics).toContainEqual(
+    expect.objectContaining({
+      code: "duplicate_filename",
+      severity: "warning",
+      sourceUrl: "https://example.test/replays/101",
+    }),
+  );
+  expect(report.diagnostics).toContainEqual(
+    expect.objectContaining({
+      code: "changed_metadata",
+      externalId: "100",
+      severity: "warning",
+      sourceUrl: "https://example.test/replays/100",
+    }),
+  );
 });
 
 test("discoverReplaysDryRun should return an empty report for non-fixture non-table text", async () => {

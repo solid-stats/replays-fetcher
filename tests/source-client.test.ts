@@ -157,7 +157,7 @@ test("createSourceClient should classify SSH command failures as source errors",
     sourceClient.fetchText(new URL("https://example.test/replays/100")),
   ).rejects.toMatchObject({
     code: "rate_limited",
-    message: "curl failed with status 429",
+    message: "SSH source request was rate limited",
     name: "SourceFetchError",
   });
 });
@@ -178,6 +178,30 @@ test("createSourceClient should classify generic SSH command failures as unavail
     sourceClient.fetchText(new URL("https://example.test/replays/100")),
   ).rejects.toMatchObject({
     code: "source_unavailable",
+    message: "SSH source request failed",
+    name: "SourceFetchError",
+  });
+});
+
+test("createSourceClient should not expose SSH failure details in source diagnostics", async () => {
+  const config = loadConfig({
+    ...validEnvironment,
+    REPLAY_SOURCE_SSH_HOST: "allowlisted-host",
+    REPLAY_SOURCE_TRANSPORT: "ssh",
+  });
+  const sourceClient = createSourceClient(config, {
+    async execFile() {
+      throw new Error(
+        "connection failed using /home/operator/.ssh/config and secret token",
+      );
+    },
+  });
+
+  await expect(
+    sourceClient.fetchText(new URL("https://example.test/replays/100")),
+  ).rejects.toMatchObject({
+    code: "source_unavailable",
+    message: "SSH source request failed",
     name: "SourceFetchError",
   });
 });

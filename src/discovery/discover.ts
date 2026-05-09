@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- Discovery orchestration is split once storage/staging phases add separate modules. */
 import { extractFilenameFromDetailHtml, extractReplayRows } from "./html.js";
 import { SourceFetchError } from "./source-client.js";
 
@@ -50,6 +51,16 @@ interface BuildReportOptions {
   readonly options: DiscoverReplaysDryRunOptions;
 }
 
+interface DiscoverPageCandidatesResult {
+  readonly candidates: readonly ReplayCandidate[];
+  readonly diagnostics: readonly DiscoveryDiagnostic[];
+}
+
+interface CandidateRegistryEntry {
+  readonly candidate: ReplayCandidate;
+  readonly serialized: string;
+}
+
 export async function discoverReplaysDryRun(
   options: DiscoverReplaysDryRunOptions,
 ): Promise<DiscoveryReport> {
@@ -73,7 +84,8 @@ export async function discoverReplaysDryRun(
         sourceClient: options.sourceClient,
         sourceText,
       });
-      candidates.push(...pageCandidates);
+      candidates.push(...pageCandidates.candidates);
+      diagnostics.push(...pageCandidates.diagnostics);
     }
   } catch (error) {
     if (!(error instanceof SourceFetchError)) {
@@ -124,27 +136,52 @@ async function discoverPageCandidates(input: {
   readonly pageUrl: URL;
   readonly sourceClient: SourceClient;
   readonly sourceText: string;
-}): Promise<readonly ReplayCandidate[]> {
+}): Promise<DiscoverPageCandidatesResult> {
   if (input.fixture !== undefined) {
-    return input.fixture.candidates.map((candidate) =>
-      toReplayCandidate(candidate),
+    return collectCandidateDiagnostics(
+      input.fixture.candidates.map((candidate) => toReplayCandidate(candidate)),
     );
   }
 
   const candidates: ReplayCandidate[] = [];
+  const diagnostics: DiscoveryDiagnostic[] = [];
   const rows = extractReplayRows(input.sourceText, input.page, input.pageUrl);
 
   for (const row of rows) {
-    // Source requests are intentionally sequential to avoid aggressive polling.
-    // eslint-disable-next-line no-await-in-loop
-    const candidate = await discoverRowCandidate(input.sourceClient, row);
+    if (row.source.url === undefined) {
+      diagnostics.push({
+        code: "malformed_row",
+        message: "Source row did not include a replay link",
+        page: row.page,
+        severity: "warning",
+        sourceUrl: input.pageUrl.toString(),
+      });
+    } else {
+      // Source requests are intentionally sequential to avoid aggressive polling.
+      // eslint-disable-next-line no-await-in-loop
+      const candidate = await discoverRowCandidate(input.sourceClient, row);
 
-    if (candidate !== undefined) {
-      candidates.push(candidate);
+      if (candidate === undefined) {
+        diagnostics.push({
+          code: "missing_filename",
+          externalId: row.source.externalId,
+          message: "Replay detail page did not include a filename",
+          page: row.page,
+          severity: "warning",
+          sourceUrl: row.source.url,
+        });
+      } else {
+        candidates.push(candidate);
+      }
     }
   }
 
-  return candidates;
+  const candidateDiagnostics = collectCandidateDiagnostics(candidates);
+
+  return {
+    candidates: candidateDiagnostics.candidates,
+    diagnostics: [...diagnostics, ...candidateDiagnostics.diagnostics],
+  };
 }
 
 async function discoverRowCandidate(
@@ -163,6 +200,75 @@ async function discoverRowCandidate(
   }
 
   return toReplayCandidateFromHtmlRow(filename, row, row.source.url);
+}
+
+function collectCandidateDiagnostics(
+  candidates: readonly ReplayCandidate[],
+): DiscoverPageCandidatesResult {
+  const candidatesByFilename = new Map<string, CandidateRegistryEntry[]>();
+  const emittedExactCandidates = new Set<string>();
+  const outputCandidates: ReplayCandidate[] = [];
+  const diagnostics: DiscoveryDiagnostic[] = [];
+
+  for (const candidate of candidates) {
+    const serialized = JSON.stringify(candidate);
+    const existingEntries =
+      candidatesByFilename.get(candidate.identity.filename) ?? [];
+    const exactCandidateExists = emittedExactCandidates.has(serialized);
+
+    if (existingEntries.length > 0) {
+      diagnostics.push({
+        candidateIndex: outputCandidates.length,
+        code: "duplicate_filename",
+        externalId: candidate.source.externalId,
+        message: "Filename appeared more than once in source discovery",
+        page: candidate.source.page,
+        severity: "warning",
+        sourceUrl: candidate.source.url,
+      });
+
+      if (hasChangedMetadata(existingEntries, candidate)) {
+        diagnostics.push({
+          candidateIndex: outputCandidates.length,
+          code: "changed_metadata",
+          externalId: candidate.source.externalId,
+          message:
+            "Filename/source ID metadata changed within one discovery run",
+          page: candidate.source.page,
+          severity: "warning",
+          sourceUrl: candidate.source.url,
+        });
+      }
+    }
+
+    if (!exactCandidateExists) {
+      outputCandidates.push(candidate);
+      emittedExactCandidates.add(serialized);
+    }
+
+    existingEntries.push({ candidate, serialized });
+    candidatesByFilename.set(candidate.identity.filename, existingEntries);
+  }
+
+  return { candidates: outputCandidates, diagnostics };
+}
+
+function hasChangedMetadata(
+  existingEntries: readonly CandidateRegistryEntry[],
+  candidate: ReplayCandidate,
+): boolean {
+  const candidateSourceId = candidate.source.externalId;
+
+  return existingEntries.some((entry) => {
+    if (entry.candidate.source.externalId !== candidateSourceId) {
+      return false;
+    }
+
+    return (
+      JSON.stringify(entry.candidate.metadata ?? {}) !==
+      JSON.stringify(candidate.metadata ?? {})
+    );
+  });
 }
 
 function toReplayCandidateFromHtmlRow(

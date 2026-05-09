@@ -78,13 +78,17 @@ function createSshSourceClient(
 
         return result.stdout;
       } catch (error) {
-        let message = "SSH source request failed";
-        /* v8 ignore next -- defensive guard for non-Error promise rejections. */
-        if (error instanceof Error) {
-          ({ message } = error);
+        if (error instanceof SourceFetchError) {
+          throw error;
         }
 
-        throw new SourceFetchError(classifySshFailure(error), message);
+        const code = classifySshFailure(error);
+        let message = "SSH source request failed";
+        if (code === "rate_limited") {
+          message = "SSH source request was rate limited";
+        }
+
+        throw new SourceFetchError(code, message);
       }
     },
   };
