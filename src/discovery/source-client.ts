@@ -76,13 +76,10 @@ function createSshSourceClient(
       } catch (error) {
         let message = "SSH source request failed";
         if (error instanceof Error) {
-          message = error.message;
+          ({ message } = error);
         }
 
-        throw new SourceFetchError(
-          classifySshFailure(error),
-          message,
-        );
+        throw new SourceFetchError(classifySshFailure(error), message);
       }
     },
   };

@@ -38,6 +38,36 @@ test("extractReplayRows should parse replay rows from common-table HTML", () => 
   ]);
 });
 
+test("extractReplayRows should handle missing tables and incomplete rows", () => {
+  expect(
+    extractReplayRows(
+      `<html><body>No table</body></html>`,
+      1,
+      new URL("https://example.test/replays"),
+    ),
+  ).toStrictEqual([]);
+
+  expect(
+    extractReplayRows(
+      `
+        <table class="common-table">
+          <tbody>
+            <tr><td>missing link</td></tr>
+          </tbody>
+        </table>
+      `,
+      2,
+      new URL("https://example.test/replays"),
+    ),
+  ).toStrictEqual([
+    {
+      metadata: {},
+      page: 2,
+      source: {},
+    },
+  ]);
+});
+
 test("extractFilenameFromDetailHtml should prefer #filename over body data-ocap", () => {
   expect(
     extractFilenameFromDetailHtml(
@@ -49,4 +79,12 @@ test("extractFilenameFromDetailHtml should prefer #filename over body data-ocap"
       `<html><body data-ocap="fallback.json"></body></html>`,
     ),
   ).toBe("fallback.json");
+  expect(extractFilenameFromDetailHtml(`<html><body></body></html>`)).toBe(
+    undefined,
+  );
+  expect(
+    extractFilenameFromDetailHtml(
+      `<html><body><input id="filename" value="replay&amp;encoded.json"></body></html>`,
+    ),
+  ).toBe("replay&encoded.json");
 });

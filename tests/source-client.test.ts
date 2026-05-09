@@ -1,7 +1,10 @@
-import { expect, test } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 
 import { loadConfig } from "../src/config.js";
-import { createSourceClient } from "../src/discovery/source-client.js";
+import {
+  createSourceClient,
+  SourceFetchError,
+} from "../src/discovery/source-client.js";
 
 const validEnvironment = {
   DATABASE_URL: "postgres://user:pass@localhost:5432/replays",
@@ -12,6 +15,43 @@ const validEnvironment = {
   S3_REGION: "us-east-1",
   S3_SECRET_ACCESS_KEY: "secret-key",
 };
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+test("createSourceClient should classify direct HTTP failures", async () => {
+  const config = loadConfig(validEnvironment);
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: false,
+      status: 429,
+      text: async () => "",
+    })),
+  );
+  const sourceClient = createSourceClient(config);
+
+  await expect(
+    sourceClient.fetchText(new URL("https://example.test/replays")),
+  ).rejects.toMatchObject({
+    code: "rate_limited",
+    name: "SourceFetchError",
+  });
+});
+
+test("SourceFetchError should carry source failure metadata", () => {
+  const error = new SourceFetchError(
+    "source_unavailable",
+    "source unavailable",
+  );
+
+  expect(error).toMatchObject({
+    code: "source_unavailable",
+    message: "source unavailable",
+    name: "SourceFetchError",
+  });
+});
 
 test("createSourceClient should invoke SSH transport with configured host and URL", async () => {
   const calls: {
@@ -63,6 +103,27 @@ test("createSourceClient should classify SSH command failures as source errors",
   ).rejects.toMatchObject({
     code: "rate_limited",
     message: "curl failed with status 429",
+    name: "SourceFetchError",
+  });
+});
+
+test("createSourceClient should classify non-error SSH failures without leaking config", async () => {
+  const config = loadConfig({
+    ...validEnvironment,
+    REPLAY_SOURCE_SSH_HOST: "allowlisted-host",
+    REPLAY_SOURCE_TRANSPORT: "ssh",
+  });
+  const sourceClient = createSourceClient(config, {
+    async execFile() {
+      return Promise.reject("ssh failed");
+    },
+  });
+
+  await expect(
+    sourceClient.fetchText(new URL("https://example.test/replays/100")),
+  ).rejects.toMatchObject({
+    code: "source_unavailable",
+    message: "SSH source request failed",
     name: "SourceFetchError",
   });
 });
