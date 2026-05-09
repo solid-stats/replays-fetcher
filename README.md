@@ -2,7 +2,7 @@
 
 `replays-fetcher` is the ingest service for Solid Stats. It discovers new OCAP replay files from the external replay source, stores raw replay objects in S3-compatible storage, and writes ingestion staging records that `server-2` promotes into canonical replay records and parse jobs.
 
-This repository now contains the Phase 1 TypeScript foundation: package scripts, strict compiler settings, config validation, a `check` command, tests, and integration-contract docs. Source discovery, S3 writes, staging schema integration, and scheduled execution are planned in later phases.
+This repository now contains the Phase 2 TypeScript dry-run discovery path: package scripts, strict compiler settings, config validation, a `check` command, `discover --dry-run`, tests, and integration-contract docs. Raw S3 writes, staging schema integration, and scheduled execution are planned in later phases.
 
 ## Product Boundary
 
@@ -37,7 +37,7 @@ Project planning lives in `.planning/`:
 - `.planning/STATE.md` - current GSD state.
 - `.planning/research/SUMMARY.md` - architecture findings and risks.
 
-Current phase: Phase 1, Project Foundation and Integration Contract. Phase 1 implements the repository foundation and documents the ingest handoff contract.
+Current phase: Phase 2, Source Discovery and Dry Run. Phase 2 reads the configured replay source and emits a non-mutating candidate report for operator inspection.
 
 ## Development Workflow
 
@@ -81,6 +81,24 @@ Validate runtime configuration:
 pnpm run check
 ```
 
+Run dry-run discovery:
+
+```bash
+pnpm exec tsx src/cli.ts discover --dry-run
+```
+
+Dry-run discovery reads the configured source and emits JSON to stdout. It does not write S3 objects, staging rows, parser artifacts, local replay-list files, or `server-2` business tables.
+
+Top-level report fields:
+
+- `ok` - whether discovery completed without source-level errors.
+- `mode` - currently `dry-run`.
+- `sourceUrl` - configured source URL used for the discovery pass.
+- `generatedAt` - report timestamp.
+- `counts` - candidate and diagnostic totals.
+- `candidates` - normalized replay candidate evidence.
+- `diagnostics` - structured source or candidate warnings/errors.
+
 The `check` command requires these environment variables:
 
 - `REPLAY_SOURCE_URL`
@@ -94,6 +112,19 @@ The `check` command requires these environment variables:
 Optional:
 
 - `S3_FORCE_PATH_STYLE` defaults to `true`.
+- `REPLAY_SOURCE_TRANSPORT` defaults to `direct`; set to `ssh` to fetch source pages through an operator-managed SSH host.
+- `REPLAY_SOURCE_SSH_HOST` is required when `REPLAY_SOURCE_TRANSPORT=ssh`.
+- `REPLAY_SOURCE_SSH_COMMAND` defaults to `curl -fsSL --max-time 30`.
+
+For operators whose local IP is blocked by Cloudflare, dry-run discovery can use an allowlisted SSH host:
+
+```bash
+REPLAY_SOURCE_TRANSPORT=ssh \
+REPLAY_SOURCE_SSH_HOST=<allowlisted-host> \
+pnpm exec tsx src/cli.ts discover --dry-run
+```
+
+The SSH path is an operator-managed source transport, not the old relay service.
 
 ## Planned Commands
 
@@ -110,7 +141,7 @@ replays-fetcher discover --dry-run
 replays-fetcher run-once
 ```
 
-`discover --dry-run` is planned for Phase 2. Raw S3 writes are planned for Phase 3. Staging/outbox writes are planned for Phase 4. `run-once` scheduled operation is planned for Phase 5.
+`discover --dry-run` is implemented for Phase 2. Raw S3 writes are planned for Phase 3. Staging/outbox writes are planned for Phase 4. `run-once` scheduled operation is planned for Phase 5.
 
 ## Contract Docs
 
