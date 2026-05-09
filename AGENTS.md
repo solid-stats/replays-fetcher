@@ -40,7 +40,7 @@ Read these planning files before planning or implementing:
 Use TypeScript for v1 unless a later planning decision changes it:
 
 - Node.js 25 with TypeScript 6 for crawler and scheduled job runtime.
-- Very strict TypeScript, ESLint 10 typed linting, Prettier formatting, Vitest tests, and V8 coverage gates.
+- Very strict TypeScript, ESLint 10 very strict typed linting, Prettier formatting, Vitest tests, and V8 coverage gates.
 - S3-compatible object storage client for raw replay writes.
 - PostgreSQL client for staging/outbox writes only.
 - Structured logging and explicit run summaries.
