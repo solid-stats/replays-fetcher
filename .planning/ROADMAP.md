@@ -117,7 +117,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Project Foundation and Integration Contract | 1/1 | Complete | 2026-05-09 |
-| 2. Source Discovery and Dry Run | 2/4 | In Progress | - |
+| 2. Source Discovery and Dry Run | 3/4 | In Progress | - |
 | 3. Raw Replay Storage | 0/TBD | Not started | - |
 | 4. Staging and Promotion Handoff | 0/TBD | Not started | - |
 | 5. Scheduled Operations and Validation | 0/TBD | Not started | - |

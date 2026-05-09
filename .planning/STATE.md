@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: initial ingest service
 status: executing
-last_updated: "2026-05-09T11:43:33.116Z"
+last_updated: "2026-05-09T11:56:08.848Z"
 last_activity: 2026-05-09
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 5
-  completed_plans: 3
-  percent: 60
+  completed_plans: 4
+  percent: 80
 ---
 
 # Project State
@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 ## Current Position
 
 Phase: 02 (source-discovery-and-dry-run) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-05-09
 
-Progress: [██████░░░░] 60%
+Progress: [████████░░] 80%
 
 ## Accumulated Context
 
@@ -54,6 +54,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 02]: SSH source access uses an operator-managed OpenSSH fetch command, not a relay/tunnel/daemon.
 - [Phase 02]: Detail filename identity preserves #filename precedence over body[data-ocap].
 - [Phase 02]: Source-level dry-run failures are reported as diagnostics and exit non-zero in the CLI.
+- [Phase 02]: Dry-run item diagnostics remain warnings with ok=true; source-level unavailable/rate-limit diagnostics fail the report and CLI exit.
+- [Phase 02]: Discovery source requests are sequentially paced by default with a 2000 ms delay and injectable sleep for tests.
 
 ### Pending Todos
 
@@ -69,4 +71,4 @@ None yet.
 
 ## Next Step
 
-Execute `.planning/phases/02-source-discovery-and-dry-run/02-02-PLAN.md`.
+Execute `.planning/phases/02-source-discovery-and-dry-run/02-03-PLAN.md`.
