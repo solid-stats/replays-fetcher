@@ -1,7 +1,7 @@
 import { execFile as execFileCallback } from "node:child_process";
 import { promisify } from "node:util";
 
-import type { AppConfig } from "../config.js";
+import type { SourceConfig } from "../config.js";
 import type { SourceClient } from "./types.js";
 
 type ExecFile = (
@@ -27,11 +27,11 @@ interface CreateSourceClientOptions {
 }
 
 export function createSourceClient(
-  config: AppConfig,
+  config: SourceConfig,
   options: CreateSourceClientOptions = {},
 ): SourceClient {
   if (config.sourceTransport === "direct") {
-    return createDirectSourceClient();
+    return createDirectSourceClient(config);
   }
 
   if (options.execFile === undefined) {
@@ -41,39 +41,63 @@ export function createSourceClient(
   return createSshSourceClient(config, options.execFile);
 }
 
-function createDirectSourceClient(): SourceClient {
+function createDirectSourceClient(config: SourceConfig): SourceClient {
   return {
     async fetchText(url: URL): Promise<string> {
-      const response = await fetch(url);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => {
+        controller.abort();
+      }, config.sourceTimeoutMs);
 
-      if (!response.ok) {
-        let code: SourceFetchError["code"] = "source_unavailable";
-        if (response.status === httpTooManyRequestsStatus) {
-          code = "rate_limited";
+      try {
+        const response = await fetch(url, { signal: controller.signal });
+
+        if (!response.ok) {
+          let code: SourceFetchError["code"] = "source_unavailable";
+          if (response.status === httpTooManyRequestsStatus) {
+            code = "rate_limited";
+          }
+
+          throw new SourceFetchError(
+            code,
+            `Source request failed with status ${String(response.status)}`,
+          );
+        }
+
+        return await response.text();
+      } catch (error) {
+        if (error instanceof SourceFetchError) {
+          throw error;
         }
 
         throw new SourceFetchError(
-          code,
-          `Source request failed with status ${String(response.status)}`,
+          "source_unavailable",
+          "Source request failed",
         );
+      } finally {
+        clearTimeout(timeout);
       }
-
-      return response.text();
     },
   };
 }
 
 function createSshSourceClient(
-  config: AppConfig,
+  config: SourceConfig,
   execFile: ExecFile,
 ): SourceClient {
   return {
     async fetchText(url: URL): Promise<string> {
       try {
+        const encodedUrl = Buffer.from(url.toString(), "utf8").toString(
+          "base64",
+        );
         const result = await execFile("ssh", [
           getSshHost(config),
-          config.sourceSshCommand,
-          url.toString(),
+          "sh",
+          "-c",
+          `${config.sourceSshCommand} -- "$(printf %s "$1" | base64 -d)"`,
+          "replays-fetcher-source",
+          encodedUrl,
         ]);
 
         return result.stdout;
@@ -94,7 +118,7 @@ function createSshSourceClient(
   };
 }
 
-function getSshHost(config: AppConfig): string {
+function getSshHost(config: SourceConfig): string {
   if (config.sourceSshHost === undefined) {
     throw new SourceFetchError(
       "source_unavailable",

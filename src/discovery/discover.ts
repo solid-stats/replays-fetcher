@@ -58,6 +58,16 @@ interface DiscoverPageCandidatesResult {
   readonly diagnostics: readonly DiscoveryDiagnostic[];
 }
 
+type CandidateFixtureResult =
+  | {
+      readonly candidate: ReplayCandidate;
+      readonly diagnostic?: never;
+    }
+  | {
+      readonly candidate?: never;
+      readonly diagnostic: DiscoveryDiagnostic;
+    };
+
 interface CandidateRegistryEntry {
   readonly candidate: ReplayCandidate;
   readonly serialized: string;
@@ -139,7 +149,7 @@ function buildReport(input: BuildReportOptions): DiscoveryReport {
       discovered: input.candidates.length,
     },
     diagnostics: input.diagnostics,
-    generatedAt: input.options.generatedAt ?? new Date(0).toISOString(),
+    generatedAt: input.options.generatedAt ?? new Date().toISOString(),
     mode: "dry-run",
     ok: input.ok,
     sourceUrl: input.options.sourceUrl.toString(),
@@ -163,9 +173,7 @@ async function discoverPageCandidates(input: {
   readonly sourceText: string;
 }): Promise<DiscoverPageCandidatesResult> {
   if (input.fixture !== undefined) {
-    return collectCandidateDiagnostics(
-      input.fixture.candidates.map((candidate) => toReplayCandidate(candidate)),
-    );
+    return collectFixtureCandidates(input.fixture, input.pageUrl);
   }
 
   const candidates: ReplayCandidate[] = [];
@@ -205,6 +213,31 @@ async function discoverPageCandidates(input: {
       } else {
         candidates.push(candidate);
       }
+    }
+  }
+
+  const candidateDiagnostics = collectCandidateDiagnostics(candidates);
+
+  return {
+    candidates: candidateDiagnostics.candidates,
+    diagnostics: [...diagnostics, ...candidateDiagnostics.diagnostics],
+  };
+}
+
+function collectFixtureCandidates(
+  fixture: SourceFixture,
+  pageUrl: URL,
+): DiscoverPageCandidatesResult {
+  const candidates: ReplayCandidate[] = [];
+  const diagnostics: DiscoveryDiagnostic[] = [];
+
+  for (const [index, candidate] of fixture.candidates.entries()) {
+    const result = toReplayCandidate(candidate, index, pageUrl);
+
+    if (result.candidate === undefined) {
+      diagnostics.push(result.diagnostic);
+    } else {
+      candidates.push(result.candidate);
     }
   }
 
@@ -408,7 +441,28 @@ function parseSourceFixture(text: string): SourceFixture | undefined {
   return undefined;
 }
 
-function toReplayCandidate(candidate: SourceCandidateFixture): ReplayCandidate {
+function toReplayCandidate(
+  candidate: SourceCandidateFixture,
+  index: number,
+  pageUrl: URL,
+): CandidateFixtureResult {
+  if (
+    typeof candidate.filename !== "string" ||
+    candidate.filename.trim().length === 0 ||
+    typeof candidate.url !== "string" ||
+    candidate.url.trim().length === 0
+  ) {
+    return {
+      diagnostic: {
+        candidateIndex: index,
+        code: "malformed_row",
+        message: "Source fixture candidate did not include filename and URL",
+        severity: "warning",
+        sourceUrl: pageUrl.toString(),
+      },
+    };
+  }
+
   const source: MutableReplaySource = {
     url: candidate.url,
   };
@@ -448,12 +502,16 @@ function toReplayCandidate(candidate: SourceCandidateFixture): ReplayCandidate {
 
   if (Object.keys(metadata).length > 0) {
     return {
-      ...replayCandidate,
-      metadata,
+      candidate: {
+        ...replayCandidate,
+        metadata,
+      },
     };
   }
 
-  return replayCandidate;
+  return {
+    candidate: replayCandidate,
+  };
 }
 
 function toPageUrl(sourceUrl: URL, page: number): URL {

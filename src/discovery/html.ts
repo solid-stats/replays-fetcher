@@ -125,7 +125,20 @@ function hrefToUrl(
     return undefined;
   }
 
-  return new URL(href, sourceUrl).toString();
+  try {
+    const resolved = new URL(href, sourceUrl);
+
+    if (
+      resolved.origin !== sourceUrl.origin ||
+      !resolved.pathname.startsWith("/replays/")
+    ) {
+      return undefined;
+    }
+
+    return resolved.toString();
+  } catch {
+    return undefined;
+  }
 }
 
 function findInputValueById(html: string, id: string): string | undefined {

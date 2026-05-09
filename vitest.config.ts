@@ -3,7 +3,7 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     coverage: {
-      exclude: ["dist/**", "tests/**", "vitest.config.ts"],
+      exclude: ["dist/**", "src/**/*.test.ts", "vitest.config.ts"],
       include: ["src/**/*.ts"],
       provider: "v8",
       thresholds: {
@@ -13,6 +13,6 @@ export default defineConfig({
         statements: 100,
       },
     },
-    include: ["tests/**/*.test.ts"],
+    include: ["src/**/*.test.ts"],
   },
 });

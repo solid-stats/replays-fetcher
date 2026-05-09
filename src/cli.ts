@@ -1,7 +1,12 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 
-import { ConfigError, loadConfig, redactConfig } from "./config.js";
+import {
+  ConfigError,
+  loadConfig,
+  loadSourceConfig,
+  redactConfig,
+} from "./config.js";
 import { discoverReplaysDryRun } from "./discovery/discover.js";
 import { createSourceClient } from "./discovery/source-client.js";
 
@@ -63,7 +68,7 @@ export function buildCli(): Command {
         return;
       }
 
-      const config = loadConfig();
+      const config = loadSourceConfig();
       const sourceClient = createSourceClient(config);
       const report = await discoverReplaysDryRun({
         sourceClient,

@@ -1,6 +1,11 @@
 import { expect, test } from "vitest";
 
-import { ConfigError, loadConfig, redactConfig } from "../src/config.js";
+import {
+  ConfigError,
+  loadConfig,
+  loadSourceConfig,
+  redactConfig,
+} from "./config.js";
 
 const validEnvironment = {
   REPLAY_SOURCE_URL: "https://example.test/replays",
@@ -11,6 +16,8 @@ const validEnvironment = {
   S3_SECRET_ACCESS_KEY: "secret-key",
   DATABASE_URL: "postgres://user:pass@localhost:5432/replays",
 };
+const defaultSourceTimeoutMs = Number("30000");
+const overrideSourceTimeoutMs = Number("1500");
 
 test("loadConfig should load required source, S3, and staging settings when valid environment is provided", () => {
   const config = loadConfig(validEnvironment);
@@ -18,11 +25,38 @@ test("loadConfig should load required source, S3, and staging settings when vali
   expect(config.sourceUrl).toBe("https://example.test/replays");
   expect(config.sourceTransport).toBe("direct");
   expect(config.sourceSshCommand).toBe("curl -fsSL --max-time 30");
+  expect(config.sourceTimeoutMs).toBe(defaultSourceTimeoutMs);
   expect(config.s3.bucket).toBe("solid-stats-replays");
   expect(config.s3.forcePathStyle).toBe(true);
   expect(config.staging.databaseUrl).toBe(
     "postgres://user:pass@localhost:5432/replays",
   );
+});
+
+test("loadSourceConfig should not require S3 or staging settings for dry-run", () => {
+  const config = loadSourceConfig({
+    REPLAY_SOURCE_URL: "https://example.test/replays",
+  });
+
+  expect(config).toMatchObject({
+    sourceSshCommand: "curl -fsSL --max-time 30",
+    sourceTimeoutMs: defaultSourceTimeoutMs,
+    sourceTransport: "direct",
+    sourceUrl: "https://example.test/replays",
+  });
+});
+
+test("loadSourceConfig should validate required source settings", () => {
+  expect(() => loadSourceConfig({})).toThrow(ConfigError);
+});
+
+test("loadSourceConfig should parse source timeout override", () => {
+  const config = loadSourceConfig({
+    REPLAY_SOURCE_TIMEOUT_MS: "1500",
+    REPLAY_SOURCE_URL: "https://example.test/replays",
+  });
+
+  expect(config.sourceTimeoutMs).toBe(overrideSourceTimeoutMs);
 });
 
 test("loadConfig should load SSH source transport settings when provided", () => {

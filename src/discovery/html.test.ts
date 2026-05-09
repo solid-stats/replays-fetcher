@@ -1,9 +1,6 @@
 import { expect, test } from "vitest";
 
-import {
-  extractFilenameFromDetailHtml,
-  extractReplayRows,
-} from "../src/discovery/html.js";
+import { extractFilenameFromDetailHtml, extractReplayRows } from "./html.js";
 
 test("extractReplayRows should parse replay rows from common-table HTML", () => {
   const rows = extractReplayRows(
@@ -69,6 +66,62 @@ test("extractReplayRows should handle missing tables and incomplete rows", () =>
     {
       metadata: {},
       page: 2,
+      source: {},
+    },
+  ]);
+});
+
+test("extractReplayRows should treat invalid href values as missing links", () => {
+  expect(
+    extractReplayRows(
+      `
+        <table class="common-table">
+          <tbody>
+            <tr><td><a href="https://[invalid.test">broken</a></td></tr>
+          </tbody>
+        </table>
+      `,
+      1,
+      new URL("https://example.test/replays"),
+    ),
+  ).toStrictEqual([
+    {
+      metadata: {
+        missionText: "broken",
+      },
+      page: 1,
+      source: {},
+    },
+  ]);
+});
+
+test("extractReplayRows should reject cross-source and non-replay hrefs", () => {
+  expect(
+    extractReplayRows(
+      `
+        <table class="common-table">
+          <tbody>
+            <tr><td><a href="https://internal.test/admin">internal</a></td></tr>
+            <tr><td><a href="/downloads/custom">download</a></td></tr>
+          </tbody>
+        </table>
+      `,
+      1,
+      new URL("https://example.test/replays"),
+    ),
+  ).toStrictEqual([
+    {
+      metadata: {
+        missionText: "internal",
+      },
+      page: 1,
+      source: {},
+    },
+    {
+      metadata: {
+        missionText: "download",
+      },
+      page: 1,
       source: {},
     },
   ]);

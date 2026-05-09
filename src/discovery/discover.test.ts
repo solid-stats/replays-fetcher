@@ -1,10 +1,10 @@
 /* eslint-disable max-lines -- Phase 2 dry-run discovery scenarios are kept together for report-contract readability. */
 import { expect, test } from "vitest";
 
-import { discoverReplaysDryRun } from "../src/discovery/discover.js";
-import { SourceFetchError } from "../src/discovery/source-client.js";
+import { discoverReplaysDryRun } from "./discover.js";
+import { SourceFetchError } from "./source-client.js";
 
-import type { SourceClient } from "../src/discovery/types.js";
+import type { SourceClient } from "./types.js";
 
 test("discoverReplaysDryRun should map a source fixture into a dry-run report", async () => {
   const sourceClient: SourceClient = {
@@ -218,10 +218,6 @@ test("discoverReplaysDryRun should support maxPages and skip incomplete HTML can
       "https://example.test/replays/102",
       `<html><body data-ocap="page-two.json"></body></html>`,
     ],
-    [
-      "https://example.test/downloads/custom",
-      `<html><body data-ocap="custom.json"></body></html>`,
-    ],
   ]);
   const sourceClient: SourceClient = {
     async fetchText(url) {
@@ -240,23 +236,16 @@ test("discoverReplaysDryRun should support maxPages and skip incomplete HTML can
   });
 
   expect(report.maxPages).toBe(2);
-  expect(report.candidates).toHaveLength(2);
+  expect(report.candidates).toHaveLength(1);
   expect(report.candidates[0]?.identity.filename).toBe("page-two.json");
-  expect(report.candidates[1]).toMatchObject({
-    identity: {
-      filename: "custom.json",
-    },
-    source: {
-      page: 2,
-      url: "https://example.test/downloads/custom",
-    },
-  });
+  expect(report.diagnostics.map((diagnostic) => diagnostic.code)).toContain(
+    "malformed_row",
+  );
   expect(requestedUrls).toStrictEqual([
     "https://example.test/replays",
     "https://example.test/replays/101",
     "https://example.test/replays?p=2",
     "https://example.test/replays/102",
-    "https://example.test/downloads/custom",
   ]);
 });
 
@@ -309,6 +298,39 @@ test("discoverReplaysDryRun should report malformed rows and missing filenames a
       page: 1,
       severity: "warning",
       sourceUrl: "https://example.test/replays/101",
+    },
+  ]);
+});
+
+test("discoverReplaysDryRun should report malformed fixture candidates as warnings", async () => {
+  const sourceClient: SourceClient = {
+    async fetchText() {
+      return JSON.stringify({
+        candidates: [
+          {},
+          {
+            filename: "valid.json",
+            url: "https://example.test/replays/valid",
+          },
+        ],
+      });
+    },
+  };
+
+  const report = await discoverReplaysDryRun({
+    sourceClient,
+    sourceUrl: new URL("https://example.test/replays"),
+  });
+
+  expect(report.ok).toBe(true);
+  expect(report.candidates).toHaveLength(1);
+  expect(report.diagnostics).toStrictEqual([
+    {
+      candidateIndex: 0,
+      code: "malformed_row",
+      message: "Source fixture candidate did not include filename and URL",
+      severity: "warning",
+      sourceUrl: "https://example.test/replays",
     },
   ]);
 });
@@ -423,13 +445,13 @@ test("discoverReplaysDryRun should omit metadata for sparse HTML rows", async ()
       `
         <table class="common-table">
           <tbody>
-            <tr><td><a href="/downloads/custom"></a></td></tr>
+            <tr><td><a href="/replays/custom"></a></td></tr>
           </tbody>
         </table>
       `,
     ],
     [
-      "https://example.test/downloads/custom",
+      "https://example.test/replays/custom",
       `<html><body data-ocap="custom.json"></body></html>`,
     ],
   ]);
@@ -451,11 +473,93 @@ test("discoverReplaysDryRun should omit metadata for sparse HTML rows", async ()
         filename: "custom.json",
       },
       source: {
+        externalId: "custom",
         page: 1,
-        url: "https://example.test/downloads/custom",
+        url: "https://example.test/replays/custom",
       },
     },
   ]);
+});
+
+test("discoverReplaysDryRun should allow replay detail URLs without external IDs", async () => {
+  const responses = new Map([
+    [
+      "https://example.test/replays",
+      `
+        <table class="common-table">
+          <tbody>
+            <tr><td><a href="/replays/">no id</a></td></tr>
+          </tbody>
+        </table>
+      `,
+    ],
+    [
+      "https://example.test/replays/",
+      `<html><body data-ocap="no-id.json"></body></html>`,
+    ],
+  ]);
+  const sourceClient: SourceClient = {
+    async fetchText(url) {
+      return responses.get(url.toString()) ?? "";
+    },
+  };
+
+  const report = await discoverReplaysDryRun({
+    requestDelayMs: 0,
+    sourceClient,
+    sourceUrl: new URL("https://example.test/replays"),
+  });
+
+  expect(report.candidates).toStrictEqual([
+    {
+      identity: {
+        filename: "no-id.json",
+      },
+      metadata: {
+        missionText: "no id",
+      },
+      source: {
+        page: 1,
+        url: "https://example.test/replays/",
+      },
+    },
+  ]);
+});
+
+test("discoverReplaysDryRun should preserve external IDs for sparse HTML rows", async () => {
+  const responses = new Map([
+    [
+      "https://example.test/replays",
+      `
+        <table class="common-table">
+          <tbody>
+            <tr><td><a href="/replays/100"></a></td></tr>
+          </tbody>
+        </table>
+      `,
+    ],
+    [
+      "https://example.test/replays/100",
+      `<html><body data-ocap="custom.json"></body></html>`,
+    ],
+  ]);
+  const sourceClient: SourceClient = {
+    async fetchText(url) {
+      return responses.get(url.toString()) ?? "";
+    },
+  };
+
+  const report = await discoverReplaysDryRun({
+    requestDelayMs: 0,
+    sourceClient,
+    sourceUrl: new URL("https://example.test/replays"),
+  });
+
+  expect(report.candidates[0]?.source).toStrictEqual({
+    externalId: "100",
+    page: 1,
+    url: "https://example.test/replays/100",
+  });
 });
 
 test("discoverReplaysDryRun should apply default pacing between source requests", async () => {
@@ -511,10 +615,11 @@ test("discoverReplaysDryRun should return an empty report for non-fixture non-ta
   };
 
   const report = await discoverReplaysDryRun({
+    generatedAt: "2026-05-09T00:00:00.000Z",
     sourceClient,
     sourceUrl: new URL("https://example.test/replays"),
   });
 
-  expect(report.generatedAt).toBe(new Date(0).toISOString());
+  expect(report.generatedAt).toBe("2026-05-09T00:00:00.000Z");
   expect(report.candidates).toHaveLength(0);
 });

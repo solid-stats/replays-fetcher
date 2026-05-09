@@ -1,10 +1,9 @@
+/* eslint-disable max-lines -- Source-client transport tests keep direct and SSH behavior together. */
 import { afterEach, expect, test, vi } from "vitest";
 
-import { loadConfig, type AppConfig } from "../src/config.js";
-import {
-  createSourceClient,
-  SourceFetchError,
-} from "../src/discovery/source-client.js";
+import { loadConfig, type AppConfig } from "../config.js";
+
+import { createSourceClient, SourceFetchError } from "./source-client.js";
 
 const validEnvironment = {
   DATABASE_URL: "postgres://user:pass@localhost:5432/replays",
@@ -15,9 +14,11 @@ const validEnvironment = {
   S3_REGION: "us-east-1",
   S3_SECRET_ACCESS_KEY: "secret-key",
 };
+const shortTimeoutMs = 25;
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 test("createSourceClient should classify direct HTTP failures", async () => {
@@ -60,6 +61,83 @@ test("createSourceClient should classify non-rate-limited direct failures", asyn
   });
 });
 
+test("createSourceClient should pass a timeout signal to direct fetch", async () => {
+  const config = loadConfig({
+    ...validEnvironment,
+    REPLAY_SOURCE_TIMEOUT_MS: "1500",
+  });
+  const fetchSpy = vi.fn(async () => ({
+    ok: true,
+    text: async () => "source text",
+  }));
+  vi.stubGlobal("fetch", fetchSpy);
+  const sourceClient = createSourceClient(config);
+
+  await expect(
+    sourceClient.fetchText(new URL("https://example.test/replays")),
+  ).resolves.toBe("source text");
+  expect(fetchSpy).toHaveBeenCalledWith(
+    new URL("https://example.test/replays"),
+    {
+      signal: expect.any(AbortSignal) as AbortSignal,
+    },
+  );
+});
+
+test("createSourceClient should abort direct fetches after the configured timeout", async () => {
+  vi.useFakeTimers();
+  const config = loadConfig({
+    ...validEnvironment,
+    REPLAY_SOURCE_TIMEOUT_MS: String(shortTimeoutMs),
+  });
+  const observed: { signal?: AbortSignal } = {};
+  vi.stubGlobal(
+    "fetch",
+    vi.fn((_url: URL, init?: RequestInit) => {
+      if (init?.signal !== undefined && init.signal !== null) {
+        observed.signal = init.signal;
+      }
+
+      return new Promise((_resolve, reject) => {
+        observed.signal?.addEventListener("abort", () => {
+          reject(new Error("aborted"));
+        });
+      });
+    }),
+  );
+  const sourceClient = createSourceClient(config);
+  const request = sourceClient
+    .fetchText(new URL("https://example.test/replays"))
+    .catch((error: unknown) => error);
+
+  await vi.advanceTimersByTimeAsync(shortTimeoutMs);
+
+  expect(observed.signal?.aborted).toBe(true);
+  await expect(request).resolves.toMatchObject({
+    code: "source_unavailable",
+    message: "Source request failed",
+  });
+});
+
+test("createSourceClient should classify rejected direct fetches as unavailable", async () => {
+  const config = loadConfig(validEnvironment);
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => {
+      throw new TypeError("network reset with local path details");
+    }),
+  );
+  const sourceClient = createSourceClient(config);
+
+  await expect(
+    sourceClient.fetchText(new URL("https://example.test/replays")),
+  ).rejects.toMatchObject({
+    code: "source_unavailable",
+    message: "Source request failed",
+    name: "SourceFetchError",
+  });
+});
+
 test("SourceFetchError should carry source failure metadata", () => {
   const error = new SourceFetchError(
     "source_unavailable",
@@ -94,16 +172,62 @@ test("createSourceClient should invoke SSH transport with configured host and UR
   await expect(
     sourceClient.fetchText(new URL("https://example.test/replays/100")),
   ).resolves.toBe("source text");
+  const encodedUrl = Buffer.from(
+    "https://example.test/replays/100",
+    "utf8",
+  ).toString("base64");
   expect(calls).toStrictEqual([
     {
       arguments_: [
         "allowlisted-host",
-        "curl -fsSL --max-time 30",
-        "https://example.test/replays/100",
+        "sh",
+        "-c",
+        'curl -fsSL --max-time 30 -- "$(printf %s "$1" | base64 -d)"',
+        "replays-fetcher-source",
+        encodedUrl,
       ],
       file: "ssh",
     },
   ]);
+});
+
+test("createSourceClient should not pass source-controlled SSH URLs to the remote shell", async () => {
+  const calls: {
+    readonly arguments_: readonly string[];
+    readonly file: string;
+  }[] = [];
+  const hostileUrl = new URL(
+    "https://example.test/replays/100?name=$(touch injected);`id`&x=1",
+  );
+  const config = loadConfig({
+    ...validEnvironment,
+    REPLAY_SOURCE_SSH_HOST: "allowlisted-host",
+    REPLAY_SOURCE_TRANSPORT: "ssh",
+  });
+  const sourceClient = createSourceClient(config, {
+    async execFile(file, arguments_) {
+      calls.push({ arguments_, file });
+
+      return { stderr: "", stdout: "source text" };
+    },
+  });
+
+  await sourceClient.fetchText(hostileUrl);
+
+  const sshArguments = JSON.stringify(calls[0]);
+
+  expect(sshArguments).not.toContain(hostileUrl.toString());
+  expect(calls[0]).toMatchObject({
+    arguments_: [
+      "allowlisted-host",
+      "sh",
+      "-c",
+      expect.any(String) as string,
+      "replays-fetcher-source",
+      Buffer.from(hostileUrl.toString(), "utf8").toString("base64"),
+    ],
+    file: "ssh",
+  });
 });
 
 test("createSourceClient should allow default SSH command runner construction", () => {

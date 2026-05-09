@@ -8,7 +8,7 @@
     "replays-fetcher": "./dist/cli.js"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.build.json",
     "check": "tsx src/cli.ts check",
     "format": "prettier --check .",
     "lint": "eslint .",

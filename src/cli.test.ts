@@ -1,9 +1,10 @@
+/* eslint-disable max-lines -- CLI command scenarios are kept together for command-surface readability. */
 import { readFile } from "node:fs/promises";
 
 import { afterEach, expect, test, vi } from "vitest";
 
-import { buildCli } from "../src/cli.js";
-import * as configModule from "../src/config.js";
+import { buildCli } from "./cli.js";
+import * as configModule from "./config.js";
 
 const validEnvironment = {
   DATABASE_URL: "postgres://user:pass@localhost:5432/replays",
@@ -26,6 +27,11 @@ interface CheckOutput {
 }
 
 interface CliOutput {
+  readonly diagnostics?: readonly {
+    readonly code: string;
+    readonly message: string;
+    readonly severity: string;
+  }[];
   readonly error?: string;
   readonly mode?: string;
   readonly ok: boolean;
@@ -117,7 +123,9 @@ test("buildCli should rethrow unexpected check failures when configuration loadi
 });
 
 test("buildCli should write dry-run discovery output", async () => {
-  for (const [key, value] of Object.entries(validEnvironment)) {
+  for (const [key, value] of Object.entries({
+    REPLAY_SOURCE_URL: validEnvironment.REPLAY_SOURCE_URL,
+  })) {
     vi.stubEnv(key, value);
   }
   vi.stubGlobal(
@@ -157,7 +165,9 @@ test("buildCli should write dry-run discovery output", async () => {
 });
 
 test("buildCli dry-run should only read from the configured source", async () => {
-  for (const [key, value] of Object.entries(validEnvironment)) {
+  for (const [key, value] of Object.entries({
+    REPLAY_SOURCE_URL: validEnvironment.REPLAY_SOURCE_URL,
+  })) {
     vi.stubEnv(key, value);
   }
   const sourceFetch = vi.fn(async () => ({
@@ -189,6 +199,9 @@ test("buildCli dry-run should only read from the configured source", async () =>
   expect(sourceFetch).toHaveBeenCalledTimes(1);
   expect(sourceFetch).toHaveBeenCalledWith(
     new URL("https://example.test/replays"),
+    {
+      signal: expect.any(AbortSignal) as AbortSignal,
+    },
   );
   expect(parseCliOutput(writes)).toMatchObject({
     mode: "dry-run",
@@ -197,7 +210,9 @@ test("buildCli dry-run should only read from the configured source", async () =>
 });
 
 test("buildCli should set a failing exit code for source-level dry-run failures", async () => {
-  for (const [key, value] of Object.entries(validEnvironment)) {
+  for (const [key, value] of Object.entries({
+    REPLAY_SOURCE_URL: validEnvironment.REPLAY_SOURCE_URL,
+  })) {
     vi.stubEnv(key, value);
   }
   vi.stubGlobal(
@@ -223,6 +238,44 @@ test("buildCli should set a failing exit code for source-level dry-run failures"
 
   const output = parseCliOutput(writes);
   expect(output).toMatchObject({
+    ok: false,
+  });
+  expect(process.exitCode).toBe(2);
+});
+
+test("buildCli should report rejected source fetches as structured dry-run failures", async () => {
+  for (const [key, value] of Object.entries({
+    REPLAY_SOURCE_URL: validEnvironment.REPLAY_SOURCE_URL,
+  })) {
+    vi.stubEnv(key, value);
+  }
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => {
+      throw new TypeError("dns failure with local resolver details");
+    }),
+  );
+  const writes: string[] = [];
+  vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+    writes.push(String(chunk));
+    return true;
+  });
+
+  await buildCli().parseAsync([
+    "node",
+    "replays-fetcher",
+    "discover",
+    "--dry-run",
+  ]);
+
+  expect(parseCliOutput(writes)).toMatchObject({
+    diagnostics: [
+      {
+        code: "source_unavailable",
+        message: "Source request failed",
+        severity: "error",
+      },
+    ],
     ok: false,
   });
   expect(process.exitCode).toBe(2);
