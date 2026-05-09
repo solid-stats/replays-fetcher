@@ -14,7 +14,7 @@ This roadmap builds `replays-fetcher` as a narrow TypeScript scheduled ingest se
 - [x] **Phase 2: Source Discovery and Dry Run** - Discover replay candidates from the external source without mutating S3 or staging state.
 - [x] **Phase 3: Raw Replay Storage** - Fetch replay bytes, compute checksums, and write idempotent S3 raw objects.
 - [x] **Phase 4: Staging and Promotion Handoff** - Write staging/outbox records compatible with `server-2` promotion and conflict handling.
-- [ ] **Phase 5: Scheduled Operations and Validation** - Add run-once scheduling behavior, observability, failure taxonomy, and integration tests.
+- [x] **Phase 5: Scheduled Operations and Validation** - Add run-once scheduling behavior, observability, failure taxonomy, and integration tests.
 
 ## Phase Details
 
@@ -119,13 +119,13 @@ Plans:
 4. Failures distinguish source unavailable, fetch failed, checksum/storage failed, staging failed, and config invalid.
 5. Unit tests cover idempotency, checksums, key generation, staging payloads, dry-run behavior, and failure classification.
 
-**Plans:** 4 planned
+**Plans:** 4/4 complete
 
 Plans:
-- [ ] 05-01-PLAN.md — Define run summary and failure taxonomy contracts.
-- [ ] 05-02-PLAN.md — Implement reusable run-once orchestration.
-- [ ] 05-03-PLAN.md — Wire CLI run-once command.
-- [ ] 05-04-PLAN.md — Document scheduled operations and verify v1.
+- [x] 05-01-PLAN.md — Define run summary and failure taxonomy contracts.
+- [x] 05-02-PLAN.md — Implement reusable run-once orchestration.
+- [x] 05-03-PLAN.md — Wire CLI run-once command.
+- [x] 05-04-PLAN.md — Document scheduled operations and verify v1.
 
 ## Progress
 
@@ -138,7 +138,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 2. Source Discovery and Dry Run | 4/4 | Complete | 2026-05-09 |
 | 3. Raw Replay Storage | 4/4 | Complete | 2026-05-09 |
 | 4. Staging and Promotion Handoff | 4/4 | Complete | 2026-05-09 |
-| 5. Scheduled Operations and Validation | 0/4 | Planned | - |
+| 5. Scheduled Operations and Validation | 4/4 | Complete | 2026-05-09 |
 
 ---
 *Roadmap created: 2026-05-09*

@@ -46,6 +46,24 @@ Required staging fields:
 
 The fetcher does not create canonical `replays`, does not create `parse_jobs`, does not publish RabbitMQ messages, and does not resolve duplicate conflicts. Those decisions remain in `server-2`.
 
+## Scheduled Operation Contract
+
+`run-once` is the v1 scheduled operation entrypoint. It performs one bounded discovery -> raw storage -> staging cycle and then exits. It is suitable for cron, container schedules, or an external scheduler.
+
+The command writes exactly one JSON run summary to stdout. It uses exit code `0` for successful cycles and `2` for expected operational failures such as invalid config, unavailable source, failed fetches, storage failures or conflicts, staging failures or conflicts, and non-stageable raw results.
+
+Run summaries include:
+
+- run ID, mode, start timestamp, and finish timestamp.
+- source URL when discovery execution occurs.
+- counts for discovered, fetched, stored, staged, duplicate, conflict, failed, skipped, and diagnostics.
+- discovery diagnostics.
+- raw storage evidence with checksum, object key, byte size, fetch timestamp, and raw storage status.
+- staging evidence with staged, already-staged, conflict, failed, or not-stageable status.
+- failure categories: `config_invalid`, `source_unavailable`, `fetch_failed`, `storage_failed`, `storage_conflict`, `staging_failed`, `staging_conflict`, and `not_stageable`.
+
+Run summaries must not include S3 secrets, database credentials, SSH secrets, raw replay bytes, parser artifacts, canonical replay records, parse jobs, parser results, identity records, stats rows, roles, requests, or moderation data.
+
 ## `replay-parser-2` Responsibilities
 
 - Consume parser jobs from `server-2`.

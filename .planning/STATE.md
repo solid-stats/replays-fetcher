@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: initial ingest service
-status: ready_to_execute
-last_updated: "2026-05-09T13:32:00.000Z"
+status: complete
+last_updated: "2026-05-09T13:42:00.000Z"
 last_activity: 2026-05-09
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 17
-  completed_plans: 13
-  percent: 80
+  completed_plans: 17
+  percent: 100
 ---
 
 # Project State
@@ -20,16 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-09)
 
 **Core value:** Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
-**Current focus:** Phase 5 - Scheduled Operations and Validation
+**Current focus:** v1 initial ingest service complete
 
 ## Current Position
 
 Phase: 5
-Plan: Not started
-Status: Ready to execute planned Phase 5 work
+Plan: Complete
+Status: Phase 5 complete; v1 initial ingest service implemented and verified
 Last activity: 2026-05-09
 
-Progress: [████████░░] 80%
+Progress: [██████████] 100%
 
 ## Accumulated Context
 
@@ -72,6 +72,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 05]: `run-once` should wrap existing discovery -> raw storage -> staging behavior into one bounded scheduled cycle.
 - [Phase 05]: Expected operational failures use exit code 2; unexpected programmer errors still throw.
 - [Phase 05]: Run summaries must include run ID, timestamps, source URL, counts, diagnostics, raw storage evidence, staging evidence, and failure categories without secrets/raw bytes.
+- [Phase 05]: `run-once` is implemented as the scheduled v1 entrypoint and emits one structured JSON summary.
+- [Phase 05]: Unit tests remain colocated beside source files under `src/`.
 
 ### Execution Metrics
 
@@ -86,6 +88,10 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 | 04 | 02 | complete | 2 | 6 |
 | 04 | 03 | complete | 2 | 5 |
 | 04 | 04 | complete | 2 | 5 |
+| 05 | 01 | complete | 2 | 3 |
+| 05 | 02 | complete | 2 | 3 |
+| 05 | 03 | complete | 2 | 3 |
+| 05 | 04 | complete | 2 | 5 |
 
 ### Pending Todos
 
@@ -98,4 +104,4 @@ None yet.
 
 ## Next Step
 
-Run `$gsd-execute-phase 5` to execute scheduled operations and validation plans.
+Use `$gsd-ship` or a project-specific release/PR workflow to review and package the completed v1 ingest service.

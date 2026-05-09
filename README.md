@@ -2,7 +2,7 @@
 
 `replays-fetcher` is the ingest service for Solid Stats. It discovers new OCAP replay files from the external replay source, stores raw replay objects in S3-compatible storage, and writes ingestion staging records that `server-2` promotes into canonical replay records and parse jobs.
 
-This repository now contains the Phase 4 TypeScript staging handoff path: package scripts, strict compiler settings, config validation, a `check` command, `discover --dry-run`, `discover --store-raw`, `discover --store-raw --stage`, tests, and integration-contract docs. Scheduled execution remains planned for a later phase.
+This repository now contains the v1 TypeScript ingest path: package scripts, strict compiler settings, config validation, a `check` command, `discover --dry-run`, `discover --store-raw`, `discover --store-raw --stage`, `run-once`, tests, and integration-contract docs.
 
 ## Product Boundary
 
@@ -37,7 +37,7 @@ Project planning lives in `.planning/`:
 - `.planning/STATE.md` - current GSD state.
 - `.planning/research/SUMMARY.md` - architecture findings and risks.
 
-Current phase: Phase 5, Scheduled Operations and Validation. Phase 5 will add scheduled `run-once` behavior, structured run summaries, and operational validation over the existing discovery, raw storage, and staging paths.
+Current state: Phase 5, Scheduled Operations and Validation, is complete. The v1 ingest service includes scheduled `run-once` behavior, structured run summaries, and operational validation over the discovery, raw storage, and staging paths.
 
 ## Development Workflow
 
@@ -104,7 +104,7 @@ The storage path performs `HEAD` before `PUT` for idempotency:
 - Existing object with mismatched evidence: does not overwrite and reports `conflict`.
 - Source or storage failure: reports structured `failed` evidence.
 
-The raw storage command does not write staging rows, outbox rows, parser artifacts, local replay-list files, or `server-2` business tables. Scheduled `run-once` remains planned for Phase 5.
+The raw storage command does not write staging rows, outbox rows, parser artifacts, local replay-list files, or `server-2` business tables.
 
 Store raw replay objects and stage them for `server-2` promotion:
 
@@ -121,7 +121,49 @@ Staging idempotency follows the `server-2` schema:
 - Matching checksum/object key under another source identity reports `conflict` so `server-2` remains the owner of duplicate lineage decisions.
 - Raw storage failures are not staged and are counted as skipped staging items.
 
-The staging command does not create canonical `replays`, does not create `parse_jobs`, does not publish RabbitMQ messages, does not write parser artifacts, and does not implement scheduled `run-once`.
+The staging command does not create canonical `replays`, does not create `parse_jobs`, does not publish RabbitMQ messages, and does not write parser artifacts.
+
+Run one scheduled ingest cycle:
+
+```bash
+pnpm exec tsx src/cli.ts run-once
+```
+
+`run-once` is the v1 command intended for cron, container schedules, or an external scheduler. It executes exactly one bounded discovery -> raw storage -> staging cycle, emits one structured JSON summary to stdout, and exits.
+
+Exit codes:
+
+- `0` - the cycle completed without expected operational failures.
+- `2` - configuration, source, fetch, storage, or staging completed as a structured expected failure.
+
+Unexpected programmer errors still throw instead of being hidden as operational failures.
+
+Run summary fields:
+
+- `runId` - unique ID for the one-shot run.
+- `mode` - `run-once`.
+- `startedAt` and `finishedAt` - ISO timestamps.
+- `ok` - whether the run had no failure categories.
+- `sourceUrl` - configured source URL when discovery reached source execution.
+- `counts` - totals for `discovered`, `fetched`, `stored`, `staged`, `duplicate`, `conflict`, `failed`, `skipped`, and `diagnostics`.
+- `failureCategories` - stable failure category values for operators and schedulers.
+- `diagnostics` - source discovery warnings or errors.
+- `rawStorage` - per-candidate raw object evidence without raw replay bytes.
+- `staging` - per-candidate staging outcome evidence.
+- `candidates` - normalized discovery candidates.
+
+Failure categories:
+
+- `config_invalid`
+- `source_unavailable`
+- `fetch_failed`
+- `storage_failed`
+- `storage_conflict`
+- `staging_failed`
+- `staging_conflict`
+- `not_stageable`
+
+Run summaries must not include S3 secrets, database credentials, SSH command secrets, raw replay bytes, parser artifacts, or canonical `server-2` business records.
 
 Top-level report fields:
 
@@ -173,7 +215,7 @@ For `discover --store-raw --stage`, the command also requires:
 
 - `DATABASE_URL` pointing at the `server-2` PostgreSQL database that owns `ingest_staging_records`.
 
-## Planned Commands
+## Commands
 
 Expected v1 command shape:
 
@@ -194,7 +236,7 @@ replays-fetcher discover --store-raw --stage
 replays-fetcher run-once
 ```
 
-`discover --dry-run` is implemented for non-mutating source inspection. `discover --store-raw` is implemented for Phase 3 raw object storage. `discover --store-raw --stage` is implemented for Phase 4 staging writes to `ingest_staging_records`. `run-once` scheduled operation is planned for Phase 5.
+`discover --dry-run` is implemented for non-mutating source inspection. `discover --store-raw` is implemented for raw object storage. `discover --store-raw --stage` is implemented for staging writes to `ingest_staging_records`. `run-once` is implemented for scheduled v1 ingestion.
 
 ## Contract Docs
 

@@ -1,5 +1,5 @@
 /* eslint-disable max-lines -- CLI command scenarios are kept together for command-surface readability. */
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -126,6 +126,14 @@ const stagingBoundaryTokens = [
   /parse\.failed/iu,
   /writeFile/iu,
 ] as const;
+
+const ignoredProjectDirectories = new Set([
+  ".git",
+  ".planning",
+  "coverage",
+  "dist",
+  "node_modules",
+]);
 
 function parseCheckOutput(writes: readonly string[]): CheckOutput {
   return JSON.parse(writes.join("")) as CheckOutput;
@@ -260,6 +268,33 @@ function stubValidEnvironment(): void {
 
 async function readProjectFile(filePath: string): Promise<string> {
   return readFile(new URL(`../${filePath}`, import.meta.url), "utf8");
+}
+
+async function listProjectFiles(
+  directory: URL,
+  prefix = "",
+): Promise<readonly string[]> {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const nestedFiles = await Promise.all(
+    entries.map(async (entry) => {
+      const relativePath = `${prefix}${entry.name}`;
+
+      if (entry.isDirectory()) {
+        if (ignoredProjectDirectories.has(entry.name)) {
+          return [];
+        }
+
+        return listProjectFiles(
+          new URL(`${entry.name}/`, directory),
+          `${relativePath}/`,
+        );
+      }
+
+      return [relativePath];
+    }),
+  );
+
+  return nestedFiles.flat();
 }
 
 afterEach(() => {
@@ -1013,4 +1048,18 @@ test("staging path source should not write forbidden business tables or parser a
     expect(sourceText).not.toMatch(token);
   }
   expect(sourceText).toMatch(/insert\s+into\s+ingest_staging_records/iu);
+});
+
+test("unit tests should remain colocated beside source files", async () => {
+  const projectFiles = await listProjectFiles(new URL("../", import.meta.url));
+  const testFiles = projectFiles.filter((filePath) =>
+    filePath.endsWith(".test.ts"),
+  );
+
+  expect(testFiles.length).toBeGreaterThan(0);
+
+  for (const testFile of testFiles) {
+    expect(testFile).toMatch(/^src\//u);
+    expect(projectFiles).toContain(testFile.replace(/\.test\.ts$/u, ".ts"));
+  }
 });

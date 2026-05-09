@@ -24,7 +24,7 @@ Requirements for the initial ingest service release. Each maps to roadmap phases
 ### Runtime and Configuration
 
 - [x] **RUN-01**: Service is implemented as a strict TypeScript application.
-- [ ] **RUN-02**: Service supports a scheduled `run-once` execution mode suitable for cron/container scheduling.
+- [x] **RUN-02**: Service supports a scheduled `run-once` execution mode suitable for cron/container scheduling.
 - [x] **RUN-03**: Service supports a dry-run discovery mode that reads the source and reports candidates without writing S3 or staging records.
 - [x] **RUN-04**: Service supports a config/connectivity check mode for source, S3, and staging database settings.
 - [x] **RUN-05**: Required environment/config values are validated before a fetch cycle mutates storage or staging state.
@@ -55,16 +55,16 @@ Requirements for the initial ingest service release. Each maps to roadmap phases
 
 ### Observability and Operations
 
-- [ ] **OPS-01**: Every run emits a structured summary with discovered, fetched, skipped, staged, duplicate, conflict, and failed counts.
-- [ ] **OPS-02**: Logs include source identity, checksum/object key where available, run ID, and failure category without leaking secrets.
-- [ ] **OPS-03**: Failures are classified so operators can distinguish source unavailable, fetch failed, checksum/storage failed, staging failed, and config invalid.
-- [ ] **OPS-04**: Scheduled execution exits with clear status codes suitable for cron/container supervision.
+- [x] **OPS-01**: Every run emits a structured summary with discovered, fetched, skipped, staged, duplicate, conflict, and failed counts.
+- [x] **OPS-02**: Logs include source identity, checksum/object key where available, run ID, and failure category without leaking secrets.
+- [x] **OPS-03**: Failures are classified so operators can distinguish source unavailable, fetch failed, checksum/storage failed, staging failed, and config invalid.
+- [x] **OPS-04**: Scheduled execution exits with clear status codes suitable for cron/container supervision.
 
 ### Validation
 
-- [ ] **TEST-01**: Unit tests cover source candidate parsing, idempotency decisions, checksum calculation, object key generation, staging payload creation, and failure classification.
+- [x] **TEST-01**: Unit tests cover source candidate parsing, idempotency decisions, checksum calculation, object key generation, staging payload creation, and failure classification.
 - [x] **TEST-02**: Integration tests cover S3-compatible storage behavior using local/mocked storage.
-- [ ] **TEST-03**: Integration tests cover staging writes using an isolated PostgreSQL database or equivalent test harness.
+- [x] **TEST-03**: Integration tests cover staging writes using an isolated PostgreSQL database or equivalent test harness.
 - [x] **TEST-04**: Tests prove the fetcher does not write forbidden `server-2` business tables.
 - [x] **TEST-05**: Dry-run mode is tested to prove it does not mutate S3 or staging state.
 
@@ -109,7 +109,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INT-03 | Phase 1 | Complete |
 | INT-04 | Phase 1 | Complete |
 | RUN-01 | Phase 1 | Complete |
-| RUN-02 | Phase 5 | Pending |
+| RUN-02 | Phase 5 | Complete |
 | RUN-03 | Phase 2 | Complete |
 | RUN-04 | Phase 1 | Complete |
 | RUN-05 | Phase 1 | Complete |
@@ -128,13 +128,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | STAGE-03 | Phase 4 | Complete |
 | STAGE-04 | Phase 4 | Complete |
 | STAGE-05 | Phase 4 | Complete |
-| OPS-01 | Phase 5 | Pending |
-| OPS-02 | Phase 5 | Pending |
-| OPS-03 | Phase 5 | Pending |
-| OPS-04 | Phase 5 | Pending |
-| TEST-01 | Phase 5 | Pending |
+| OPS-01 | Phase 5 | Complete |
+| OPS-02 | Phase 5 | Complete |
+| OPS-03 | Phase 5 | Complete |
+| OPS-04 | Phase 5 | Complete |
+| TEST-01 | Phase 5 | Complete |
 | TEST-02 | Phase 3 | Complete |
-| TEST-03 | Phase 5 | Pending |
+| TEST-03 | Phase 5 | Complete |
 | TEST-04 | Phase 4 | Complete |
 | TEST-05 | Phase 2 | Complete |
 
@@ -145,4 +145,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-05-09*
-*Last updated: 2026-05-09 after Phase 4 completion*
+*Last updated: 2026-05-09 after Phase 5 completion*
