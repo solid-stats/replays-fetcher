@@ -2,7 +2,7 @@
 
 `replays-fetcher` is the ingest service for Solid Stats. It discovers new OCAP replay files from the external replay source, stores raw replay objects in S3-compatible storage, and writes ingestion staging records that `server-2` promotes into canonical replay records and parse jobs.
 
-This repository now contains the Phase 3 TypeScript raw storage path: package scripts, strict compiler settings, config validation, a `check` command, `discover --dry-run`, `discover --store-raw`, tests, and integration-contract docs. Phase 4 staging handoff is planned against `server-2`'s existing `ingest_staging_records` table; scheduled execution remains planned for a later phase.
+This repository now contains the Phase 4 TypeScript staging handoff path: package scripts, strict compiler settings, config validation, a `check` command, `discover --dry-run`, `discover --store-raw`, `discover --store-raw --stage`, tests, and integration-contract docs. Scheduled execution remains planned for a later phase.
 
 ## Product Boundary
 
@@ -37,7 +37,7 @@ Project planning lives in `.planning/`:
 - `.planning/STATE.md` - current GSD state.
 - `.planning/research/SUMMARY.md` - architecture findings and risks.
 
-Current phase: Phase 4, Staging and Promotion Handoff. Phase 4 will write pending `ingest_staging_records` rows for `server-2` promotion without creating canonical `replays`, `parse_jobs`, parser artifacts, or scheduled `run-once` behavior.
+Current phase: Phase 5, Scheduled Operations and Validation. Phase 5 will add scheduled `run-once` behavior, structured run summaries, and operational validation over the existing discovery, raw storage, and staging paths.
 
 ## Development Workflow
 
@@ -106,6 +106,23 @@ The storage path performs `HEAD` before `PUT` for idempotency:
 
 The raw storage command does not write staging rows, outbox rows, parser artifacts, local replay-list files, or `server-2` business tables. Scheduled `run-once` remains planned for Phase 5.
 
+Store raw replay objects and stage them for `server-2` promotion:
+
+```bash
+pnpm exec tsx src/cli.ts discover --store-raw --stage
+```
+
+`discover --store-raw --stage` extends the raw storage path by writing pending rows to `server-2`'s existing `ingest_staging_records` table through `DATABASE_URL`. It uses `source_system`, `source_replay_id`, `object_key`, `checksum`, `size_bytes`, `replay_timestamp`, `status`, `promotion_evidence`, and `conflict_details` fields compatible with `server-2`.
+
+Staging idempotency follows the `server-2` schema:
+
+- Matching `source_system + source_replay_id` with matching object evidence reports `already_staged`.
+- Matching source identity with changed checksum/object key reports `conflict`.
+- Matching checksum/object key under another source identity reports `conflict` so `server-2` remains the owner of duplicate lineage decisions.
+- Raw storage failures are not staged and are counted as skipped staging items.
+
+The staging command does not create canonical `replays`, does not create `parse_jobs`, does not publish RabbitMQ messages, does not write parser artifacts, and does not implement scheduled `run-once`.
+
 Top-level report fields:
 
 - `ok` - whether discovery completed without source-level errors.
@@ -152,6 +169,10 @@ For `discover --store-raw`, the same SSH transport can be used for source page r
 - `S3_SECRET_ACCESS_KEY`
 - `S3_FORCE_PATH_STYLE` when the provider does not use the default path-style behavior.
 
+For `discover --store-raw --stage`, the command also requires:
+
+- `DATABASE_URL` pointing at the `server-2` PostgreSQL database that owns `ingest_staging_records`.
+
 ## Planned Commands
 
 Expected v1 command shape:
@@ -166,11 +187,14 @@ replays-fetcher discover --dry-run
 # Discover and store raw replay objects without staging records
 replays-fetcher discover --store-raw
 
+# Discover, store raw replay objects, and write pending staging rows
+replays-fetcher discover --store-raw --stage
+
 # Run one scheduled fetch cycle
 replays-fetcher run-once
 ```
 
-`discover --dry-run` is implemented for non-mutating source inspection. `discover --store-raw` is implemented for Phase 3 raw object storage. Staging writes to `ingest_staging_records` are planned for Phase 4. `run-once` scheduled operation is planned for Phase 5.
+`discover --dry-run` is implemented for non-mutating source inspection. `discover --store-raw` is implemented for Phase 3 raw object storage. `discover --store-raw --stage` is implemented for Phase 4 staging writes to `ingest_staging_records`. `run-once` scheduled operation is planned for Phase 5.
 
 ## Contract Docs
 

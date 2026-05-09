@@ -47,11 +47,11 @@ Requirements for the initial ingest service release. Each maps to roadmap phases
 
 ### Staging and Deduplication Evidence
 
-- [ ] **STAGE-01**: Fetcher writes ingestion staging/outbox records containing source identity, source URL, object key, checksum, byte size, discovered/fetched timestamps, and status evidence.
-- [ ] **STAGE-02**: Staging writes are idempotent for repeated discovery of the same checksum and source identity.
-- [ ] **STAGE-03**: Fetcher provides enough evidence for `server-2` to deduplicate by checksum plus source identity.
-- [ ] **STAGE-04**: Ambiguous duplicate or identity conflicts are preserved as evidence for `server-2` manual review; fetcher does not auto-merge them.
-- [ ] **STAGE-05**: Fetcher does not create canonical `replays` or `parse_jobs` records.
+- [x] **STAGE-01**: Fetcher writes ingestion staging/outbox records containing source identity, source URL, object key, checksum, byte size, discovered/fetched timestamps, and status evidence.
+- [x] **STAGE-02**: Staging writes are idempotent for repeated discovery of the same checksum and source identity.
+- [x] **STAGE-03**: Fetcher provides enough evidence for `server-2` to deduplicate by checksum plus source identity.
+- [x] **STAGE-04**: Ambiguous duplicate or identity conflicts are preserved as evidence for `server-2` manual review; fetcher does not auto-merge them.
+- [x] **STAGE-05**: Fetcher does not create canonical `replays` or `parse_jobs` records.
 
 ### Observability and Operations
 
@@ -65,7 +65,7 @@ Requirements for the initial ingest service release. Each maps to roadmap phases
 - [ ] **TEST-01**: Unit tests cover source candidate parsing, idempotency decisions, checksum calculation, object key generation, staging payload creation, and failure classification.
 - [x] **TEST-02**: Integration tests cover S3-compatible storage behavior using local/mocked storage.
 - [ ] **TEST-03**: Integration tests cover staging writes using an isolated PostgreSQL database or equivalent test harness.
-- [ ] **TEST-04**: Tests prove the fetcher does not write forbidden `server-2` business tables.
+- [x] **TEST-04**: Tests prove the fetcher does not write forbidden `server-2` business tables.
 - [x] **TEST-05**: Dry-run mode is tested to prove it does not mutate S3 or staging state.
 
 ## v2 Requirements
@@ -123,11 +123,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | STOR-03 | Phase 3 | Complete |
 | STOR-04 | Phase 3 | Complete |
 | STOR-05 | Phase 3 | Complete |
-| STAGE-01 | Phase 4 | Pending |
-| STAGE-02 | Phase 4 | Pending |
-| STAGE-03 | Phase 4 | Pending |
-| STAGE-04 | Phase 4 | Pending |
-| STAGE-05 | Phase 4 | Pending |
+| STAGE-01 | Phase 4 | Complete |
+| STAGE-02 | Phase 4 | Complete |
+| STAGE-03 | Phase 4 | Complete |
+| STAGE-04 | Phase 4 | Complete |
+| STAGE-05 | Phase 4 | Complete |
 | OPS-01 | Phase 5 | Pending |
 | OPS-02 | Phase 5 | Pending |
 | OPS-03 | Phase 5 | Pending |
@@ -135,7 +135,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TEST-01 | Phase 5 | Pending |
 | TEST-02 | Phase 3 | Complete |
 | TEST-03 | Phase 5 | Pending |
-| TEST-04 | Phase 4 | Pending |
+| TEST-04 | Phase 4 | Complete |
 | TEST-05 | Phase 2 | Complete |
 
 **Coverage:**
@@ -145,4 +145,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-05-09*
-*Last updated: 2026-05-09 after Phase 4 planning*
+*Last updated: 2026-05-09 after Phase 4 completion*

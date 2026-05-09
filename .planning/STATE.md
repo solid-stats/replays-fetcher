@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: initial ingest service
-status: ready_to_execute
-last_updated: "2026-05-09T13:12:00.000Z"
+status: ready_to_plan
+last_updated: "2026-05-09T13:26:40.000Z"
 last_activity: 2026-05-09
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 13
-  completed_plans: 9
-  percent: 60
+  completed_plans: 13
+  percent: 80
 ---
 
 # Project State
@@ -20,16 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-09)
 
 **Core value:** Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
-**Current focus:** Phase 4 - Staging and Promotion Handoff
+**Current focus:** Phase 5 - Scheduled Operations and Validation
 
 ## Current Position
 
-Phase: 4
+Phase: 5
 Plan: Not started
-Status: Ready to execute planned Phase 4 work
+Status: Ready to plan Phase 5 work
 Last activity: 2026-05-09
 
-Progress: [██████░░░░] 60%
+Progress: [████████░░] 80%
 
 ## Accumulated Context
 
@@ -67,6 +67,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 04]: Use `server-2`'s existing `ingest_staging_records` table for staging handoff; do not invent a new staging table.
 - [Phase 04]: No separate outbox table exists in current `server-2`; parser publish lifecycle is backed by durable `parse_jobs` after server promotion.
 - [Phase 04]: Fetcher writes only pending staging evidence. `server-2` owns promotion into canonical `replays`, `parse_jobs`, RabbitMQ publishing, duplicate handling, and operator APIs.
+- [Phase 04]: `discover --store-raw --stage` is the operator command for raw storage plus pending staging writes.
+- [Phase 04]: Staging repository classifies matching source/object evidence as `already_staged`, source evidence mismatch as `conflict`, and raw object identity under another source as `conflict`.
 
 ### Execution Metrics
 
@@ -77,6 +79,10 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 | 03 | 02 | complete | 2 | 4 |
 | 03 | 03 | complete | 2 | 8 |
 | 03 | 04 | complete | 3 | 4 |
+| 04 | 01 | complete | 2 | 4 |
+| 04 | 02 | complete | 2 | 6 |
+| 04 | 03 | complete | 2 | 5 |
+| 04 | 04 | complete | 2 | 5 |
 
 ### Pending Todos
 
@@ -84,10 +90,9 @@ None yet.
 
 ### Blockers/Concerns
 
-- Phase 4 writes to `server-2` database staging table `ingest_staging_records`; credentials and local PostgreSQL integration availability still need verification during execution.
 - Rate-limit/backoff expectations for the external source are not locked yet.
 - GSD subagents are not installed in this runtime, so new-project research/roadmap generation was performed inline.
 
 ## Next Step
 
-Run `$gsd-execute-phase 4` to execute staging/promotion handoff plans.
+Run `$gsd-plan-phase 5` to plan scheduled operations and validation.

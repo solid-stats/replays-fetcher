@@ -103,6 +103,29 @@ const storageBoundaryTokens = [
   ["replays", "List"].join(""),
 ] as const;
 
+const stagingBoundaryFiles = [
+  "src/staging/payload.ts",
+  "src/staging/postgres-staging-repository.ts",
+  "src/staging/stage-raw-replay.ts",
+  "src/cli.ts",
+] as const;
+
+const stagingBoundaryTokens = [
+  /insert\s+into\s+replays/iu,
+  /insert\s+into\s+parse_jobs/iu,
+  /insert\s+into\s+parser_results/iu,
+  /insert\s+into\s+parser_events/iu,
+  /insert\s+into\s+player_stats/iu,
+  /insert\s+into\s+squad_stats/iu,
+  /insert\s+into\s+users/iu,
+  /insert\s+into\s+roles/iu,
+  /insert\s+into\s+requests/iu,
+  /insert\s+into\s+moderation_actions/iu,
+  /parse\.completed/iu,
+  /parse\.failed/iu,
+  /writeFile/iu,
+] as const;
+
 function parseCheckOutput(writes: readonly string[]): CheckOutput {
   return JSON.parse(writes.join("")) as CheckOutput;
 }
@@ -812,4 +835,16 @@ test("raw storage path source should not include parser, staging, replay-list, o
   for (const token of storageBoundaryTokens) {
     expect(sourceText).not.toContain(token);
   }
+});
+
+test("staging path source should not write forbidden business tables or parser artifacts", async () => {
+  const sourceTexts = await Promise.all(
+    stagingBoundaryFiles.map((filePath) => readProjectFile(filePath)),
+  );
+  const sourceText = sourceTexts.join("\n");
+
+  for (const token of stagingBoundaryTokens) {
+    expect(sourceText).not.toMatch(token);
+  }
+  expect(sourceText).toMatch(/insert\s+into\s+ingest_staging_records/iu);
 });

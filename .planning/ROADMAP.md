@@ -13,7 +13,7 @@ This roadmap builds `replays-fetcher` as a narrow TypeScript scheduled ingest se
 - [x] **Phase 1: Project Foundation and Integration Contract** - Establish TypeScript workspace, config validation, docs, and explicit cross-app boundaries.
 - [x] **Phase 2: Source Discovery and Dry Run** - Discover replay candidates from the external source without mutating S3 or staging state.
 - [x] **Phase 3: Raw Replay Storage** - Fetch replay bytes, compute checksums, and write idempotent S3 raw objects.
-- [ ] **Phase 4: Staging and Promotion Handoff** - Write staging/outbox records compatible with `server-2` promotion and conflict handling.
+- [x] **Phase 4: Staging and Promotion Handoff** - Write staging/outbox records compatible with `server-2` promotion and conflict handling.
 - [ ] **Phase 5: Scheduled Operations and Validation** - Add run-once scheduling behavior, observability, failure taxonomy, and integration tests.
 
 ## Phase Details
@@ -95,13 +95,13 @@ Plans:
 4. Tests prove fetcher does not write forbidden `server-2` business tables.
 5. Cross-app contract notes define what `server-2` must poll/promote before parse jobs are created.
 
-**Plans:** 4 planned
+**Plans:** 4/4 complete
 
 Plans:
-- [ ] 04-01-PLAN.md — Define server-2-compatible staging payload contracts.
-- [ ] 04-02-PLAN.md — Implement idempotent PostgreSQL staging repository.
-- [ ] 04-03-PLAN.md — Wire raw storage evidence into staging CLI orchestration.
-- [ ] 04-04-PLAN.md — Document staging handoff and verify forbidden-write boundaries.
+- [x] 04-01-PLAN.md — Define server-2-compatible staging payload contracts.
+- [x] 04-02-PLAN.md — Implement idempotent PostgreSQL staging repository.
+- [x] 04-03-PLAN.md — Wire raw storage evidence into staging CLI orchestration.
+- [x] 04-04-PLAN.md — Document staging handoff and verify forbidden-write boundaries.
 
 ### Phase 5: Scheduled Operations and Validation
 
@@ -131,7 +131,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 1. Project Foundation and Integration Contract | 1/1 | Complete | 2026-05-09 |
 | 2. Source Discovery and Dry Run | 4/4 | Complete | 2026-05-09 |
 | 3. Raw Replay Storage | 4/4 | Complete | 2026-05-09 |
-| 4. Staging and Promotion Handoff | 0/4 | Planned | - |
+| 4. Staging and Promotion Handoff | 4/4 | Complete | 2026-05-09 |
 | 5. Scheduled Operations and Validation | 0/TBD | Not started | - |
 
 ---
