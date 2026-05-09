@@ -39,8 +39,8 @@ Read these planning files before planning or implementing:
 
 Use TypeScript for v1 unless a later planning decision changes it:
 
-- Node.js with TypeScript for crawler and scheduled job runtime.
-- Strict TypeScript, linting, formatting, and tests.
+- Node.js 25 with TypeScript 6 for crawler and scheduled job runtime.
+- Very strict TypeScript, ESLint 10 typed linting, Prettier formatting, Vitest tests, and V8 coverage gates.
 - S3-compatible object storage client for raw replay writes.
 - PostgreSQL client for staging/outbox writes only.
 - Structured logging and explicit run summaries.
@@ -92,8 +92,8 @@ The service is intentionally narrow. It fetches replay bytes and records source 
 
 ## Recommendation
 ## Runtime and Language
-- **Node.js:** target current Active LTS for new work. As of 2026-05-09, Node.js 24 is Active LTS according to the Node.js release schedule.
-- **TypeScript:** use the latest stable TypeScript release available at implementation time. TypeScript 5.9 docs are current as of April 2026 and include `node20` module behavior; phase planning should lock exact compiler settings.
+- **Node.js:** target Node.js 25 for new work so the project starts on the current toolchain line.
+- **TypeScript:** use TypeScript 6 from project start, with strict compiler settings and typed linting.
 - **Module style:** prefer ESM unless implementation discovers a dependency constraint.
 - **Package manager:** align with adjacent Solid Games repos during Phase 1.
 ## Service Libraries
@@ -102,7 +102,7 @@ The service is intentionally narrow. It fetches replay bytes and records source 
 - **Database migrations:** defer exact tool choice until staging table ownership is locked with `server-2`. If this repo owns staging migrations, prefer a TypeScript-friendly migration path that can emit plain SQL and be reviewed by `server-2`.
 - **Configuration validation:** use a schema validator such as Zod or a small typed validator. Fail before mutating S3 or PostgreSQL.
 - **Logging:** use structured JSON logs. Pino is a strong default if a library is needed; direct JSON-to-stdout is also acceptable for the initial skeleton.
-- **Testing:** use Vitest for unit tests and TypeScript test execution. Use Testcontainers or local mocks for PostgreSQL and MinIO/S3-compatible integration tests when Docker is available.
+- **Testing:** use Vitest 4 for unit tests and TypeScript test execution, with V8 coverage thresholds set to 100% for reachable source. Use Testcontainers or local mocks for PostgreSQL and MinIO/S3-compatible integration tests when Docker is available.
 ## Commands to Plan
 - `replays-fetcher check` - validate config and connectivity.
 - `replays-fetcher discover --dry-run` - discover candidates without writes.

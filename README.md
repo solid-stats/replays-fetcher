@@ -49,6 +49,10 @@ Before implementation work, run the next GSD step from `.planning/STATE.md`. Com
 
 ## Local Commands
 
+Use Node.js 25 for the current baseline. Tooling is intentionally pinned to the
+latest starting point for new work: TypeScript 6, ESLint 10,
+`@types/node` 25, Vitest 4 with V8 coverage, and Prettier 3.
+
 Install dependencies:
 
 ```bash
@@ -58,10 +62,13 @@ npm install
 Validate the repository:
 
 ```bash
-npm test
-npm run typecheck
+npm run format
 npm run lint
+npm run typecheck
+npm test
+npm run test:coverage
 npm run build
+npm run verify
 ```
 
 Validate runtime configuration:

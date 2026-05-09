@@ -31,7 +31,7 @@ const configSchema = z.object({
 
 export type AppConfig = z.infer<typeof configSchema>;
 
-export type ConfigSource = Record<string, string | undefined>;
+export type ConfigSource = Record<string, boolean | string | undefined>;
 
 export class ConfigError extends Error {
   readonly issues: string[];
