@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: initial ingest service
-status: executing
-last_updated: "2026-05-09T11:56:08.848Z"
+status: verifying
+last_updated: "2026-05-09T12:06:00.313Z"
 last_activity: 2026-05-09
 progress:
   total_phases: 5
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 5
-  completed_plans: 4
-  percent: 80
+  completed_plans: 5
+  percent: 100
 ---
 
 # Project State
@@ -24,12 +24,12 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 
 ## Current Position
 
-Phase: 02 (source-discovery-and-dry-run) — EXECUTING
+Phase: 02 (source-discovery-and-dry-run) — COMPLETE
 Plan: 4 of 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-05-09
 
-Progress: [████████░░] 80%
+Progress: [██████████] 100%
 
 ## Accumulated Context
 
@@ -56,6 +56,14 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 02]: Source-level dry-run failures are reported as diagnostics and exit non-zero in the CLI.
 - [Phase 02]: Dry-run item diagnostics remain warnings with ok=true; source-level unavailable/rate-limit diagnostics fail the report and CLI exit.
 - [Phase 02]: Discovery source requests are sequentially paced by default with a 2000 ms delay and injectable sleep for tests.
+- [Phase 02]: Dry-run remains read-only with test and docs guards against S3, PostgreSQL, parser artifact, local replay-list, and run-once mutation surfaces.
+- [Phase 02]: README documents the Phase 2 operator dry-run command and SSH source transport as operator-managed, not the old relay service.
+
+### Execution Metrics
+
+| Phase | Plan | Duration | Tasks | Files |
+|-------|------|----------|-------|-------|
+| 02 | 03 | 4min | 2 | 5 |
 
 ### Pending Todos
 
@@ -71,4 +79,4 @@ None yet.
 
 ## Next Step
 
-Execute `.planning/phases/02-source-discovery-and-dry-run/02-03-PLAN.md`.
+Verify Phase 02 completion, then plan Phase 03 raw replay storage.

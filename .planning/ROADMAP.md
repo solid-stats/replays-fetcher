@@ -11,7 +11,7 @@ This roadmap builds `replays-fetcher` as a narrow TypeScript scheduled ingest se
 - Decimal phases (2.1, 2.2): Urgent insertions if needed.
 
 - [x] **Phase 1: Project Foundation and Integration Contract** - Establish TypeScript workspace, config validation, docs, and explicit cross-app boundaries.
-- [ ] **Phase 2: Source Discovery and Dry Run** - Discover replay candidates from the external source without mutating S3 or staging state.
+- [x] **Phase 2: Source Discovery and Dry Run** - Discover replay candidates from the external source without mutating S3 or staging state.
 - [ ] **Phase 3: Raw Replay Storage** - Fetch replay bytes, compute checksums, and write idempotent S3 raw objects.
 - [ ] **Phase 4: Staging and Promotion Handoff** - Write staging/outbox records compatible with `server-2` promotion and conflict handling.
 - [ ] **Phase 5: Scheduled Operations and Validation** - Add run-once scheduling behavior, observability, failure taxonomy, and integration tests.
@@ -53,7 +53,7 @@ This roadmap builds `replays-fetcher` as a narrow TypeScript scheduled ingest se
 4. Missing, malformed, duplicate, and changed source metadata produce structured diagnostics.
 5. Source adapter behavior is covered by fixtures or mocked responses.
 
-**Plans:** 2/4 complete
+**Plans:** 4/4 complete
 
 ### Phase 3: Raw Replay Storage
 
@@ -117,7 +117,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Project Foundation and Integration Contract | 1/1 | Complete | 2026-05-09 |
-| 2. Source Discovery and Dry Run | 3/4 | In Progress | - |
+| 2. Source Discovery and Dry Run | 4/4 | Complete | 2026-05-09 |
 | 3. Raw Replay Storage | 0/TBD | Not started | - |
 | 4. Staging and Promotion Handoff | 0/TBD | Not started | - |
 | 5. Scheduled Operations and Validation | 0/TBD | Not started | - |
