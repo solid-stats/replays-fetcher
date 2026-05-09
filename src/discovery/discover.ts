@@ -450,7 +450,8 @@ function toReplayCandidate(
     typeof candidate.filename !== "string" ||
     candidate.filename.trim().length === 0 ||
     typeof candidate.url !== "string" ||
-    candidate.url.trim().length === 0
+    candidate.url.trim().length === 0 ||
+    !isValidFixtureUrl(candidate.url)
   ) {
     return {
       diagnostic: {
@@ -512,6 +513,10 @@ function toReplayCandidate(
   return {
     candidate: replayCandidate,
   };
+}
+
+function isValidFixtureUrl(value: string): boolean {
+  return URL.parse(value) !== null;
 }
 
 function toPageUrl(sourceUrl: URL, page: number): URL {

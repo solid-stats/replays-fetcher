@@ -309,6 +309,10 @@ test("discoverReplaysDryRun should report malformed fixture candidates as warnin
         candidates: [
           {},
           {
+            filename: "invalid-url.json",
+            url: "not a url",
+          },
+          {
             filename: "valid.json",
             url: "https://example.test/replays/valid",
           },
@@ -327,6 +331,13 @@ test("discoverReplaysDryRun should report malformed fixture candidates as warnin
   expect(report.diagnostics).toStrictEqual([
     {
       candidateIndex: 0,
+      code: "malformed_row",
+      message: "Source fixture candidate did not include filename and URL",
+      severity: "warning",
+      sourceUrl: "https://example.test/replays",
+    },
+    {
+      candidateIndex: 1,
       code: "malformed_row",
       message: "Source fixture candidate did not include filename and URL",
       severity: "warning",
