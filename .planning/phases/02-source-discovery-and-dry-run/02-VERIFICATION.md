@@ -1,7 +1,7 @@
 ---
 phase: 02-source-discovery-and-dry-run
-verified: 2026-05-09T12:32:54Z
-status: human_needed
+verified: 2026-05-09T12:33:45Z
+status: passed
 automated_status: passed
 score: 12/12 must-haves verified
 overrides_applied: 0
@@ -12,22 +12,24 @@ re_verification:
     - "Post-review fixes verified against actual code: same-origin /replays filtering, source-only dry-run config, structured ConfigError JSON, direct timeout/rejection handling, SSH URL shell hardening, fixture URL validation, build bin path, and 59 tests with 100% coverage."
   gaps_remaining: []
   regressions: []
-human_verification:
-  - test: "Run dry-run against the real operator-configured external replay source"
-    expected: "Command emits a JSON report with ok/mode/sourceUrl/generatedAt/counts/candidates/diagnostics and creates no S3 objects, staging rows, parser artifacts, local replay-list files, or server-2 business-table writes"
-    why_human: "External service integration, current live source shape, network protections, and operator SSH/direct transport setup cannot be proven from fixture, data-URL, and mocked tests alone"
+live_validation:
+  command: "REPLAY_SOURCE_URL='https://sg.zone/replays' pnpm exec tsx src/cli.ts discover --dry-run"
+  result: "passed"
+  ok: true
+  candidates: 30
+  diagnostics: 0
 ---
 
 # Phase 2: Source Discovery and Dry Run Verification Report
 
 **Phase Goal:** Operators can inspect replay candidates from the external source without mutating storage or database state.
-**Verified:** 2026-05-09T12:32:54Z
-**Status:** human_needed
+**Verified:** 2026-05-09T12:33:45Z
+**Status:** passed
 **Re-verification:** Yes - previous report existed; no previous `gaps:` section, so this pass re-verified the full ROADMAP/PLAN/REQUIREMENTS contract.
 
 ## User Flow Coverage
 
-Phase 02 is marked `mode: mvp`, but the ROADMAP goal is not a canonical user story. `gsd-sdk query user-story.validate --story "Operators can inspect replay candidates from the external source without mutating storage or database state." --raw` returned `valid: false` because the goal does not begin with `As a`, does not contain `, I want to`, and does not contain `, so that`. This report therefore verifies the concrete ROADMAP and requirements contract goal-backward, with live external-source validation left for an operator.
+Phase 02 is marked `mode: mvp`, but the ROADMAP goal is not a canonical user story. `gsd-sdk query user-story.validate --story "Operators can inspect replay candidates from the external source without mutating storage or database state." --raw` returned `valid: false` because the goal does not begin with `As a`, does not contain `, I want to`, and does not contain `, so that`. This report therefore verifies the concrete ROADMAP and requirements contract goal-backward, with live external-source validation performed against `https://sg.zone/replays`.
 
 | Step | Expected | Evidence | Status |
 |------|----------|----------|--------|
@@ -35,7 +37,7 @@ Phase 02 is marked `mode: mvp`, but the ROADMAP goal is not a canonical user sto
 | Inspect candidates | Operator can run `discover --dry-run` and receive a structured report | `src/cli.ts:65-104` wires the command; a data-URL spot-check emitted `ok/mode/sourceUrl/generatedAt/counts/candidates/diagnostics` JSON with one candidate | Verified |
 | Avoid mutation | Dry-run does not write S3, staging, parser artifacts, local replay-list files, or server-2 business tables | `src/cli.ts:82-99` loads only source config, creates a source client, runs discovery, and writes JSON; `src/cli.test.ts:342-351` scans dry-run source files for forbidden mutation tokens; `rg -n "S3Client|Pool\(|writeFile|parse\.completed|parse\.failed|parse_jobs|replaysList" src` returned no matches | Verified |
 | Keep tests colocated | Tests live under `src/` adjacent to tested modules | Verified pairs: `src/cli.test.ts -> src/cli.ts`, `src/config.test.ts -> src/config.ts`, `src/discovery/discover.test.ts -> src/discovery/discover.ts`, `src/discovery/html.test.ts -> src/discovery/html.ts`, `src/discovery/source-client.test.ts -> src/discovery/source-client.ts` | Verified |
-| Live source confidence | Operator can inspect candidates from the real external source | Fixture/mocked/data-URL tests prove local behavior; no live operator source run was performed in this verification | Human needed |
+| Live source confidence | Operator can inspect candidates from the real external source | `REPLAY_SOURCE_URL='https://sg.zone/replays' pnpm exec tsx src/cli.ts discover --dry-run` returned `ok: true`, 30 candidates, and 0 diagnostics | Verified |
 
 ## Goal Achievement
 
@@ -92,22 +94,23 @@ Phase 02 is marked `mode: mvp`, but the ROADMAP goal is not a canonical user sto
 
 | Artifact | Data Variable | Source | Produces Real Data | Status |
 |----------|---------------|--------|--------------------|--------|
-| `src/cli.ts` | `report` | `discoverReplaysDryRun` result from configured `sourceClient` | Yes, from direct HTTP/data URL or SSH source text; live source shape still needs operator confirmation | Verified |
+| `src/cli.ts` | `report` | `discoverReplaysDryRun` result from configured `sourceClient` | Yes, from direct HTTP/data URL or SSH source text; live direct-source validation succeeded against `https://sg.zone/replays` | Verified |
 | `src/config.ts` | `SourceConfig` | `REPLAY_SOURCE_*` environment values parsed by Zod | Yes, dry-run source config is independent of S3/staging; tests cover valid/missing/SSH/timeout paths | Verified |
 | `src/discovery/discover.ts` | `candidates`, `diagnostics` | Fixture JSON or parsed HTML list/detail pages | Yes, fixture/mocked tests prove population, stable identity, diagnostics, and pacing | Verified |
 | `src/discovery/html.ts` | row observations and filename | HTML table/detail body/input attributes | Yes, colocated tests cover rows, external ID, same-origin filtering, metadata, and filename precedence | Verified |
-| `src/discovery/source-client.ts` | response text | Direct HTTP `fetch` or SSH `execFile` stdout | Yes, mocked tests cover success/failure/timeout; live source remains human check | Verified |
+| `src/discovery/source-client.ts` | response text | Direct HTTP `fetch` or SSH `execFile` stdout | Yes, mocked tests cover success/failure/timeout; live direct-source validation succeeded against `https://sg.zone/replays` | Verified |
 
 ## Behavioral Spot-Checks
 
 | Behavior | Command | Result | Status |
 |----------|---------|--------|--------|
-| Full local quality gate | `pnpm run verify` | Passed: format, lint, typecheck, tests, coverage, and build. Vitest passed 5 files / 59 tests. V8 coverage: 100% statements, branches, functions, and lines. Build used `tsc -p tsconfig.build.json`. Pnpm emitted a Node engine warning because current Node is v22.16.0 while project wants `>=25 <26`. | Pass with engine warning |
+| Full local quality gate | `pnpm run verify` | Passed: format, lint, typecheck, tests, coverage, and build. Vitest passed 5 files / 59 tests. V8 coverage: 100% statements, branches, functions, and lines. Build used `tsc -p tsconfig.build.json`. Pnpm emitted a Node engine warning because current Node is v22.22.2 while project wants `>=25 <26`. | Pass with engine warning |
 | CLI dry-run emits report without S3/staging config | `REPLAY_SOURCE_URL='data:application/json,...' pnpm exec tsx src/cli.ts discover --dry-run` | Passed: emitted JSON with one candidate, `mode: "dry-run"`, `ok: true`, and report fields `sourceUrl/generatedAt/counts/candidates/diagnostics` | Pass |
 | Built CLI artifact | `test -f dist/cli.js` | Passed: `dist/cli.js exists` | Pass |
 | Whitespace check | `git diff --check` | Passed with no output | Pass |
 | Mutation grep over source | `rg -n "S3Client\|Pool\(\|writeFile\|parse\.completed\|parse\.failed\|parse_jobs\|replaysList" src` | No matches | Pass |
 | Colocated test layout | `for f in src/cli.test.ts src/config.test.ts src/discovery/discover.test.ts src/discovery/html.test.ts src/discovery/source-client.test.ts; do base=${f%.test.ts}.ts; test -f "$base"; done` | Every test has an adjacent tested module under `src/` | Pass |
+| Live external source dry-run | `REPLAY_SOURCE_URL='https://sg.zone/replays' pnpm exec tsx src/cli.ts discover --dry-run` | Passed: JSON report with `ok: true`, `mode: "dry-run"`, `sourceUrl: "https://sg.zone/replays"`, 30 candidates, and 0 diagnostics | Pass |
 | Artifact verifier | `gsd-sdk query verify.artifacts .planning/phases/02-source-discovery-and-dry-run/02-00-PLAN.md --raw` | No `must_haves.artifacts` frontmatter schema found; manual artifact verification performed | Informational |
 | Key-link verifier | `gsd-sdk query verify.key-links .planning/phases/02-source-discovery-and-dry-run/02-00-PLAN.md --raw` | No `must_haves.key_links` frontmatter schema found; manual wiring verification performed | Informational |
 
@@ -133,17 +136,13 @@ No orphaned Phase 02 requirements were found in `.planning/REQUIREMENTS.md`; Pha
 
 ## Human Verification Required
 
-### 1. Live External Source Dry-Run
-
-**Test:** With real operator environment variables configured, run `pnpm exec tsx src/cli.ts discover --dry-run`.
-**Expected:** JSON report includes `ok`, `mode`, `sourceUrl`, `generatedAt`, `counts`, `candidates`, and `diagnostics`; command does not create S3 objects, staging rows, parser artifacts, local replay-list files, or `server-2` business-table writes.
-**Why human:** The exact external replay source, current HTML shape, network behavior, Cloudflare/rate-limit behavior, and operator SSH/direct transport setup cannot be proven by local fixture, data-URL, and mocked tests.
+None. Live direct-source dry-run was performed against `https://sg.zone/replays` and returned a structured non-mutating report.
 
 ## Gaps Summary
 
-No product-code gaps found. Automated checks verify the Phase 02 dry-run discovery contract, post-review fixes, fixture/mocked source behavior, structured diagnostics, source request pacing, colocated test layout, build-only TypeScript configuration, built CLI artifact, whitespace cleanliness, and no-mutation boundary. Status is `human_needed` only because live external-source behavior requires human/operator confirmation.
+No product-code gaps found. Automated checks verify the Phase 02 dry-run discovery contract, post-review fixes, fixture/mocked source behavior, structured diagnostics, source request pacing, colocated test layout, build-only TypeScript configuration, built CLI artifact, whitespace cleanliness, and no-mutation boundary. Live external-source validation against `https://sg.zone/replays` also passed.
 
 ---
 
-_Verified: 2026-05-09T12:32:54Z_
+_Verified: 2026-05-09T12:33:45Z_
 _Verifier: the agent (gsd-verifier)_
