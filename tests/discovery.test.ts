@@ -12,8 +12,10 @@ test("discoverReplaysDryRun should map a source fixture into a dry-run report", 
         candidates: [
           {
             externalId: "100",
+            discoveredAt: "2026-05-08T00:00:00.000Z",
             filename: "replay-a.json",
             missionText: "sg@test",
+            page: 2,
             serverId: 1,
             url: "https://example.test/replays/100",
             world: "Altis",
@@ -45,10 +47,26 @@ test("discoverReplaysDryRun should map a source fixture into a dry-run report", 
     },
     source: {
       externalId: "100",
+      page: 2,
       url: "https://example.test/replays/100",
     },
   });
   expect(report.diagnostics).toHaveLength(0);
+});
+
+test("discoverReplaysDryRun should rethrow unexpected source errors", async () => {
+  const sourceClient: SourceClient = {
+    async fetchText() {
+      throw new TypeError("unexpected source crash");
+    },
+  };
+
+  await expect(
+    discoverReplaysDryRun({
+      sourceClient,
+      sourceUrl: new URL("https://example.test/replays"),
+    }),
+  ).rejects.toThrow("unexpected source crash");
 });
 
 test("discoverReplaysDryRun should parse HTML list and detail pages with stable identity", async () => {
