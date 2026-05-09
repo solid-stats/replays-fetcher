@@ -32,10 +32,10 @@ Requirements for the initial ingest service release. Each maps to roadmap phases
 ### Source Discovery
 
 - [x] **SRC-01**: Fetcher discovers replay candidates from the external replay source and records source URL plus external source replay ID when available.
-- [ ] **SRC-02**: Discovery is idempotent across repeated scheduled runs.
+- [x] **SRC-02**: Discovery is idempotent across repeated scheduled runs.
 - [ ] **SRC-03**: Source adapter handles missing, malformed, duplicate, and changed source metadata with structured diagnostics instead of silent corruption.
 - [ ] **SRC-04**: Fetcher respects configurable rate limits, timeouts, and bounded retry behavior for external source requests.
-- [ ] **SRC-05**: Source discovery tests use fixtures or mocked responses before any production-like source assumptions are trusted.
+- [x] **SRC-05**: Source discovery tests use fixtures or mocked responses before any production-like source assumptions are trusted.
 
 ### Raw Replay Storage
 
@@ -114,10 +114,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RUN-04 | Phase 1 | Complete |
 | RUN-05 | Phase 1 | Complete |
 | SRC-01 | Phase 2 | Complete |
-| SRC-02 | Phase 2 | Pending |
+| SRC-02 | Phase 2 | Complete |
 | SRC-03 | Phase 2 | Pending |
 | SRC-04 | Phase 2 | Pending |
-| SRC-05 | Phase 2 | Pending |
+| SRC-05 | Phase 2 | Complete |
 | STOR-01 | Phase 3 | Pending |
 | STOR-02 | Phase 3 | Pending |
 | STOR-03 | Phase 3 | Pending |

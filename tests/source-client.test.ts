@@ -1,6 +1,6 @@
 import { afterEach, expect, test, vi } from "vitest";
 
-import { loadConfig } from "../src/config.js";
+import { loadConfig, type AppConfig } from "../src/config.js";
 import {
   createSourceClient,
   SourceFetchError,
@@ -115,6 +115,29 @@ test("createSourceClient should allow default SSH command runner construction", 
 
   expect(createSourceClient(config)).toMatchObject({
     fetchText: expect.any(Function) as unknown,
+  });
+});
+
+test("createSourceClient should fail before SSH execution when host is missing", async () => {
+  const config = {
+    ...loadConfig({
+      ...validEnvironment,
+      REPLAY_SOURCE_SSH_HOST: "allowlisted-host",
+      REPLAY_SOURCE_TRANSPORT: "ssh",
+    }),
+    sourceSshHost: undefined,
+  } as AppConfig;
+  const sourceClient = createSourceClient(config, {
+    async execFile() {
+      return { stderr: "", stdout: "unreachable" };
+    },
+  });
+
+  await expect(
+    sourceClient.fetchText(new URL("https://example.test/replays/100")),
+  ).rejects.toMatchObject({
+    code: "source_unavailable",
+    message: "SSH source host is not configured",
   });
 });
 

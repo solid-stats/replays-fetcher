@@ -126,73 +126,6 @@ test("discoverReplaysDryRun should parse HTML list and detail pages with stable 
   expect(JSON.stringify(reportA)).toBe(JSON.stringify(reportB));
 });
 
-test("discoverReplaysDryRun should fetch pages through maxPages in source order", async () => {
-  const fetchedUrls: string[] = [];
-  const responses = new Map([
-    [
-      "https://example.test/replays",
-      `
-        <table class="common-table">
-          <tbody>
-            <tr>
-              <td><a href="/replays/100">first@test</a></td>
-              <td>Altis</td>
-              <td>1</td>
-            </tr>
-          </tbody>
-        </table>
-      `,
-    ],
-    [
-      "https://example.test/replays?p=2",
-      `
-        <table class="common-table">
-          <tbody>
-            <tr>
-              <td><a href="/replays/200">second@test</a></td>
-              <td>Malden</td>
-              <td>2</td>
-            </tr>
-          </tbody>
-        </table>
-      `,
-    ],
-    [
-      "https://example.test/replays/100",
-      `<html><body data-ocap="first.json"></body></html>`,
-    ],
-    [
-      "https://example.test/replays/200",
-      `<html><body data-ocap="second.json"></body></html>`,
-    ],
-  ]);
-  const sourceClient: SourceClient = {
-    async fetchText(url) {
-      fetchedUrls.push(url.toString());
-
-      return responses.get(url.toString()) ?? "";
-    },
-  };
-
-  const report = await discoverReplaysDryRun({
-    generatedAt: "2026-05-09T00:00:00.000Z",
-    maxPages: 2,
-    sourceClient,
-    sourceUrl: new URL("https://example.test/replays"),
-  });
-
-  expect(fetchedUrls).toStrictEqual([
-    "https://example.test/replays",
-    "https://example.test/replays/100",
-    "https://example.test/replays?p=2",
-    "https://example.test/replays/200",
-  ]);
-  expect(report.maxPages).toBe(2);
-  expect(
-    report.candidates.map((candidate) => candidate.identity.filename),
-  ).toStrictEqual(["first.json", "second.json"]);
-});
-
 test("discoverReplaysDryRun should report source-level fetch failures", async () => {
   const sourceClient: SourceClient = {
     async fetchText() {
@@ -245,6 +178,7 @@ test("discoverReplaysDryRun should support maxPages and skip incomplete HTML can
         <table class="common-table">
           <tbody>
             <tr><td><a href="/replays/102">sg@test</a></td><td>Altis</td><td>2</td></tr>
+            <tr><td><a href="/downloads/custom">no id</a></td><td>Malden</td><td>3</td></tr>
           </tbody>
         </table>
       `,
@@ -252,6 +186,10 @@ test("discoverReplaysDryRun should support maxPages and skip incomplete HTML can
     [
       "https://example.test/replays/102",
       `<html><body data-ocap="page-two.json"></body></html>`,
+    ],
+    [
+      "https://example.test/downloads/custom",
+      `<html><body data-ocap="custom.json"></body></html>`,
     ],
   ]);
   const sourceClient: SourceClient = {
@@ -270,13 +208,23 @@ test("discoverReplaysDryRun should support maxPages and skip incomplete HTML can
   });
 
   expect(report.maxPages).toBe(2);
-  expect(report.candidates).toHaveLength(1);
+  expect(report.candidates).toHaveLength(2);
   expect(report.candidates[0]?.identity.filename).toBe("page-two.json");
+  expect(report.candidates[1]).toMatchObject({
+    identity: {
+      filename: "custom.json",
+    },
+    source: {
+      page: 2,
+      url: "https://example.test/downloads/custom",
+    },
+  });
   expect(requestedUrls).toStrictEqual([
     "https://example.test/replays",
     "https://example.test/replays/101",
     "https://example.test/replays?p=2",
     "https://example.test/replays/102",
+    "https://example.test/downloads/custom",
   ]);
 });
 

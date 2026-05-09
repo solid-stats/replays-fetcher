@@ -90,7 +90,7 @@ test("extractFilenameFromDetailHtml should prefer #filename over body data-ocap"
   );
   expect(
     extractFilenameFromDetailHtml(
-      `<html><body><input id="filename" value="replay&amp;encoded.json"></body></html>`,
+      `<html><body><input id="other" value="ignored.json"><input id="filename" value="replay&amp;encoded.json"></body></html>`,
     ),
   ).toBe("replay&encoded.json");
 });

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: initial ingest service
 status: executing
-last_updated: "2026-05-09T11:29:46.597Z"
+last_updated: "2026-05-09T11:43:33.116Z"
 last_activity: 2026-05-09
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 5
-  completed_plans: 2
-  percent: 40
+  completed_plans: 3
+  percent: 60
 ---
 
 # Project State
@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 ## Current Position
 
 Phase: 02 (source-discovery-and-dry-run) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-05-09
 
-Progress: [████░░░░░░] 40%
+Progress: [██████░░░░] 60%
 
 ## Accumulated Context
 
@@ -51,6 +51,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - Phase 1 established strict TypeScript, Vitest, ESLint, Prettier, config validation, the `check` command, and integration-contract docs.
 - [Phase 02]: Discovery core accepts a SourceClient seam so dry-run behavior stays independent from direct HTTP or future SSH transport.
 - [Phase 02]: The discover command remains non-mutating and rejects non-dry-run execution until Phase 3.
+- [Phase 02]: SSH source access uses an operator-managed OpenSSH fetch command, not a relay/tunnel/daemon.
+- [Phase 02]: Detail filename identity preserves #filename precedence over body[data-ocap].
+- [Phase 02]: Source-level dry-run failures are reported as diagnostics and exit non-zero in the CLI.
 
 ### Pending Todos
 
@@ -66,4 +69,4 @@ None yet.
 
 ## Next Step
 
-Execute `.planning/phases/02-source-discovery-and-dry-run/02-01-PLAN.md`.
+Execute `.planning/phases/02-source-discovery-and-dry-run/02-02-PLAN.md`.
