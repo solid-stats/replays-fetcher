@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import type { SourceTransport } from "./discovery/types.js";
+
 const booleanFromEnvironment = z
     .union([z.boolean(), z.string()])
     .optional()
@@ -21,20 +23,37 @@ const booleanFromEnvironment = z
 
       throw new Error("Expected boolean-like value");
     }),
-  configSchema = z.object({
-    sourceUrl: z.url(),
-    s3: z.object({
-      endpoint: z.url(),
-      region: z.string().min(1),
-      bucket: z.string().min(1),
-      accessKeyId: z.string().min(1),
-      secretAccessKey: z.string().min(1),
-      forcePathStyle: booleanFromEnvironment,
-    }),
-    staging: z.object({
-      databaseUrl: z.url(),
-    }),
-  });
+  configSchema = z
+    .object({
+      sourceUrl: z.url(),
+      sourceTransport: z.enum(["direct", "ssh"]).default("direct"),
+      sourceSshHost: z.string().min(1).optional(),
+      sourceSshCommand: z.string().min(1).default("curl -fsSL --max-time 30"),
+      s3: z.object({
+        endpoint: z.url(),
+        region: z.string().min(1),
+        bucket: z.string().min(1),
+        accessKeyId: z.string().min(1),
+        secretAccessKey: z.string().min(1),
+        forcePathStyle: booleanFromEnvironment,
+      }),
+      staging: z.object({
+        databaseUrl: z.url(),
+      }),
+    })
+    .superRefine((config, context) => {
+      if (
+        config.sourceTransport === "ssh" &&
+        config.sourceSshHost === undefined
+      ) {
+        context.addIssue({
+          code: "custom",
+          message:
+            "REPLAY_SOURCE_SSH_HOST is required when REPLAY_SOURCE_TRANSPORT=ssh",
+          path: ["sourceSshHost"],
+        });
+      }
+    });
 
 export type AppConfig = z.infer<typeof configSchema>;
 
@@ -53,6 +72,11 @@ export class ConfigError extends Error {
 export function loadConfig(source: ConfigSource = process.env): AppConfig {
   const result = configSchema.safeParse({
     sourceUrl: source["REPLAY_SOURCE_URL"],
+    sourceTransport: source["REPLAY_SOURCE_TRANSPORT"] as
+      | SourceTransport
+      | undefined,
+    sourceSshHost: source["REPLAY_SOURCE_SSH_HOST"],
+    sourceSshCommand: source["REPLAY_SOURCE_SSH_COMMAND"],
     s3: {
       endpoint: source["S3_ENDPOINT"],
       region: source["S3_REGION"],

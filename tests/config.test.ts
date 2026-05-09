@@ -16,11 +16,35 @@ test("loadConfig should load required source, S3, and staging settings when vali
   const config = loadConfig(validEnvironment);
 
   expect(config.sourceUrl).toBe("https://example.test/replays");
+  expect(config.sourceTransport).toBe("direct");
+  expect(config.sourceSshCommand).toBe("curl -fsSL --max-time 30");
   expect(config.s3.bucket).toBe("solid-stats-replays");
   expect(config.s3.forcePathStyle).toBe(true);
   expect(config.staging.databaseUrl).toBe(
     "postgres://user:pass@localhost:5432/replays",
   );
+});
+
+test("loadConfig should load SSH source transport settings when provided", () => {
+  const config = loadConfig({
+    ...validEnvironment,
+    REPLAY_SOURCE_SSH_COMMAND: "curl -fsSL --max-time 10",
+    REPLAY_SOURCE_SSH_HOST: "allowlisted-host",
+    REPLAY_SOURCE_TRANSPORT: "ssh",
+  });
+
+  expect(config.sourceTransport).toBe("ssh");
+  expect(config.sourceSshHost).toBe("allowlisted-host");
+  expect(config.sourceSshCommand).toBe("curl -fsSL --max-time 10");
+});
+
+test("loadConfig should require an SSH host when SSH transport is enabled", () => {
+  expect(() =>
+    loadConfig({
+      ...validEnvironment,
+      REPLAY_SOURCE_TRANSPORT: "ssh",
+    }),
+  ).toThrow("REPLAY_SOURCE_SSH_HOST");
 });
 
 test("loadConfig should throw ConfigError when required settings are missing", () => {
@@ -61,8 +85,16 @@ test("loadConfig should reject path-style override when value is not boolean-lik
 });
 
 test("redactConfig should redact full S3 credentials when configuration is logged", () => {
-  const redacted = redactConfig(loadConfig(validEnvironment));
+  const redacted = redactConfig(
+    loadConfig({
+      ...validEnvironment,
+      REPLAY_SOURCE_SSH_HOST: "allowlisted-host",
+      REPLAY_SOURCE_TRANSPORT: "ssh",
+    }),
+  );
 
+  expect(redacted.sourceTransport).toBe("ssh");
+  expect(redacted.sourceSshHost).toBe("allowlisted-host");
   expect(redacted.s3.accessKeyId).toBe("ac****ey");
   expect(redacted.s3.secretAccessKey).toBe("se****ey");
 });
