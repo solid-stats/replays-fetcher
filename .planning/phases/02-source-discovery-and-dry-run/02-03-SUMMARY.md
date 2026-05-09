@@ -38,7 +38,7 @@ patterns-established:
 
 requirements-completed: [RUN-03, SRC-01, SRC-02, SRC-03, SRC-04, SRC-05, TEST-05]
 
-duration: 12min
+duration: 4min
 completed: 2026-05-09
 ---
 
@@ -48,11 +48,11 @@ completed: 2026-05-09
 
 ## Performance
 
-- **Duration:** 12 min
-- **Started:** 2026-05-09T11:52:00Z
-- **Completed:** 2026-05-09T12:03:44Z
+- **Duration:** 4 min
+- **Started:** 2026-05-09T12:01:07Z
+- **Completed:** 2026-05-09T12:04:53Z
 - **Tasks:** 2
-- **Files modified:** 4
+- **Files modified:** 5
 
 ## Accomplishments
 
@@ -64,10 +64,12 @@ completed: 2026-05-09
 
 ## Task Commits
 
+Each task was committed atomically:
+
 1. **Task 02-03-01: No-mutation guard coverage** - `a5fb93a` (test)
 2. **Task 02-03-02: Dry-run operator documentation** - `212ad52` (docs)
 
-This summary and validation state are recorded in the final GSD artifact commit for the plan.
+**Plan metadata:** pending final docs commit
 
 ## Files Created/Modified
 
@@ -76,6 +78,28 @@ This summary and validation state are recorded in the final GSD artifact commit 
 - `tests/discovery.test.ts` - Adds injected `SourceClient` coverage for dry-run discovery.
 - `.planning/phases/02-source-discovery-and-dry-run/02-VALIDATION.md` - Marks Plan 02-03 validation entries passed.
 - `.planning/phases/02-source-discovery-and-dry-run/02-03-SUMMARY.md` - Records execution and verification evidence.
+
+## Decisions Made
+
+- Kept Phase 2 strictly read-only: tests and docs cover dry-run boundaries instead of introducing storage, staging, parser, local-list, or scheduling behavior.
+- Documented SSH as an operator-managed source transport only, preserving the decision not to revive the old relay service.
+
+## Deviations from Plan
+
+### Auto-fixed Issues
+
+**1. [Rule 1 - Bug] Fixed duplicate import and lint shape in dry-run guard tests**
+- **Found during:** Task 02-03-01 (Final no-mutation guard coverage)
+- **Issue:** The first test edit duplicated a `readFile` import and briefly used lint-disallowed async/map patterns.
+- **Fix:** Removed the duplicate import, simplified the static guard test, and re-ran test/lint gates.
+- **Files modified:** `tests/cli.test.ts`
+- **Verification:** `pnpm test`, `pnpm run lint`, and no-mutation grep passed.
+- **Committed in:** `a5fb93a`
+
+---
+
+**Total deviations:** 1 auto-fixed (1 bug)
+**Impact on plan:** Test hygiene only; no product behavior, storage, staging, parser, local-list, or scheduling scope was added.
 
 ## Verification
 
@@ -88,9 +112,17 @@ This summary and validation state are recorded in the final GSD artifact commit 
 
 - Local commands run under Node v22.22.2 while `package.json` requires Node `>=25 <26`; pnpm emitted engine warnings, but verification passed.
 
+## Known Stubs
+
+None. Empty arrays in touched test files are local accumulators for assertions, not user-facing stubs or unimplemented behavior.
+
 ## Threat Flags
 
 None. This plan added no S3 client, PostgreSQL pool, parser artifact writer, local replay-list writer, replay byte downloader, staging write, business-table write, or `run-once` implementation.
+
+## User Setup Required
+
+None - no external service configuration required. Operators who use SSH transport still need normal OpenSSH access to the allowlisted host configured outside this app.
 
 ## Next Phase Readiness
 
