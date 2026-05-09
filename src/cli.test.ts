@@ -8,6 +8,7 @@ import * as configModule from "./config.js";
 
 import type { AppConfig, SourceConfig } from "./config.js";
 import type { DiscoveryReport, ReplayCandidate } from "./discovery/types.js";
+import type { RunSummary } from "./run/types.js";
 import type { IngestStagingResult } from "./staging/types.js";
 import type { ReplayByteClient } from "./storage/replay-byte-client.js";
 import type { StoreRawReplayResult } from "./storage/store-raw-replay.js";
@@ -220,6 +221,34 @@ function createStagingResult(
   return {
     reason: `${status} staging result`,
     status,
+  };
+}
+
+function createRunSummary(overrides: Partial<RunSummary> = {}): RunSummary {
+  return {
+    candidates: [],
+    counts: {
+      conflict: 0,
+      diagnostics: 0,
+      discovered: 0,
+      duplicate: 0,
+      failed: 0,
+      fetched: 0,
+      skipped: 0,
+      staged: 0,
+      stored: 0,
+    },
+    diagnostics: [],
+    failureCategories: [],
+    finishedAt: "2026-05-09T12:00:05.000Z",
+    mode: "run-once",
+    ok: true,
+    rawStorage: [],
+    runId: "run-fixed",
+    sourceUrl: validEnvironment.REPLAY_SOURCE_URL,
+    staging: [],
+    startedAt: "2026-05-09T12:00:00.000Z",
+    ...overrides,
   };
 }
 
@@ -809,10 +838,147 @@ test("buildCli should reject staging without raw storage", async () => {
   expect(process.exitCode).toBe(2);
 });
 
-test("buildCli should throw explicit planned-phase errors when future commands are used", async () => {
-  await expect(
-    buildCli().parseAsync(["node", "replays-fetcher", "run-once"]),
-  ).rejects.toThrow("run-once is planned for Phase 5");
+test("buildCli run-once should execute one scheduled cycle and write a structured summary", async () => {
+  stubValidEnvironment();
+  const writes: string[] = [];
+  const byteClient = { fetchBytes: vi.fn() };
+  const sourceClient = { fetchText: vi.fn() };
+  const stagingRepository = { stage: vi.fn() };
+  const storage = { storeRawReplay: vi.fn() };
+  const injectedRunOnce = vi.fn(async (input: { readonly runId: string }) => ({
+    exitCode: 0 as const,
+    summary: createRunSummary({
+      counts: {
+        conflict: 0,
+        diagnostics: 0,
+        discovered: 1,
+        duplicate: 0,
+        failed: 0,
+        fetched: 1,
+        skipped: 0,
+        staged: 1,
+        stored: 1,
+      },
+      runId: input.runId,
+    }),
+  }));
+  vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+    writes.push(String(chunk));
+    return true;
+  });
+
+  await buildCli({
+    createPostgresStagingRepositoryFromDatabaseUrl(databaseUrl) {
+      expect(databaseUrl).toBe(validEnvironment.DATABASE_URL);
+      return stagingRepository;
+    },
+    createReplayByteClient(config) {
+      expect(config.sourceUrl).toBe(validEnvironment.REPLAY_SOURCE_URL);
+      return byteClient;
+    },
+    createS3RawReplayStorageFromConfig(config) {
+      expect(config.bucket).toBe(validEnvironment.S3_BUCKET);
+      return storage;
+    },
+    createSourceClient(config) {
+      expect(config.sourceUrl).toBe(validEnvironment.REPLAY_SOURCE_URL);
+      return sourceClient;
+    },
+    now: () => new Date("2026-05-09T12:00:00.000Z"),
+    runOnce: injectedRunOnce,
+  }).parseAsync(["node", "replays-fetcher", "run-once"]);
+
+  expect(injectedRunOnce).toHaveBeenCalledWith({
+    byteClient,
+    discoverReplays: expect.any(Function) as typeof createDiscoveryReport,
+    now: expect.any(Function) as () => Date,
+    runId: expect.stringMatching(/^run-2026-05-09T12:00:00\.000Z-/u) as string,
+    sourceClient,
+    sourceUrl: new URL(validEnvironment.REPLAY_SOURCE_URL),
+    stageRawReplay: expect.any(Function) as unknown,
+    stagingRepository,
+    storage,
+    storeRawReplay: expect.any(Function) as unknown,
+  });
+  expect(parseCliOutput(writes)).toMatchObject({
+    counts: {
+      discovered: 1,
+      staged: 1,
+      stored: 1,
+    },
+    mode: "run-once",
+    ok: true,
+    runId: expect.stringMatching(/^run-2026-05-09T12:00:00\.000Z-/u) as string,
+  });
+  expect(JSON.stringify(parseCliOutput(writes))).not.toContain("secret-key");
+  expect(process.exitCode).toBe(0);
+});
+
+test("buildCli run-once should set exit code 2 for expected operational failures", async () => {
+  stubValidEnvironment();
+  const writes: string[] = [];
+  vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+    writes.push(String(chunk));
+    return true;
+  });
+
+  await buildCli({
+    createPostgresStagingRepositoryFromDatabaseUrl: () => ({ stage: vi.fn() }),
+    createReplayByteClient: () => ({ fetchBytes: vi.fn() }),
+    createRunId: () => "run-failed",
+    createS3RawReplayStorageFromConfig: () => ({ storeRawReplay: vi.fn() }),
+    createSourceClient: () => ({ fetchText: vi.fn() }),
+    runOnce: vi.fn(async () => ({
+      exitCode: 2 as const,
+      summary: createRunSummary({
+        failureCategories: ["source_unavailable"],
+        ok: false,
+        runId: "run-failed",
+      }),
+    })),
+  }).parseAsync(["node", "replays-fetcher", "run-once"]);
+
+  expect(parseCliOutput(writes)).toMatchObject({
+    failureCategories: ["source_unavailable"],
+    mode: "run-once",
+    ok: false,
+    runId: "run-failed",
+  });
+  expect(process.exitCode).toBe(2);
+});
+
+test("buildCli run-once should report config errors before creating mutating resources", async () => {
+  const writes: string[] = [];
+  const run = vi.fn();
+  const createStorage = vi.fn();
+  const createStaging = vi.fn();
+  vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+    writes.push(String(chunk));
+    return true;
+  });
+
+  await buildCli({
+    createPostgresStagingRepositoryFromDatabaseUrl: createStaging,
+    createRunId: () => "run-config-invalid",
+    createS3RawReplayStorageFromConfig: createStorage,
+    now: () => new Date("2026-05-09T12:00:00.000Z"),
+    runOnce: run,
+  }).parseAsync(["node", "replays-fetcher", "run-once"]);
+
+  expect(run).not.toHaveBeenCalled();
+  expect(createStorage).not.toHaveBeenCalled();
+  expect(createStaging).not.toHaveBeenCalled();
+  expect(parseCliOutput(writes)).toMatchObject({
+    failureCategories: ["config_invalid"],
+    issues: expect.arrayContaining([
+      expect.stringContaining("sourceUrl"),
+      expect.stringContaining("s3"),
+    ]) as string[],
+    mode: "run-once",
+    ok: false,
+    runId: "run-config-invalid",
+  });
+  expect(process.exitCode).toBe(2);
 });
 
 test("dry-run command source should not include mutation surfaces", async () => {

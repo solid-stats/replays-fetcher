@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 /* eslint-disable max-lines -- CLI command handlers are kept together for command-surface readability. */
+import { randomUUID } from "node:crypto";
+
 import { Command } from "commander";
 
 import {
@@ -12,6 +14,8 @@ import {
 } from "./config.js";
 import { discoverReplaysDryRun } from "./discovery/discover.js";
 import { createSourceClient } from "./discovery/source-client.js";
+import { runOnce } from "./run/run-once.js";
+import { buildConfigInvalidRunSummary, runExitCode } from "./run/summary.js";
 import {
   createPostgresStagingRepositoryFromDatabaseUrl,
   type PostgresStagingRepository,
@@ -57,6 +61,7 @@ type AppConfigResult =
     };
 
 interface BuildCliDependencies {
+  readonly createRunId?: (now: Date) => string;
   readonly createReplayByteClient?: (config: SourceConfig) => ReplayByteClient;
   readonly createS3RawReplayStorageFromConfig?: (
     config: AppConfig["s3"],
@@ -68,6 +73,8 @@ interface BuildCliDependencies {
   readonly discoverReplaysDryRun?: typeof discoverReplaysDryRun;
   readonly loadConfig?: () => AppConfig;
   readonly loadSourceConfig?: () => SourceConfig;
+  readonly now?: () => Date;
+  readonly runOnce?: typeof runOnce;
   readonly stageRawReplay?: typeof stageRawReplay;
   readonly storeRawReplay?: typeof storeRawReplay;
 }
@@ -113,7 +120,7 @@ export function buildCli(dependencies: BuildCliDependencies = {}): Command {
 
   registerCheckCommand(program, cliDependencies);
   registerDiscoverCommand(program, cliDependencies);
-  registerRunOnceCommand(program);
+  registerRunOnceCommand(program, cliDependencies);
 
   return program;
 }
@@ -122,6 +129,7 @@ function resolveDependencies(
   dependencies: BuildCliDependencies,
 ): Required<BuildCliDependencies> {
   return {
+    createRunId,
     createReplayByteClient,
     createPostgresStagingRepositoryFromDatabaseUrl,
     createS3RawReplayStorageFromConfig,
@@ -129,6 +137,8 @@ function resolveDependencies(
     discoverReplaysDryRun,
     loadConfig,
     loadSourceConfig,
+    now: () => new Date(),
+    runOnce,
     stageRawReplay,
     storeRawReplay,
     ...dependencies,
@@ -247,13 +257,69 @@ function registerDiscoverCommand(
     });
 }
 
-function registerRunOnceCommand(program: Command): void {
+function registerRunOnceCommand(
+  program: Command,
+  dependencies: Required<BuildCliDependencies>,
+): void {
   program
     .command("run-once")
     .description("Execute one scheduled ingest cycle")
-    .action(() => {
-      throw new Error("run-once is planned for Phase 5");
+    .action(async () => {
+      const startedAt = dependencies.now();
+      const runId = dependencies.createRunId(startedAt);
+      const configResult = loadStoreRawConfig(dependencies);
+
+      if (!configResult.ok) {
+        const finishedAt = dependencies.now().toISOString();
+        const summary = buildConfigInvalidRunSummary({
+          finishedAt,
+          issues: configResult.issues,
+          runId,
+          startedAt: startedAt.toISOString(),
+        });
+        writeJson(summary);
+        process.exitCode = runExitCode(summary);
+        return;
+      }
+
+      const resources = createStoreRawResources(
+        dependencies,
+        configResult.config,
+        true,
+      );
+      const result = await dependencies.runOnce({
+        byteClient: resources.byteClient,
+        discoverReplays: dependencies.discoverReplaysDryRun,
+        now: dependencies.now,
+        runId,
+        sourceClient: resources.sourceClient,
+        sourceUrl: new URL(configResult.config.sourceUrl),
+        stageRawReplay: dependencies.stageRawReplay,
+        stagingRepository: requireStagingRepository(
+          resources.stagingRepository,
+        ),
+        storage: resources.storage,
+        storeRawReplay: dependencies.storeRawReplay,
+      });
+
+      writeJson(result.summary);
+      process.exitCode = result.exitCode;
     });
+}
+
+function createRunId(now: Date): string {
+  return `run-${now.toISOString()}-${randomUUID()}`;
+}
+
+function requireStagingRepository(
+  repository: StagingRepository | undefined,
+): StagingRepository {
+  /* v8 ignore next -- run-once always requests staging resources. */
+  if (repository === undefined) {
+    throw new Error("Expected staging repository for run-once");
+  }
+
+  return repository;
 }
 
 async function runStoreRawDiscovery(
