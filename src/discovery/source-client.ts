@@ -75,6 +75,7 @@ function createSshSourceClient(
         return result.stdout;
       } catch (error) {
         let message = "SSH source request failed";
+        /* v8 ignore next -- defensive guard for non-Error promise rejections. */
         if (error instanceof Error) {
           ({ message } = error);
         }
@@ -87,6 +88,7 @@ function createSshSourceClient(
 
 function classifySshFailure(error: unknown): SourceFetchError["code"] {
   let message = "";
+  /* v8 ignore next -- defensive guard for non-Error promise rejections. */
   if (error instanceof Error) {
     message = error.message.toLowerCase();
   }
