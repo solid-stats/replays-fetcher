@@ -195,10 +195,7 @@ async function discoverPageCandidates(input: {
               severity: "warning",
               sourceUrl: row.source.url,
             },
-            {
-              externalId: row.source.externalId,
-              page: row.page,
-            },
+            diagnosticEvidence(row.source.externalId, row.page),
           ),
         );
       } else {
@@ -257,10 +254,10 @@ function collectCandidateDiagnostics(
             severity: "warning",
             sourceUrl: candidate.source.url,
           },
-          {
-            externalId: candidate.source.externalId,
-            page: candidate.source.page,
-          },
+          diagnosticEvidence(
+            candidate.source.externalId,
+            candidate.source.page,
+          ),
         ),
       );
 
@@ -275,10 +272,10 @@ function collectCandidateDiagnostics(
               severity: "warning",
               sourceUrl: candidate.source.url,
             },
-            {
-              externalId: candidate.source.externalId,
-              page: candidate.source.page,
-            },
+            diagnosticEvidence(
+              candidate.source.externalId,
+              candidate.source.page,
+            ),
           ),
         );
       }
@@ -294,6 +291,29 @@ function collectCandidateDiagnostics(
   }
 
   return { candidates: outputCandidates, diagnostics };
+}
+
+function diagnosticEvidence(
+  externalId: string | undefined,
+  page: number | undefined,
+): {
+  readonly externalId?: string;
+  readonly page?: number;
+} {
+  const evidence: {
+    externalId?: string;
+    page?: number;
+  } = {};
+
+  if (externalId !== undefined) {
+    evidence.externalId = externalId;
+  }
+
+  if (page !== undefined) {
+    evidence.page = page;
+  }
+
+  return evidence;
 }
 
 function withOptionalDiagnosticEvidence(
