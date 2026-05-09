@@ -2,7 +2,7 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: initial ingest service
-status: verifying
+status: ready_to_plan
 last_updated: "2026-05-09T12:06:00.313Z"
 last_activity: 2026-05-09
 progress:
@@ -10,7 +10,7 @@ progress:
   completed_phases: 2
   total_plans: 5
   completed_plans: 5
-  percent: 100
+  percent: 40
 ---
 
 # Project State
@@ -24,12 +24,12 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 
 ## Current Position
 
-Phase: 02 (source-discovery-and-dry-run) — COMPLETE
-Plan: 4 of 4
-Status: Phase complete — ready for verification
+Phase: 3
+Plan: Not started
+Status: Ready to plan
 Last activity: 2026-05-09
 
-Progress: [██████████] 100%
+Progress: [████░░░░░░] 40%
 
 ## Accumulated Context
 
@@ -79,4 +79,4 @@ None yet.
 
 ## Next Step
 
-Verify Phase 02 completion, then plan Phase 03 raw replay storage.
+Plan Phase 03 raw replay storage.
