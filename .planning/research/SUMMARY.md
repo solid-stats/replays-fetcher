@@ -2,7 +2,7 @@
 
 **Project:** replays-fetcher  
 **Domain:** scheduled replay ingest service, S3 raw storage, PostgreSQL staging integration  
-**Researched:** 2026-04-26  
+**Researched:** 2026-05-09  
 **Confidence:** MEDIUM
 
 ## Executive Summary
@@ -23,6 +23,16 @@ Use TypeScript for v1. The service should expose a small command surface:
 
 The implementation should be deterministic and idempotent. Running the same discovery cycle twice should not create duplicate promoted product state. Staging rows should include enough evidence for `server-2` to make safe promotion decisions.
 
+### Recommended Stack
+
+- Node.js Active LTS at implementation time; Node.js 24 is Active LTS as of 2026-05-09.
+- Strict TypeScript, with the exact compiler/module target locked in Phase 1.
+- AWS SDK for JavaScript v3 for S3-compatible raw object writes.
+- `pg` for explicit PostgreSQL staging/outbox writes unless `server-2` schema ownership requires another migration path.
+- Vitest for unit tests.
+- Testcontainers or local mocks for PostgreSQL and MinIO/S3-compatible integration coverage.
+- Structured JSON logging, with Pino as a likely default if a logging library is introduced.
+
 ### Data Ownership
 
 The accepted ownership model is:
@@ -36,7 +46,7 @@ Direct writes from `replays-fetcher` into business tables are a high-risk overri
 
 ### Required Staging Evidence
 
-The exact schema belongs in an implementation phase, but staging records should likely preserve:
+The exact schema belongs in an implementation phase, but staging records should preserve:
 
 - External source name.
 - External source replay ID when available.
@@ -87,6 +97,10 @@ The fetcher should only write `raw/`. Parser artifact keying remains owned by `r
 
 ## Sources
 
-- User architecture decisions from 2026-04-26 Codex Questions UI session.
-- `replay-parser-2` planning docs and GSD briefs for parser/backend/web ownership boundaries.
-- `server-2` GSD brief for backend source-of-truth responsibilities.
+- Node.js Releases: https://nodejs.org/en/about/releases/
+- TypeScript 5.9 release notes: https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-9.html
+- AWS SDK for JavaScript v3 guide: https://docs.aws.amazon.com/en_us/sdk-for-javascript/v3/developer-guide/welcome.html
+- node-postgres docs: https://node-postgres.com/
+- Vitest docs: https://main.vitest.dev/guide/learn/writing-tests
+- Testcontainers for Node.js: https://node.testcontainers.org/
+- User project brief: `gsd-briefs/replays-fetcher.md`
