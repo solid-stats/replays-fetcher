@@ -184,7 +184,11 @@ async function discoverPageCandidates(input: {
     } else {
       // Source requests are intentionally sequential to avoid aggressive polling.
       // eslint-disable-next-line no-await-in-loop
-      const candidate = await discoverRowCandidate(input.sourceClient, row);
+      const candidate = await discoverRowCandidate(
+        input.sourceClient,
+        row,
+        row.source.url,
+      );
 
       if (candidate === undefined) {
         diagnostics.push(
@@ -215,19 +219,16 @@ async function discoverPageCandidates(input: {
 async function discoverRowCandidate(
   sourceClient: SourceClient,
   row: ReturnType<typeof extractReplayRows>[number],
+  sourceUrl: string,
 ): Promise<ReplayCandidate | undefined> {
-  if (row.source.url === undefined) {
-    return undefined;
-  }
-
-  const detailHtml = await sourceClient.fetchText(new URL(row.source.url));
+  const detailHtml = await sourceClient.fetchText(new URL(sourceUrl));
   const filename = extractFilenameFromDetailHtml(detailHtml);
 
   if (filename === undefined) {
     return undefined;
   }
 
-  return toReplayCandidateFromHtmlRow(filename, row, row.source.url);
+  return toReplayCandidateFromHtmlRow(filename, row, sourceUrl);
 }
 
 function collectCandidateDiagnostics(
@@ -450,6 +451,7 @@ function toPageUrl(sourceUrl: URL, page: number): URL {
   return pageUrl;
 }
 
+/* v8 ignore next 5 -- tested through injected sleep to avoid real timer delay. */
 async function defaultSleep(milliseconds: number): Promise<void> {
   await new Promise((resolve) => {
     setTimeout(resolve, milliseconds);
