@@ -5,18 +5,12 @@ import {
   S3ServiceException,
 } from "@aws-sdk/client-s3";
 
-import { calculateSha256 } from "./checksum.js";
-import { toRawReplayObjectKey } from "./object-key.js";
-
-import type { RawReplayStorageEvidence } from "./types.js";
+import type {
+  RawReplayStorageEvidence,
+  RawReplayStorageInput,
+} from "./types.js";
 import type { AppConfig } from "../config.js";
 import type { ReplayCandidate } from "../discovery/types.js";
-
-interface RawReplayStoreInput {
-  readonly bytes: Uint8Array;
-  readonly candidate: ReplayCandidate;
-  readonly fetchedAt: string;
-}
 
 interface S3Sender {
   send(command: HeadObjectCommand | PutObjectCommand): Promise<{
@@ -31,7 +25,9 @@ interface CreateS3RawReplayStorageOptions {
 }
 
 export interface S3RawReplayStorage {
-  storeRawReplay(input: RawReplayStoreInput): Promise<RawReplayStorageEvidence>;
+  storeRawReplay(
+    input: RawReplayStorageInput,
+  ): Promise<RawReplayStorageEvidence>;
 }
 
 export function createS3RawReplayStorage(
@@ -39,14 +35,12 @@ export function createS3RawReplayStorage(
 ): S3RawReplayStorage {
   return {
     async storeRawReplay(input): Promise<RawReplayStorageEvidence> {
-      const checksum = calculateSha256(input.bytes);
-      const objectKey = toRawReplayObjectKey(checksum);
       const baseEvidence = toBaseEvidence({
         bucket: options.bucket,
         candidate: input.candidate,
-        checksum,
+        checksum: input.checksum,
         fetchedAt: input.fetchedAt,
-        objectKey,
+        objectKey: input.objectKey,
         byteSize: input.bytes.byteLength,
       });
 
@@ -54,13 +48,13 @@ export function createS3RawReplayStorage(
         const head = await options.sender.send(
           new HeadObjectCommand({
             Bucket: options.bucket,
-            Key: objectKey,
+            Key: input.objectKey,
           }),
         );
 
         if (
           head.ContentLength === input.bytes.byteLength &&
-          head.Metadata?.["sha256"] === checksum
+          head.Metadata?.["sha256"] === input.checksum
         ) {
           return {
             ...baseEvidence,
@@ -89,9 +83,9 @@ export function createS3RawReplayStorage(
             Body: input.bytes,
             Bucket: options.bucket,
             ContentLength: input.bytes.byteLength,
-            Key: objectKey,
+            Key: input.objectKey,
             Metadata: {
-              sha256: checksum,
+              sha256: input.checksum,
             },
           }),
         );

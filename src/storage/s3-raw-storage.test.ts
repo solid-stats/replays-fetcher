@@ -58,7 +58,13 @@ test("storeRawReplay should HEAD then PUT missing raw replay objects", async () 
     },
   });
 
-  const result = await storage.storeRawReplay({ bytes, candidate, fetchedAt });
+  const result = await storage.storeRawReplay({
+    bytes,
+    candidate,
+    checksum,
+    fetchedAt,
+    objectKey,
+  });
 
   expect(result).toMatchObject({
     bucket,
@@ -108,7 +114,13 @@ test("storeRawReplay should skip matching existing raw replay objects", async ()
     },
   });
 
-  const result = await storage.storeRawReplay({ bytes, candidate, fetchedAt });
+  const result = await storage.storeRawReplay({
+    bytes,
+    candidate,
+    checksum,
+    fetchedAt,
+    objectKey,
+  });
 
   expect(result.status).toBe("skipped");
   expect(result.objectKey).toBe(objectKey);
@@ -134,7 +146,13 @@ test("storeRawReplay should return conflict for mismatched existing evidence", a
     },
   });
 
-  const result = await storage.storeRawReplay({ bytes, candidate, fetchedAt });
+  const result = await storage.storeRawReplay({
+    bytes,
+    candidate,
+    checksum,
+    fetchedAt,
+    objectKey,
+  });
 
   expect(result).toMatchObject({
     failureCategory: "object_conflict",
@@ -154,7 +172,13 @@ test("storeRawReplay should return failed evidence for S3 failures", async () =>
     },
   });
 
-  const result = await storage.storeRawReplay({ bytes, candidate, fetchedAt });
+  const result = await storage.storeRawReplay({
+    bytes,
+    candidate,
+    checksum,
+    fetchedAt,
+    objectKey,
+  });
 
   expect(result).toMatchObject({
     failureCategory: "s3_error",
@@ -176,7 +200,13 @@ test("storeRawReplay should return failed evidence for PUT failures", async () =
     },
   });
 
-  const result = await storage.storeRawReplay({ bytes, candidate, fetchedAt });
+  const result = await storage.storeRawReplay({
+    bytes,
+    candidate,
+    checksum,
+    fetchedAt,
+    objectKey,
+  });
 
   expect(result).toMatchObject({
     failureCategory: "s3_error",
