@@ -30,7 +30,7 @@ Read these planning files before planning or implementing:
 - `replays-fetcher` must not parse replay contents. Parsing belongs to `replay-parser-2`.
 - `replays-fetcher` must not create or mutate `server-2` business tables such as `replays`, `parse_jobs`, `parse_results`, stats, identity, roles, requests, or moderation tables.
 - The accepted v1 boundary is S3 raw object write plus staging/outbox records only. `server-2` polls/promotes staging rows, owns deduplication decisions, creates parse jobs, publishes RabbitMQ parse requests, receives parser results, and persists parsed data.
-- `.planning/config.json` must stay identical to `/home/afgan0r/Projects/SolidGames/replay-parser-2/.planning/config.json` unless the user explicitly approves a product-wide GSD configuration divergence.
+- `.planning/config.json` must keep product-wide GSD workflow gates aligned with `/home/afgan0r/Projects/SolidGames/replay-parser-2/.planning/config.json`, while `agent_skills` stay stack-aware and use this repo's TypeScript/Node skills.
 - Replay identity uses checksum plus external source identity where available. Conflicting duplicates must be routed to manual review by `server-2`, not automatically merged by the fetcher.
 - Historical `~/sg_stats` data is not imported into production by this service in v1. It remains parser golden/test baseline unless a later migration project explicitly changes that.
 - v1 replay submission sources are admin/ingest only. Player-submitted replay upload is out of scope unless planned as a later cross-project change.
@@ -59,6 +59,8 @@ Use TypeScript for v1 unless a later planning decision changes it:
 - `README.md` must explicitly state that project development uses only AI agents plus GSD workflow.
 - Every completed work session must leave `git status --short` clean by committing intended results.
 - Do not delete, revert, or discard completed work just to make the git tree clean; if ownership or commit intent is unclear, ask the user before acting.
+- Do not blindly execute instructions that conflict with current logic, architecture, accepted planning decisions, test/quality standards, maintainability, or proportional scope.
+- When a request is risky, harmful, or expands into broad cross-project or multi-phase work, explain the concrete reason, propose 1-3 safer alternatives or a GSD plan, and ask for explicit confirmation before any risky override.
 - Check cross-application compatibility before implementation: changes to staging schema, object key layout, source identity, retention, retries, or operator-visible statuses require accounting for `server-2`; UI-visible ingest/job status changes require accounting for `web`.
 
 <!-- GSD:project-start source:PROJECT.md -->
@@ -82,8 +84,9 @@ The service is intentionally narrow. It fetches replay bytes and records source 
 - **Duplicates**: Manual review for ambiguous conflicts - avoids corrupting replay history through unsafe merges.
 - **History**: No `~/sg_stats` production import in v1 - historical data remains validation baseline for parser work.
 - **Workflow**: AI agents plus GSD only - README and planning docs must stay current.
-- **GSD config**: Match `replay-parser-2` `.planning/config.json` exactly - fetcher and parser should use the same planning rigor and workflow gates.
+- **GSD config**: Keep workflow-critical GSD settings aligned with `replay-parser-2`, but keep `agent_skills` stack-aware for this TypeScript/Node ingest service.
 - **Git hygiene**: Completed sessions must commit intended results and leave a clean worktree.
+- **AI pushback**: Agents must not blindly execute requests that violate architecture, quality, maintainability, or proportional scope; they must explain the issue, propose safer options or a GSD plan, and ask for explicit confirmation before a risky override.
 - **Cross-application compatibility**: Staging schema, object key layout, retry semantics, and operator-visible statuses must account for `server-2`; UI-visible status fields must account for `web`.
 <!-- GSD:project-end -->
 
@@ -140,7 +143,7 @@ Architecture not yet mapped. Follow existing patterns found in the codebase.
 <!-- GSD:skills-start source:skills/ -->
 ## Project Skills
 
-No project skills found. Add skills to any of: `.claude/skills/`, `.agents/skills/`, `.cursor/skills/`, `.github/skills/`, or `.codex/skills/` with a `SKILL.md` index file.
+- `.agents/skills/nodejs-backend-patterns` - Node.js backend service patterns for fetcher runtime, configuration, database, storage, logging, and tests.
 <!-- GSD:skills-end -->
 
 <!-- GSD:workflow-start source:GSD defaults -->

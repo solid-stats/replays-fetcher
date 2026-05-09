@@ -24,7 +24,7 @@ Reliably discover and stage new replay files without corrupting `server-2` busin
 - [ ] Compute and persist replay checksum, object key, size, source URL/ID, discovered timestamp, fetch timestamp, and fetch status evidence.
 - [ ] Write only ingestion staging/outbox records for `server-2` promotion.
 - [ ] Avoid direct writes to `server-2` business tables such as `replays`, `parse_jobs`, `parse_results`, identity, stats, requests, or moderation tables.
-- [ ] Keep `.planning/config.json` identical to `replay-parser-2`'s GSD config unless a product-wide change explicitly updates both.
+- [ ] Keep workflow-critical `.planning/config.json` settings aligned with `replay-parser-2`, while keeping `agent_skills` stack-aware for this TypeScript/Node ingest service.
 - [ ] Support checksum plus source identity deduplication evidence.
 - [ ] Preserve conflicting duplicate evidence for manual review by `server-2` instead of auto-merging ambiguous cases.
 - [ ] Provide structured run summaries, failure categories, and exit codes suitable for scheduled operation.
@@ -74,8 +74,9 @@ The current parser project expects parse requests containing `job_id`, `replay_i
 - **Duplicates**: Manual review for ambiguous conflicts - avoids corrupting replay history through unsafe merges.
 - **History**: No `~/sg_stats` production import in v1 - historical data remains validation baseline for parser work.
 - **Workflow**: AI agents plus GSD only - README and planning docs must stay current.
-- **GSD config**: Match `replay-parser-2` `.planning/config.json` exactly - fetcher and parser should use the same planning rigor and workflow gates.
+- **GSD config**: Match `replay-parser-2` for planning rigor and workflow gates, but keep `agent_skills` stack-aware for the fetcher's TypeScript/Node stack.
 - **Git hygiene**: Completed sessions must commit intended results and leave a clean worktree.
+- **AI pushback**: Agents must not blindly execute requests that violate architecture, quality, maintainability, or proportional scope; they must explain the issue, propose safer options or a GSD plan, and ask for explicit confirmation before a risky override.
 - **Cross-application compatibility**: Staging schema, object key layout, retry semantics, and operator-visible statuses must account for `server-2`; UI-visible status fields must account for `web`.
 
 ## Key Decisions
@@ -90,7 +91,8 @@ The current parser project expects parse requests containing `job_id`, `replay_i
 | Use checksum plus source identity | Provides byte-level dedupe and source lineage. | Accepted |
 | Route duplicate conflicts to manual review | Avoids unsafe automatic merges. | Accepted |
 | Keep production historical import out of v1 | Prevents mixing parser validation data with production ingestion. | Accepted |
-| Keep GSD config identical to `replay-parser-2` | These repos are coupled product infrastructure and should share planning rigor, review depth, and workflow gates. | Accepted |
+| Keep GSD workflow aligned with `replay-parser-2` and stack-aware skills | These repos are coupled product infrastructure and should share planning rigor, review depth, and workflow gates, while each repo's agents use skills for its actual stack. | Accepted |
+| Require AI pushback on risky or disproportionate work | Blind compliance can damage architecture, cross-app contracts, and project velocity; agents should explain the risk and ask before broad or risky overrides. | Accepted |
 
 ## Evolution
 
