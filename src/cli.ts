@@ -66,10 +66,16 @@ export function buildCli(): Command {
 }
 
 function writeJson(value: unknown): void {
-  process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
+  process.stdout.write(`${JSON.stringify(value, undefined, 2)}\n`);
 }
 
-/* v8 ignore next 3 -- exercised by the installed binary, not unit tests. */
-if (import.meta.url === `file://${process.argv[1]}`) {
+const [, entrypointPath] = process.argv;
+
+/* v8 ignore next -- exercised by the installed binary, not unit tests. */
+if (
+  entrypointPath !== undefined &&
+  import.meta.url === `file://${entrypointPath}`
+) {
+  /* v8 ignore next -- exercised by the installed binary, not unit tests. */
   await buildCli().parseAsync(process.argv);
 }

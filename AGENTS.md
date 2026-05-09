@@ -40,7 +40,7 @@ Read these planning files before planning or implementing:
 Use TypeScript for v1 unless a later planning decision changes it:
 
 - Node.js 25 with TypeScript 6 for crawler and scheduled job runtime.
-- Very strict TypeScript, ESLint 10 very strict typed linting, Prettier formatting, Vitest tests, and V8 coverage gates.
+- Very strict TypeScript, ESLint 10 `all` plus very strict typed linting, import hygiene, Unicorn rules, Prettier formatting, Vitest 4 tests, and V8 coverage gates.
 - S3-compatible object storage client for raw replay writes.
 - PostgreSQL client for staging/outbox writes only.
 - Structured logging and explicit run summaries.
@@ -95,7 +95,7 @@ The service is intentionally narrow. It fetches replay bytes and records source 
 - **Node.js:** target Node.js 25 for new work so the project starts on the current toolchain line.
 - **TypeScript:** use TypeScript 6 from project start, with strict compiler settings and typed linting.
 - **Module style:** prefer ESM unless implementation discovers a dependency constraint.
-- **Package manager:** align with adjacent Solid Games repos during Phase 1.
+- **Package manager:** use pnpm 11 across TypeScript Solid Games repos.
 ## Service Libraries
 - **S3-compatible storage:** use AWS SDK for JavaScript v3 `@aws-sdk/client-s3`. It is modular, TypeScript-oriented, and supports S3-compatible endpoints with explicit endpoint/region/path-style configuration.
 - **PostgreSQL:** use `pg` directly for staging/outbox writes unless Phase 1 chooses a schema/migration tool. The staging contract is narrow enough that raw SQL plus typed payloads is easier to audit than a broad ORM.
@@ -115,7 +115,7 @@ The service is intentionally narrow. It fetches replay bytes and records source 
 ## Sources
 - Node.js Releases: https://nodejs.org/en/about/releases/
 - Node.js Release Working Group schedule: https://github.com/nodejs/Release
-- TypeScript 5.9 release notes: https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-9.html
+- TypeScript release notes: https://www.typescriptlang.org/docs/handbook/release-notes/overview.html
 - AWS SDK for JavaScript v3 guide: https://docs.aws.amazon.com/en_us/sdk-for-javascript/v3/developer-guide/welcome.html
 - AWS S3 JavaScript v3 examples: https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/javascript_s3_code_examples.html
 - node-postgres pooling docs: https://node-postgres.com/features/pooling

@@ -14,7 +14,7 @@ Use a small strict TypeScript service on Node.js LTS with explicit adapters for 
 - **Node.js:** target current Active LTS for new work. As of 2026-05-09, Node.js 24 is Active LTS according to the Node.js release schedule.
 - **TypeScript:** use the latest stable TypeScript release available at implementation time. TypeScript 5.9 docs are current as of April 2026 and include `node20` module behavior; phase planning should lock exact compiler settings.
 - **Module style:** prefer ESM unless implementation discovers a dependency constraint.
-- **Package manager:** align with adjacent Solid Games repos during Phase 1.
+- **Package manager:** use pnpm 11 across TypeScript Solid Games repos.
 
 ## Service Libraries
 

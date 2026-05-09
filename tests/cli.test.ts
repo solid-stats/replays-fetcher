@@ -3,7 +3,7 @@ import { afterEach, expect, test, vi } from "vitest";
 import { buildCli } from "../src/cli.js";
 import * as configModule from "../src/config.js";
 
-const validEnv = {
+const validEnvironment = {
   DATABASE_URL: "postgres://user:pass@localhost:5432/replays",
   REPLAY_SOURCE_URL: "https://example.test/replays",
   S3_ACCESS_KEY_ID: "access-key",
@@ -34,7 +34,7 @@ afterEach(() => {
 });
 
 test("buildCli should write redacted check output when valid configuration is provided", async () => {
-  for (const [key, value] of Object.entries(validEnv)) {
+  for (const [key, value] of Object.entries(validEnvironment)) {
     vi.stubEnv(key, value);
   }
   const writes: string[] = [];

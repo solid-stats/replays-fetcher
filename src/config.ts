@@ -1,33 +1,40 @@
 import { z } from "zod";
 
-const booleanFromEnv = z
-  .union([z.boolean(), z.string()])
-  .optional()
-  .transform((value) => {
-    if (value === undefined) return true;
-    if (typeof value === "boolean") return value;
+const booleanFromEnvironment = z
+    .union([z.boolean(), z.string()])
+    .optional()
+    .transform((value) => {
+      if (value === undefined) {
+        return true;
+      }
+      if (typeof value === "boolean") {
+        return value;
+      }
 
-    const normalized = value.trim().toLowerCase();
-    if (["1", "true", "yes", "y"].includes(normalized)) return true;
-    if (["0", "false", "no", "n"].includes(normalized)) return false;
+      const normalized = value.trim().toLowerCase();
+      if (["1", "true", "yes", "y"].includes(normalized)) {
+        return true;
+      }
+      if (["0", "false", "no", "n"].includes(normalized)) {
+        return false;
+      }
 
-    throw new Error("Expected boolean-like value");
+      throw new Error("Expected boolean-like value");
+    }),
+  configSchema = z.object({
+    sourceUrl: z.url(),
+    s3: z.object({
+      endpoint: z.url(),
+      region: z.string().min(1),
+      bucket: z.string().min(1),
+      accessKeyId: z.string().min(1),
+      secretAccessKey: z.string().min(1),
+      forcePathStyle: booleanFromEnvironment,
+    }),
+    staging: z.object({
+      databaseUrl: z.url(),
+    }),
   });
-
-const configSchema = z.object({
-  sourceUrl: z.string().url(),
-  s3: z.object({
-    endpoint: z.string().url(),
-    region: z.string().min(1),
-    bucket: z.string().min(1),
-    accessKeyId: z.string().min(1),
-    secretAccessKey: z.string().min(1),
-    forcePathStyle: booleanFromEnv,
-  }),
-  staging: z.object({
-    databaseUrl: z.string().url(),
-  }),
-});
 
 export type AppConfig = z.infer<typeof configSchema>;
 
@@ -45,17 +52,17 @@ export class ConfigError extends Error {
 
 export function loadConfig(source: ConfigSource = process.env): AppConfig {
   const result = configSchema.safeParse({
-    sourceUrl: source.REPLAY_SOURCE_URL,
+    sourceUrl: source["REPLAY_SOURCE_URL"],
     s3: {
-      endpoint: source.S3_ENDPOINT,
-      region: source.S3_REGION,
-      bucket: source.S3_BUCKET,
-      accessKeyId: source.S3_ACCESS_KEY_ID,
-      secretAccessKey: source.S3_SECRET_ACCESS_KEY,
-      forcePathStyle: source.S3_FORCE_PATH_STYLE,
+      endpoint: source["S3_ENDPOINT"],
+      region: source["S3_REGION"],
+      bucket: source["S3_BUCKET"],
+      accessKeyId: source["S3_ACCESS_KEY_ID"],
+      secretAccessKey: source["S3_SECRET_ACCESS_KEY"],
+      forcePathStyle: source["S3_FORCE_PATH_STYLE"],
     },
     staging: {
-      databaseUrl: source.DATABASE_URL,
+      databaseUrl: source["DATABASE_URL"],
     },
   });
 
@@ -87,6 +94,8 @@ export function redactConfig(config: AppConfig): Omit<AppConfig, "s3"> & {
 }
 
 function redactSecret(value: string): string {
-  if (value.length <= 4) return "****";
+  if (value.length <= 4) {
+    return "****";
+  }
   return `${value.slice(0, 2)}****${value.slice(-2)}`;
 }

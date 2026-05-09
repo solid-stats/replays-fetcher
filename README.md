@@ -56,25 +56,25 @@ latest starting point for new work: TypeScript 6, ESLint 10,
 Install dependencies:
 
 ```bash
-npm install
+pnpm install
 ```
 
 Validate the repository:
 
 ```bash
-npm run format
-npm run lint
-npm run typecheck
-npm test
-npm run test:coverage
-npm run build
-npm run verify
+pnpm run format
+pnpm run lint
+pnpm run typecheck
+pnpm test
+pnpm run test:coverage
+pnpm run build
+pnpm run verify
 ```
 
 Validate runtime configuration:
 
 ```bash
-npm run check
+pnpm run check
 ```
 
 The `check` command requires these environment variables:
