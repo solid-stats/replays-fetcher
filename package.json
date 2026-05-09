@@ -18,6 +18,7 @@
     "verify": "pnpm run format && pnpm run lint && pnpm run typecheck && pnpm test && pnpm run test:coverage && pnpm run build"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1045.0",
     "commander": "^14.0.3",
     "zod": "^4.4.3"
   },

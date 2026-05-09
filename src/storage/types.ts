@@ -19,6 +19,7 @@ export interface RawReplaySourceEvidence {
 
 export interface RawReplayStorageEvidence extends RawReplayObjectIdentity {
   readonly byteSize: number;
+  readonly failureCategory?: "object_conflict" | "s3_error";
   readonly fetchedAt: string;
   readonly source: ReplayCandidate["source"];
   readonly sourceFilename: string;
