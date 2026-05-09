@@ -6,9 +6,20 @@ import {
   loadConfig,
   loadSourceConfig,
   redactConfig,
+  type SourceConfig,
 } from "./config.js";
 import { discoverReplaysDryRun } from "./discovery/discover.js";
 import { createSourceClient } from "./discovery/source-client.js";
+
+type SourceConfigResult =
+  | {
+      readonly config: SourceConfig;
+      readonly ok: true;
+    }
+  | {
+      readonly issues: readonly string[];
+      readonly ok: false;
+    };
 
 export function buildCli(): Command {
   const program = new Command();
@@ -68,11 +79,21 @@ export function buildCli(): Command {
         return;
       }
 
-      const config = loadSourceConfig();
-      const sourceClient = createSourceClient(config);
+      const configResult = loadDryRunSourceConfig();
+      if (!configResult.ok) {
+        writeJson({
+          ok: false,
+          error: "discover dry-run configuration is invalid",
+          issues: configResult.issues,
+        });
+        process.exitCode = 2;
+        return;
+      }
+
+      const sourceClient = createSourceClient(configResult.config);
       const report = await discoverReplaysDryRun({
         sourceClient,
-        sourceUrl: new URL(config.sourceUrl),
+        sourceUrl: new URL(configResult.config.sourceUrl),
       });
 
       writeJson(report);
@@ -90,6 +111,25 @@ export function buildCli(): Command {
     });
 
   return program;
+}
+
+function loadDryRunSourceConfig(): SourceConfigResult {
+  try {
+    return {
+      config: loadSourceConfig(),
+      ok: true,
+    };
+  } catch (error) {
+    if (error instanceof ConfigError) {
+      return {
+        issues: error.issues,
+        ok: false,
+      };
+    }
+
+    /* v8 ignore next -- defensive guard for unexpected config loader failures. */
+    throw error;
+  }
 }
 
 function writeJson(value: unknown): void {

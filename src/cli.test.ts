@@ -33,6 +33,7 @@ interface CliOutput {
     readonly severity: string;
   }[];
   readonly error?: string;
+  readonly issues?: readonly string[];
   readonly mode?: string;
   readonly ok: boolean;
 }
@@ -279,6 +280,40 @@ test("buildCli should report rejected source fetches as structured dry-run failu
     ok: false,
   });
   expect(process.exitCode).toBe(2);
+});
+
+test("buildCli should report dry-run config errors as structured JSON", async () => {
+  const writes: string[] = [];
+  vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+    writes.push(String(chunk));
+    return true;
+  });
+
+  await buildCli().parseAsync([
+    "node",
+    "replays-fetcher",
+    "discover",
+    "--dry-run",
+  ]);
+
+  expect(parseCliOutput(writes)).toMatchObject({
+    error: "discover dry-run configuration is invalid",
+    issues: expect.arrayContaining([
+      expect.stringContaining("sourceUrl"),
+    ]) as string[],
+    ok: false,
+  });
+  expect(process.exitCode).toBe(2);
+});
+
+test("buildCli should rethrow unexpected dry-run config failures", async () => {
+  vi.spyOn(configModule, "loadSourceConfig").mockImplementation(() => {
+    throw new TypeError("unexpected dry-run config crash");
+  });
+
+  await expect(
+    buildCli().parseAsync(["node", "replays-fetcher", "discover", "--dry-run"]),
+  ).rejects.toThrow("unexpected dry-run config crash");
 });
 
 test("buildCli should reject discover without dry-run until Phase 3", async () => {
