@@ -36,8 +36,8 @@ created: 2026-05-09
 | 02-01-02 | 01 | 2 | SRC-02, SRC-05 | T-02-02 | Candidate order and identity stay stable | unit | `pnpm test` | yes | pending |
 | 02-02-01 | 02 | 3 | SRC-03, SRC-04 | T-02-03 | Source failures are explicit and non-secret | unit | `pnpm test` | yes | pending |
 | 02-02-02 | 02 | 3 | SRC-03, SRC-04 | T-02-04 | Rate limiting avoids aggressive polling | unit | `pnpm test` | yes | pending |
-| 02-03-01 | 03 | 4 | TEST-05 | T-02-01 | Dry-run cannot mutate S3/staging/parser outputs | unit/grep | `pnpm run verify` | yes | pending |
-| 02-03-02 | 03 | 4 | RUN-03, SRC-01, TEST-05 | T-02-05 | Docs match command behavior | docs/grep | `pnpm run verify` | yes | pending |
+| 02-03-01 | 03 | 4 | TEST-05 | T-02-01 | Dry-run cannot mutate S3/staging/parser outputs | unit/grep | `pnpm run verify` | yes | passed |
+| 02-03-02 | 03 | 4 | RUN-03, SRC-01, TEST-05 | T-02-05 | Docs match command behavior | docs/grep | `pnpm run verify` | yes | passed |
 
 ## Wave 0 Requirements
 
