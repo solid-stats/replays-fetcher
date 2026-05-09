@@ -15,6 +15,7 @@ This roadmap builds `replays-fetcher` as a narrow TypeScript scheduled ingest se
 - [x] **Phase 3: Raw Replay Storage** - Fetch replay bytes, compute checksums, and write idempotent S3 raw objects.
 - [x] **Phase 4: Staging and Promotion Handoff** - Write staging/outbox records compatible with `server-2` promotion and conflict handling.
 - [x] **Phase 5: Scheduled Operations and Validation** - Add run-once scheduling behavior, observability, failure taxonomy, and integration tests.
+- [ ] **Phase 6: Close v1 audit gaps: connectivity checks and discovered timestamp staging evidence** - Close milestone audit blockers before v1 archival.
 
 ## Phase Details
 
@@ -130,7 +131,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -139,6 +140,17 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 3. Raw Replay Storage | 4/4 | Complete | 2026-05-09 |
 | 4. Staging and Promotion Handoff | 4/4 | Complete | 2026-05-09 |
 | 5. Scheduled Operations and Validation | 4/4 | Complete | 2026-05-09 |
+| 6. Close v1 audit gaps: connectivity checks and discovered timestamp staging evidence | 0/0 | Not planned | - |
+
+### Phase 6: Close v1 audit gaps: connectivity checks and discovered timestamp staging evidence
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 5
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 6 to break down)
 
 ---
 *Roadmap created: 2026-05-09*

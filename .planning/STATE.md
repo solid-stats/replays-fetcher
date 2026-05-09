@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: initial ingest service
-status: complete
-last_updated: "2026-05-09T13:42:00.000Z"
+status: ready_to_plan
+last_updated: "2026-05-09T16:20:00.000Z"
 last_activity: 2026-05-09
 progress:
-  total_phases: 5
+  total_phases: 6
   completed_phases: 5
   total_plans: 17
   completed_plans: 17
-  percent: 100
+  percent: 83
 ---
 
 # Project State
@@ -20,16 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-09)
 
 **Core value:** Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
-**Current focus:** v1 initial ingest service complete
+**Current focus:** Phase 6 - Close v1 audit gaps
 
 ## Current Position
 
-Phase: 5
-Plan: Complete
-Status: Phase 5 complete; v1 initial ingest service implemented and verified
+Phase: 6
+Plan: Not planned
+Status: Ready to plan audit gap closure work
 Last activity: 2026-05-09
 
-Progress: [██████████] 100%
+Progress: [████████░░] 83%
 
 ## Accumulated Context
 
@@ -75,6 +75,10 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 05]: `run-once` is implemented as the scheduled v1 entrypoint and emits one structured JSON summary.
 - [Phase 05]: Unit tests remain colocated beside source files under `src/`.
 
+### Roadmap Evolution
+
+- Phase 6 added: Close v1 audit gaps: connectivity checks and discovered timestamp staging evidence
+
 ### Execution Metrics
 
 | Phase | Plan | Duration | Tasks | Files |
@@ -104,4 +108,4 @@ None yet.
 
 ## Next Step
 
-Use `$gsd-ship` or a project-specific release/PR workflow to review and package the completed v1 ingest service.
+Run `$gsd-plan-phase 6` to plan closure work for the v1 milestone audit blockers.
