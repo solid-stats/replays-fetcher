@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: initial ingest service
 status: planning
-stopped_at: GSD initialization complete
+stopped_at: Phase 1 complete
 last_updated: "2026-05-09T11:22:50+07:00"
-last_activity: "2026-05-09 - Initialized replays-fetcher planning from gsd-briefs/replays-fetcher.md"
+last_activity: "2026-05-09 - Completed Phase 1 project foundation and integration contract"
 progress:
   total_phases: 5
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 1
+  total_plans: 1
+  completed_plans: 1
+  percent: 20
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-09)
 
 **Core value:** Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
-**Current focus:** Phase 1 - Project Foundation and Integration Contract
+**Current focus:** Phase 2 - Source Discovery and Dry Run
 
 ## Current Position
 
-Phase: 1 (project-foundation-and-integration-contract)
+Phase: 2 (source-discovery-and-dry-run)
 Plan: Not created
 Status: Ready to plan
-Last activity: 2026-05-09 - Initialized replays-fetcher planning from `gsd-briefs/replays-fetcher.md`
+Last activity: 2026-05-09 - Completed Phase 1 project foundation and integration contract
 
-Progress: [----------] 0%
+Progress: [##--------] 20%
 
 ## Accumulated Context
 
@@ -49,6 +49,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - Ambiguous duplicate conflicts go to manual review.
 - Production historical import from `~/sg_stats` is out of scope for v1.
 - v1 replay submission sources are admin/ingest only.
+- Phase 1 established strict TypeScript, Vitest, ESLint, Prettier, config validation, the `check` command, and integration-contract docs.
 
 ### Pending Todos
 
@@ -64,4 +65,4 @@ None yet.
 
 ## Next Step
 
-Run `$gsd-plan-phase 1` in this repository to create executable plans for the project foundation and integration contract.
+Run `$gsd-plan-phase 2` in this repository to create executable plans for source discovery and dry-run behavior.

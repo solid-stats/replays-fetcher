@@ -14,7 +14,7 @@ Reliably discover and stage new replay files without corrupting `server-2` busin
 
 ### Validated
 
-(None yet - ship to validate)
+- [x] Phase 1 established a current README, AGENTS instructions, GSD planning docs, strict TypeScript foundation, config validation, and explicit cross-app ownership contract.
 
 ### Active
 
@@ -28,7 +28,7 @@ Reliably discover and stage new replay files without corrupting `server-2` busin
 - [ ] Support checksum plus source identity deduplication evidence.
 - [ ] Preserve conflicting duplicate evidence for manual review by `server-2` instead of auto-merging ambiguous cases.
 - [ ] Provide structured run summaries, failure categories, and exit codes suitable for scheduled operation.
-- [ ] Use strict TypeScript, linting, formatting, and tests.
+- [x] Use strict TypeScript, linting, formatting, and tests.
 - [ ] Keep production historical import from `~/sg_stats` out of v1.
 
 ### Out of Scope
@@ -82,15 +82,15 @@ The current parser project expects parse requests containing `job_id`, `replay_i
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Split ingest into `replays-fetcher` | Replay discovery is distinct from parsing and backend business state. | - Pending |
-| Use TypeScript | Matches `server-2` ecosystem and keeps HTTP/source/S3/PostgreSQL integration practical. | - Pending |
-| Run as scheduled job in v1 | Lower operational complexity than an always-on crawler. | - Pending |
-| Write S3 raw objects plus staging rows only | Preserves `server-2` as PostgreSQL source of truth. | - Pending |
-| Let `server-2` create `parse_jobs` | Keeps job lifecycle, retry, admin visibility, and RabbitMQ publishing centralized. | - Pending |
-| Use checksum plus source identity | Provides byte-level dedupe and source lineage. | - Pending |
-| Route duplicate conflicts to manual review | Avoids unsafe automatic merges. | - Pending |
-| Keep production historical import out of v1 | Prevents mixing parser validation data with production ingestion. | - Pending |
-| Keep GSD config identical to `replay-parser-2` | These repos are coupled product infrastructure and should share planning rigor, review depth, and workflow gates. | - Pending |
+| Split ingest into `replays-fetcher` | Replay discovery is distinct from parsing and backend business state. | Accepted |
+| Use TypeScript | Matches `server-2` ecosystem and keeps HTTP/source/S3/PostgreSQL integration practical. | Accepted |
+| Run as scheduled job in v1 | Lower operational complexity than an always-on crawler. | Accepted |
+| Write S3 raw objects plus staging rows only | Preserves `server-2` as PostgreSQL source of truth. | Accepted |
+| Let `server-2` create `parse_jobs` | Keeps job lifecycle, retry, admin visibility, and RabbitMQ publishing centralized. | Accepted |
+| Use checksum plus source identity | Provides byte-level dedupe and source lineage. | Accepted |
+| Route duplicate conflicts to manual review | Avoids unsafe automatic merges. | Accepted |
+| Keep production historical import out of v1 | Prevents mixing parser validation data with production ingestion. | Accepted |
+| Keep GSD config identical to `replay-parser-2` | These repos are coupled product infrastructure and should share planning rigor, review depth, and workflow gates. | Accepted |
 
 ## Evolution
 
@@ -110,4 +110,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state.
 
 ---
-*Last updated: 2026-05-09 after GSD initialization*
+*Last updated: 2026-05-09 after Phase 1 completion*

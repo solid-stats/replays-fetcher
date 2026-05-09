@@ -9,25 +9,25 @@ Requirements for the initial ingest service release. Each maps to roadmap phases
 
 ### Project Documentation
 
-- [ ] **DOC-01**: Repository has a current root `README.md` explaining purpose, boundaries, current phase, planned commands, architecture direction, and AI + GSD-only workflow.
-- [ ] **DOC-02**: Repository has `AGENTS.md` with product-wide GSD rules, cross-application compatibility rules, and strict fetcher ownership boundaries.
-- [ ] **DOC-03**: Planning docs capture accepted decisions: TypeScript, scheduled job, S3 raw writes, staging/outbox only, `server-2` parse-job ownership, no production historical import in v1.
-- [ ] **DOC-04**: `.planning/config.json` is identical to `replay-parser-2`'s `.planning/config.json`, and docs state that the configs must stay synchronized unless the user approves a product-wide divergence.
+- [x] **DOC-01**: Repository has a current root `README.md` explaining purpose, boundaries, current phase, planned commands, architecture direction, and AI + GSD-only workflow.
+- [x] **DOC-02**: Repository has `AGENTS.md` with product-wide GSD rules, cross-application compatibility rules, and strict fetcher ownership boundaries.
+- [x] **DOC-03**: Planning docs capture accepted decisions: TypeScript, scheduled job, S3 raw writes, staging/outbox only, `server-2` parse-job ownership, no production historical import in v1.
+- [x] **DOC-04**: `.planning/config.json` is identical to `replay-parser-2`'s `.planning/config.json`, and docs state that the configs must stay synchronized unless the user approves a product-wide divergence.
 
 ### Product Integration
 
-- [ ] **INT-01**: `replays-fetcher` treats Solid Stats as a multi-project product with clear boundaries across `replays-fetcher`, `replay-parser-2`, `server-2`, and `web`.
-- [ ] **INT-02**: Fetcher writes only raw replay objects and ingestion staging/outbox records; it never writes `server-2` business tables directly.
-- [ ] **INT-03**: `server-2` remains responsible for staging promotion, canonical replay records, parse job creation, RabbitMQ parse request publication, retry policy, duplicate conflict handling, and admin visibility.
-- [ ] **INT-04**: Staging schema, S3 object key layout, source identity, and ingest status changes are reviewed for compatibility with `server-2` and, where UI-visible, `web`.
+- [x] **INT-01**: `replays-fetcher` treats Solid Stats as a multi-project product with clear boundaries across `replays-fetcher`, `replay-parser-2`, `server-2`, and `web`.
+- [x] **INT-02**: Fetcher writes only raw replay objects and ingestion staging/outbox records; it never writes `server-2` business tables directly.
+- [x] **INT-03**: `server-2` remains responsible for staging promotion, canonical replay records, parse job creation, RabbitMQ parse request publication, retry policy, duplicate conflict handling, and admin visibility.
+- [x] **INT-04**: Staging schema, S3 object key layout, source identity, and ingest status changes are reviewed for compatibility with `server-2` and, where UI-visible, `web`.
 
 ### Runtime and Configuration
 
-- [ ] **RUN-01**: Service is implemented as a strict TypeScript application.
+- [x] **RUN-01**: Service is implemented as a strict TypeScript application.
 - [ ] **RUN-02**: Service supports a scheduled `run-once` execution mode suitable for cron/container scheduling.
 - [ ] **RUN-03**: Service supports a dry-run discovery mode that reads the source and reports candidates without writing S3 or staging records.
-- [ ] **RUN-04**: Service supports a config/connectivity check mode for source, S3, and staging database settings.
-- [ ] **RUN-05**: Required environment/config values are validated before a fetch cycle mutates storage or staging state.
+- [x] **RUN-04**: Service supports a config/connectivity check mode for source, S3, and staging database settings.
+- [x] **RUN-05**: Required environment/config values are validated before a fetch cycle mutates storage or staging state.
 
 ### Source Discovery
 
@@ -100,19 +100,19 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DOC-01 | Phase 1 | Pending |
-| DOC-02 | Phase 1 | Pending |
-| DOC-03 | Phase 1 | Pending |
-| DOC-04 | Phase 1 | Pending |
-| INT-01 | Phase 1 | Pending |
-| INT-02 | Phase 1 | Pending |
-| INT-03 | Phase 1 | Pending |
-| INT-04 | Phase 1 | Pending |
-| RUN-01 | Phase 1 | Pending |
+| DOC-01 | Phase 1 | Complete |
+| DOC-02 | Phase 1 | Complete |
+| DOC-03 | Phase 1 | Complete |
+| DOC-04 | Phase 1 | Complete |
+| INT-01 | Phase 1 | Complete |
+| INT-02 | Phase 1 | Complete |
+| INT-03 | Phase 1 | Complete |
+| INT-04 | Phase 1 | Complete |
+| RUN-01 | Phase 1 | Complete |
 | RUN-02 | Phase 5 | Pending |
 | RUN-03 | Phase 2 | Pending |
-| RUN-04 | Phase 1 | Pending |
-| RUN-05 | Phase 1 | Pending |
+| RUN-04 | Phase 1 | Complete |
+| RUN-05 | Phase 1 | Complete |
 | SRC-01 | Phase 2 | Pending |
 | SRC-02 | Phase 2 | Pending |
 | SRC-03 | Phase 2 | Pending |
@@ -145,4 +145,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-05-09*
-*Last updated: 2026-05-09 after GSD initialization*
+*Last updated: 2026-05-09 after Phase 1 completion*

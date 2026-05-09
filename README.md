@@ -2,7 +2,7 @@
 
 `replays-fetcher` is the ingest service for Solid Stats. It discovers new OCAP replay files from the external replay source, stores raw replay objects in S3-compatible storage, and writes ingestion staging records that `server-2` promotes into canonical replay records and parse jobs.
 
-This repository is initialized for planning only. It does not yet contain the TypeScript application, source adapter, S3 writer, staging schema integration, scheduled runner, or tests.
+This repository now contains the Phase 1 TypeScript foundation: package scripts, strict compiler settings, config validation, a `check` command, tests, and integration-contract docs. Source discovery, S3 writes, staging schema integration, and scheduled execution are planned in later phases.
 
 ## Product Boundary
 
@@ -37,7 +37,7 @@ Project planning lives in `.planning/`:
 - `.planning/STATE.md` - current GSD state.
 - `.planning/research/SUMMARY.md` - architecture findings and risks.
 
-Current phase: Phase 1, Project Foundation and Integration Contract. Run `$gsd-plan-phase 1` to create executable plans.
+Current phase: Phase 1, Project Foundation and Integration Contract. Phase 1 implements the repository foundation and documents the ingest handoff contract.
 
 ## Development Workflow
 
@@ -47,19 +47,60 @@ Development is performed only by AI agents using the GSD workflow. Direct non-GS
 
 Before implementation work, run the next GSD step from `.planning/STATE.md`. Completed work sessions must commit intended results and leave `git status --short` clean.
 
-## Planned Commands
+## Local Commands
 
-Commands are not implemented yet. Expected v1 shape:
+Install dependencies:
 
 ```bash
-# Run one scheduled fetch cycle
-replays-fetcher run-once
+npm install
+```
+
+Validate the repository:
+
+```bash
+npm test
+npm run typecheck
+npm run lint
+npm run build
+```
+
+Validate runtime configuration:
+
+```bash
+npm run check
+```
+
+The `check` command requires these environment variables:
+
+- `REPLAY_SOURCE_URL`
+- `S3_ENDPOINT`
+- `S3_REGION`
+- `S3_BUCKET`
+- `S3_ACCESS_KEY_ID`
+- `S3_SECRET_ACCESS_KEY`
+- `DATABASE_URL`
+
+Optional:
+
+- `S3_FORCE_PATH_STYLE` defaults to `true`.
+
+## Planned Commands
+
+Expected v1 command shape:
+
+```bash
+# Validate config before ingest work
+replays-fetcher check
 
 # Dry-run discovery without writing S3 or staging records
 replays-fetcher discover --dry-run
 
-# Validate config and storage/database connectivity
-replays-fetcher check
+# Run one scheduled fetch cycle
+replays-fetcher run-once
 ```
 
-Exact commands will be locked during implementation phases.
+`discover --dry-run` is planned for Phase 2. Raw S3 writes are planned for Phase 3. Staging/outbox writes are planned for Phase 4. `run-once` scheduled operation is planned for Phase 5.
+
+## Contract Docs
+
+See `docs/integration-contract.md` for the ownership boundary with `server-2`, `replay-parser-2`, and `web`.
