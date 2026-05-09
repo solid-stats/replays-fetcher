@@ -15,11 +15,11 @@ Reliably discover and stage new replay files without corrupting `server-2` busin
 ### Validated
 
 - [x] Phase 1 established a current README, AGENTS instructions, GSD planning docs, strict TypeScript foundation, config validation, and explicit cross-app ownership contract.
+- [x] Phase 2 established source discovery dry-run mode with direct/SSH source transport, structured candidate reports, diagnostics, pacing, no-mutation guards, and live validation against `https://sg.zone/replays`.
 
 ### Active
 
 - [ ] Discover new replay candidates from the external replay source through an idempotent scheduled job.
-- [ ] Support dry-run discovery so operators can inspect candidates without writing S3 objects or staging rows.
 - [ ] Store fetched raw replay files in S3-compatible storage under a deterministic `raw/` object layout.
 - [ ] Compute and persist replay checksum, object key, size, source URL/ID, discovered timestamp, fetch timestamp, and fetch status evidence.
 - [ ] Write only ingestion staging/outbox records for `server-2` promotion.
@@ -95,6 +95,7 @@ The current parser project expects parse requests containing `job_id`, `replay_i
 | Keep GSD workflow aligned with `replay-parser-2` and stack-aware skills | These repos are coupled product infrastructure and should share planning rigor, review depth, and workflow gates, while each repo's agents use skills for its actual stack. | Accepted |
 | Require AI pushback on risky or disproportionate work | Blind compliance can damage architecture, cross-app contracts, and project velocity; agents should explain the risk and ask before broad or risky overrides. | Accepted |
 | Apply risk-based compatibility checks product-wide | Fetcher changes can stay local only when they do not affect adjacent contracts; staging, object storage, parser handoff, API/data, auth/moderation, and UI-visible behavior require adjacent evidence or a user question. | Accepted |
+| Keep source discovery dry-run read-only | Operators need to inspect replay candidates safely before storage/staging phases; Phase 2 validates direct and SSH source reads without S3, database, parser, local replay-list, or `server-2` writes. | Accepted |
 
 ## Evolution
 
@@ -114,4 +115,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state.
 
 ---
-*Last updated: 2026-05-09 after Phase 1 completion*
+*Last updated: 2026-05-09 after Phase 2 completion*

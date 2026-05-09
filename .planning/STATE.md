@@ -20,7 +20,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-09)
 
 **Core value:** Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
-**Current focus:** Phase 02 — source-discovery-and-dry-run
+**Current focus:** Phase 3 - Raw Replay Storage
 
 ## Current Position
 
@@ -58,6 +58,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 02]: Discovery source requests are sequentially paced by default with a 2000 ms delay and injectable sleep for tests.
 - [Phase 02]: Dry-run remains read-only with test and docs guards against S3, PostgreSQL, parser artifact, local replay-list, and run-once mutation surfaces.
 - [Phase 02]: README documents the Phase 2 operator dry-run command and SSH source transport as operator-managed, not the old relay service.
+- [Phase 02]: Live direct-source dry-run validation against `https://sg.zone/replays` returned `ok: true`, 30 candidates, and 0 diagnostics without S3/staging configuration.
 
 ### Execution Metrics
 
@@ -71,7 +72,6 @@ None yet.
 
 ### Blockers/Concerns
 
-- Exact external replay source URL/API/HTML shape is not documented yet.
 - Exact staging table/schema and whether it lives in the `server-2` database or separate schema still need to be planned with `server-2`.
 - Exact raw replay S3 object key format is not locked yet.
 - Rate-limit/backoff expectations for the external source are not locked yet.
@@ -79,4 +79,4 @@ None yet.
 
 ## Next Step
 
-Plan Phase 03 raw replay storage.
+Run `$gsd-plan-phase 3` to plan raw replay storage.
