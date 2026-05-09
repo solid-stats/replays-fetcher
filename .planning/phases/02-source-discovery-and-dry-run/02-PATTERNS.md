@@ -29,6 +29,7 @@
 ## New Files to Introduce
 
 - `src/discovery/types.ts` - `ReplayCandidate`, `DiscoveryReport`, `DiscoveryDiagnostic`, `SourceClient`, and options types.
+- `src/discovery/source-client.ts` - direct HTTP source client and optional SSH-backed source client behind the same `SourceClient` interface.
 - `src/discovery/html.ts` - pure HTML parsing helpers for list rows and detail filename extraction.
 - `src/discovery/discover.ts` - orchestrates page fetches, detail fetches, max-pages, candidate ordering, diagnostics, and report creation.
 - `src/discovery/rate-limit.ts` - injectable sleep/sequential pacing helper if the pacing logic would otherwise complicate tests.
@@ -69,3 +70,4 @@ Phase 2 should parse conservatively and report malformed rows instead of silentl
 - Do not import `includeReplays.json` or `excludeReplays.json` behavior.
 - Do not write S3, database, parser artifacts, or `server-2` business tables.
 - Do not make tests depend on live `sg.zone` availability.
+- Do not rebuild the old relay path. If live access is needed, use a narrow configured SSH source transport and mock it in tests.

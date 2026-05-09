@@ -44,6 +44,8 @@ The old parser also persists `replaysList.json`, applies include/exclude config,
 
 Planning attempted `https://sg.zone/replays` with a browser-like user agent and a 20 second timeout. Both header and body requests timed out with zero bytes. This confirms that live source access is not reliable enough to be the only acceptance path. The implementation should support live discovery, but tests and plan verification must be fixture/mock driven.
 
+The user clarified that `sg.zone` access should go through SSH because they have a server allowlisted by Cloudflare. The previous relay approach is considered too complex. The implementation should therefore expose a narrow optional source transport, not a relay subsystem: direct HTTP by default, and SSH-backed remote fetching when configured. Tests should mock command execution and should not require a live SSH server.
+
 ### Report Contract
 
 The dry-run report should be treated as a Phase 2 contract because Phase 3 will consume the candidate shape for raw byte fetching and Phase 4 will consume source evidence for staging. The report should include:
@@ -75,6 +77,7 @@ Diagnostics should have stable categories and severities. Item-level diagnostics
 Recommended implementation modules:
 
 - `src/discovery/types.ts` for report, candidate, diagnostic, and source client interfaces.
+- `src/discovery/source-client.ts` for direct HTTP source fetching plus optional SSH-backed fetching behind the same `SourceClient` interface.
 - `src/discovery/html.ts` for list/detail HTML parsing helpers.
 - `src/discovery/discover.ts` for pagination, detail fetching, identity normalization, diagnostic accumulation, pacing, and deterministic ordering.
 - `src/discovery/rate-limit.ts` for sequential delay behavior.
@@ -82,18 +85,20 @@ Recommended implementation modules:
 
 ### Validation Architecture
 
-Use Vitest fixture/mocked source-client tests as the primary validation path. Avoid live source calls in automated tests. The key behaviors are deterministic report shape, filename extraction precedence, duplicate/malformed diagnostics, source-level failure exit behavior, max-pages limiting, sequential delay injection through a fake clock or injected sleep function, and proof that dry-run does not call storage/staging/parser code.
+Use Vitest fixture/mocked source-client tests as the primary validation path. Avoid live source calls in automated tests. The key behaviors are deterministic report shape, filename extraction precedence, duplicate/malformed diagnostics, source-level failure exit behavior, SSH transport command construction/error mapping, max-pages limiting, sequential delay injection through a fake clock or injected sleep function, and proof that dry-run does not call storage/staging/parser code.
 
 ## Plan Implications
 
 1. Start with a happy-path vertical slice that makes `discover --dry-run` produce a deterministic JSON report from mocked fixture source pages.
-2. Add legacy-compatible pagination and detail-page extraction with `#filename` before `body[data-ocap]`, preserving filename as source evidence.
-3. Add diagnostics, max-pages, source failure exits, and sequential pacing.
-4. Finish with no-mutation guard tests, README/report-contract documentation, and final quality gates.
+2. Add source transport support with direct HTTP by default and optional SSH-backed remote fetching for the allowlisted server.
+3. Add legacy-compatible pagination and detail-page extraction with `#filename` before `body[data-ocap]`, preserving filename as source evidence.
+4. Add diagnostics, max-pages, source failure exits, and sequential pacing.
+5. Finish with no-mutation guard tests, README/report-contract documentation, and final quality gates.
 
 ## Risks
 
 - Live `sg.zone` access can time out or be Cloudflare/rate-limit protected, so tests must not depend on it.
+- SSH transport can become a hidden relay replacement if it grows broad. Keep it as a small operator-configured fetch path and do not add long-running services, local proxy daemons, or persistent relay state in Phase 2.
 - Importing old parser include/exclude, file write, or replay download behavior would violate Phase 2 boundaries.
 - Over-canonicalizing filenames would damage source identity evidence. Preserve source filename except for non-empty validation and minimal trimming.
 - Treating duplicate filenames as automatic merge decisions would exceed fetcher authority. Report duplicate evidence and leave conflict handling to later `server-2` promotion work.
@@ -103,6 +108,6 @@ Use Vitest fixture/mocked source-client tests as the primary validation path. Av
 Plan Phase 2 as four small MVP slices:
 
 1. dry-run happy path and report contract;
-2. pagination/detail extraction and stable identity;
+2. source transport and stable identity;
 3. diagnostics, source failure handling, max-pages, and pacing;
 4. no-mutation guarantees, docs, and final gates.

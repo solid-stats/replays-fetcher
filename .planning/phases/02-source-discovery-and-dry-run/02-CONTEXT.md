@@ -24,18 +24,19 @@ The phase may add source adapter code, candidate normalization, `discover --dry-
 - **D-06:** Candidate metadata should include `filename`, source URL/replay link, optional external source ID derived from the source link when available, mission/list text, world, server ID, and discovered timestamp when available without downloading raw replay bytes.
 - **D-07:** Discovery should support a max-pages limit through CLI/config for dry-run and tests. The default may cautiously read all pages if planner/research confirms that is operationally acceptable.
 - **D-08:** Source requests should be sequential by default, with no more than one request every 2 seconds. Cloudflare/rate-limit conditions are source-level diagnostics/failures, not item-level malformed candidate issues.
+- **D-09:** Live `https://sg.zone/replays` access should support a simple SSH-backed source transport because the user has a server that is allowlisted by Cloudflare. Do not resurrect the old relay approach; use a narrow source fetch seam that can execute requests through SSH when configured and stays direct HTTP by default.
 
 ### Dry-Run Report
-- **D-09:** `discover --dry-run` should emit structured deterministic JSON to stdout. It must not write S3 objects, staging rows, local replay list files, or parser artifacts.
-- **D-10:** Treat the dry-run JSON shape as contract-like for Phase 2 tests and future Phase 3/4 reuse. Top-level report fields, candidate shape, diagnostic shape, and counts should be covered by tests.
-- **D-11:** Candidate ordering should preserve source order across pages. Fixture-based repeated dry-runs over the same source shape must produce stable output.
-- **D-12:** The JSON report should include diagnostics inside stdout as part of the single report. Stderr should be reserved for unexpected crashes or host/runtime failures, not expected source diagnostics.
-- **D-13:** Item-level diagnostics such as missing filename, malformed row, duplicate filename, or changed metadata should be reported while continuing with valid candidates. Source-level unavailable/rate-limit/config failures should return a non-zero exit code.
-- **D-14:** Partial item diagnostics should still exit 0 so operators can inspect a partially useful dry-run report. Source-level failures should exit non-zero; align with existing config failure convention where possible.
+- **D-10:** `discover --dry-run` should emit structured deterministic JSON to stdout. It must not write S3 objects, staging rows, local replay list files, or parser artifacts.
+- **D-11:** Treat the dry-run JSON shape as contract-like for Phase 2 tests and future Phase 3/4 reuse. Top-level report fields, candidate shape, diagnostic shape, and counts should be covered by tests.
+- **D-12:** Candidate ordering should preserve source order across pages. Fixture-based repeated dry-runs over the same source shape must produce stable output.
+- **D-13:** The JSON report should include diagnostics inside stdout as part of the single report. Stderr should be reserved for unexpected crashes or host/runtime failures, not expected source diagnostics.
+- **D-14:** Item-level diagnostics such as missing filename, malformed row, duplicate filename, or changed metadata should be reported while continuing with valid candidates. Source-level unavailable/rate-limit/config failures should return a non-zero exit code.
+- **D-15:** Partial item diagnostics should still exit 0 so operators can inspect a partially useful dry-run report. Source-level failures should exit non-zero; align with existing config failure convention where possible.
 
 ### Tests and Fixtures
-- **D-15:** Phase 2 tests should include a core edge set: happy path, missing filename, malformed row, duplicate filename, changed source metadata, Cloudflare/rate-limit behavior, and stable repeated dry-run output.
-- **D-16:** Fixtures/mocks should prove dry-run does not mutate S3, staging state, local replay files, or parser-owned outputs.
+- **D-16:** Phase 2 tests should include a core edge set: happy path, missing filename, malformed row, duplicate filename, changed source metadata, Cloudflare/rate-limit behavior, SSH transport command construction/error handling, and stable repeated dry-run output.
+- **D-17:** Fixtures/mocks should prove dry-run does not mutate S3, staging state, local replay files, or parser-owned outputs.
 
 ### the agent's Discretion
 - Downstream agents may choose the internal module boundaries for source adapter, candidate types, CLI action wiring, diagnostics taxonomy, and test fixture layout, as long as the decisions above and existing TypeScript/Vitest/Commander patterns are preserved.
@@ -61,6 +62,7 @@ The phase may add source adapter code, candidate normalization, `discover --dry-
 - `src/config.ts` — Existing config schema with `REPLAY_SOURCE_URL`; Phase 2 should reuse validated config behavior.
 - `tests/cli.test.ts` — Current CLI tests and planned-phase expectations that Phase 2 will replace for `discover --dry-run`.
 - `tests/config.test.ts` — Existing config validation and redaction patterns.
+- OpenSSH client (`ssh`) — Operator-managed access path for source requests when Cloudflare blocks direct local access; use as a configured transport seam, not a relay service.
 
 ### Legacy Parser Reference
 - `../replays-parser/src/jobs/prepareReplaysList/parseReplay.ts` — Old parser's `filename` extraction behavior: `#filename` first, `body[data-ocap]` fallback.
@@ -101,6 +103,8 @@ The phase may add source adapter code, candidate normalization, `discover --dry-
 - Use old parser behavior only as discovery reference. Do not import parser-owned replay parsing semantics into `replays-fetcher`.
 - The old source behavior suggests `sg.zone/replays?p=N` list pages and replay detail pages can expose a filename through either `#filename` or `body[data-ocap]`.
 - Default source pacing should be at most one request every 2 seconds.
+- For live source access, prefer an optional SSH transport that runs a remote fetch command on the allowlisted server. Keep direct HTTP as the default and keep the SSH path narrow, testable, and operator-configured.
+- The old relay path is intentionally rejected as too complex for this phase.
 
 </specifics>
 
