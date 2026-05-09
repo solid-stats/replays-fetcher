@@ -34,7 +34,11 @@ export function createSourceClient(
     return createDirectSourceClient();
   }
 
-  return createSshSourceClient(config, options.execFile ?? defaultExecFile);
+  if (options.execFile === undefined) {
+    return createSshSourceClient(config, defaultExecFile);
+  }
+
+  return createSshSourceClient(config, options.execFile);
 }
 
 function createDirectSourceClient(): SourceClient {
@@ -67,7 +71,7 @@ function createSshSourceClient(
     async fetchText(url: URL): Promise<string> {
       try {
         const result = await execFile("ssh", [
-          config.sourceSshHost ?? "",
+          getSshHost(config),
           config.sourceSshCommand,
           url.toString(),
         ]);
@@ -84,6 +88,17 @@ function createSshSourceClient(
       }
     },
   };
+}
+
+function getSshHost(config: AppConfig): string {
+  if (config.sourceSshHost === undefined) {
+    throw new SourceFetchError(
+      "source_unavailable",
+      "SSH source host is not configured",
+    );
+  }
+
+  return config.sourceSshHost;
 }
 
 function classifySshFailure(error: unknown): SourceFetchError["code"] {

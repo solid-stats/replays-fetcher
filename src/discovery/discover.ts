@@ -162,16 +162,17 @@ async function discoverRowCandidate(
     return undefined;
   }
 
-  return toReplayCandidateFromHtmlRow(filename, row);
+  return toReplayCandidateFromHtmlRow(filename, row, row.source.url);
 }
 
 function toReplayCandidateFromHtmlRow(
   filename: string,
   row: ReturnType<typeof extractReplayRows>[number],
+  sourceUrl: string,
 ): ReplayCandidate {
   const source: MutableReplaySource = {
     page: row.page,
-    url: row.source.url ?? "",
+    url: sourceUrl,
   };
 
   if (row.source.externalId !== undefined) {

@@ -52,6 +52,7 @@ test("extractReplayRows should handle missing tables and incomplete rows", () =>
       `
         <table class="common-table">
           <tbody>
+            <tr></tr>
             <tr><td>missing link</td></tr>
           </tbody>
         </table>
@@ -60,6 +61,11 @@ test("extractReplayRows should handle missing tables and incomplete rows", () =>
       new URL("https://example.test/replays"),
     ),
   ).toStrictEqual([
+    {
+      metadata: {},
+      page: 2,
+      source: {},
+    },
     {
       metadata: {},
       page: 2,

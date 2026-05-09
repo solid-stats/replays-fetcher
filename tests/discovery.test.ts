@@ -20,6 +20,10 @@ test("discoverReplaysDryRun should map a source fixture into a dry-run report", 
             url: "https://example.test/replays/100",
             world: "Altis",
           },
+          {
+            filename: "replay-b.json",
+            url: "https://example.test/replays/101",
+          },
         ],
       });
     },
@@ -33,14 +37,14 @@ test("discoverReplaysDryRun should map a source fixture into a dry-run report", 
 
   expect(report).toMatchObject({
     counts: {
-      candidates: 1,
+      candidates: 2,
       diagnostics: 0,
-      discovered: 1,
+      discovered: 2,
     },
     mode: "dry-run",
     ok: true,
   });
-  expect(report.candidates).toHaveLength(1);
+  expect(report.candidates).toHaveLength(2);
   expect(report.candidates[0]).toMatchObject({
     identity: {
       filename: "replay-a.json",

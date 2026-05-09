@@ -106,6 +106,18 @@ test("createSourceClient should invoke SSH transport with configured host and UR
   ]);
 });
 
+test("createSourceClient should allow default SSH command runner construction", () => {
+  const config = loadConfig({
+    ...validEnvironment,
+    REPLAY_SOURCE_SSH_HOST: "allowlisted-host",
+    REPLAY_SOURCE_TRANSPORT: "ssh",
+  });
+
+  expect(createSourceClient(config)).toMatchObject({
+    fetchText: expect.any(Function) as unknown,
+  });
+});
+
 test("createSourceClient should classify SSH command failures as source errors", async () => {
   const config = loadConfig({
     ...validEnvironment,

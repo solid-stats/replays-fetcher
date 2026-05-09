@@ -38,7 +38,7 @@ export function extractReplayRows(
   }
 
   return [...tableBody.matchAll(/<tr[^>]*>(?<row>[\s\S]*?)<\/tr>/giu)].map(
-    (match) => parseReplayRow(match.groups?.["row"] ?? "", page, sourceUrl),
+    (match) => parseReplayRow(getMatchGroup(match, "row"), page, sourceUrl),
   );
 }
 
@@ -72,7 +72,7 @@ function parseReplayRow(
 ): ReplayRowObservation {
   const cells = [
     ...rowHtml.matchAll(/<td[^>]*>(?<cell>[\s\S]*?)<\/td>/giu),
-  ].map((match) => match.groups?.["cell"] ?? "");
+  ].map((match) => getMatchGroup(match, "cell"));
   const link =
     /<a\b[^>]*\bhref=(?<quote>["'])(?<href>.*?)\k<quote>[^>]*>(?<text>[\s\S]*?)<\/a>/iu.exec(
       cells[0] ?? "",
@@ -127,7 +127,7 @@ function hrefToUrl(
 
 function findInputValueById(html: string, id: string): string | undefined {
   for (const match of html.matchAll(/<input\b(?<attributes>[^>]*)>/giu)) {
-    const attributes = match.groups?.["attributes"] ?? "";
+    const attributes = getMatchGroup(match, "attributes");
     const inputId = /\bid=(?<quote>["'])(?<id>.*?)\k<quote>/iu.exec(attributes)
       ?.groups?.["id"];
 
@@ -138,6 +138,11 @@ function findInputValueById(html: string, id: string): string | undefined {
   }
 
   return undefined;
+}
+
+function getMatchGroup(match: RegExpMatchArray, group: string): string {
+  /* v8 ignore next -- regexes using this helper always declare the group. */
+  return match.groups?.[group] ?? "";
 }
 
 function stripTags(html: string): string {
