@@ -377,11 +377,19 @@ function toReplayCandidateFromHtmlRow(
     source.externalId = row.source.externalId;
   }
 
-  return {
+  const candidate: ReplayCandidate = {
     identity: { filename },
-    metadata: row.metadata,
     source,
   };
+
+  if (Object.keys(row.metadata).length > 0) {
+    return {
+      ...candidate,
+      metadata: row.metadata,
+    };
+  }
+
+  return candidate;
 }
 
 function parseSourceFixture(text: string): SourceFixture | undefined {
@@ -431,13 +439,21 @@ function toReplayCandidate(candidate: SourceCandidateFixture): ReplayCandidate {
     metadata.world = candidate.world;
   }
 
-  return {
+  const replayCandidate: ReplayCandidate = {
     identity: {
       filename: candidate.filename,
     },
-    metadata,
     source,
   };
+
+  if (Object.keys(metadata).length > 0) {
+    return {
+      ...replayCandidate,
+      metadata,
+    };
+  }
+
+  return replayCandidate;
 }
 
 function toPageUrl(sourceUrl: URL, page: number): URL {
