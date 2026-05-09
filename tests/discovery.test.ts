@@ -324,7 +324,7 @@ test("discoverReplaysDryRun should report duplicate filenames and changed metada
   });
 
   expect(report.ok).toBe(true);
-  expect(report.candidates).toHaveLength(3);
+  expect(report.candidates).toHaveLength(["first", "second", "third"].length);
   expect(report.diagnostics.map((diagnostic) => diagnostic.code)).toStrictEqual(
     [
       "duplicate_filename",
@@ -429,7 +429,7 @@ test("discoverReplaysDryRun should apply default pacing between source requests"
   expect(
     report.candidates.map((candidate) => candidate.identity.filename),
   ).toStrictEqual(["first.json", "second.json"]);
-  expect(sleeps).toStrictEqual([2000, 2000]);
+  expect(sleeps).toStrictEqual(["2000", "2000"].map(Number));
 });
 
 test("discoverReplaysDryRun should return an empty report for non-fixture non-table text", async () => {
