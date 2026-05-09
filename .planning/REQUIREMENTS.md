@@ -39,11 +39,11 @@ Requirements for the initial ingest service release. Each maps to roadmap phases
 
 ### Raw Replay Storage
 
-- [ ] **STOR-01**: Fetcher stores raw replay bytes in S3-compatible storage under the `raw/` prefix.
-- [ ] **STOR-02**: Fetcher computes a SHA-256 checksum for every successfully fetched replay object.
-- [ ] **STOR-03**: Fetcher records object key, bucket/prefix, byte size, checksum, and fetch timestamp for every stored replay.
-- [ ] **STOR-04**: Fetcher avoids destructive overwrites unless the object identity/checksum rules prove the write is idempotent.
-- [ ] **STOR-05**: Storage failures are reported as structured run failures without creating promoted business state.
+- [x] **STOR-01**: Fetcher stores raw replay bytes in S3-compatible storage under the `raw/` prefix.
+- [x] **STOR-02**: Fetcher computes a SHA-256 checksum for every successfully fetched replay object.
+- [x] **STOR-03**: Fetcher records object key, bucket/prefix, byte size, checksum, and fetch timestamp for every stored replay.
+- [x] **STOR-04**: Fetcher avoids destructive overwrites unless the object identity/checksum rules prove the write is idempotent.
+- [x] **STOR-05**: Storage failures are reported as structured run failures without creating promoted business state.
 
 ### Staging and Deduplication Evidence
 
@@ -63,7 +63,7 @@ Requirements for the initial ingest service release. Each maps to roadmap phases
 ### Validation
 
 - [ ] **TEST-01**: Unit tests cover source candidate parsing, idempotency decisions, checksum calculation, object key generation, staging payload creation, and failure classification.
-- [ ] **TEST-02**: Integration tests cover S3-compatible storage behavior using local/mocked storage.
+- [x] **TEST-02**: Integration tests cover S3-compatible storage behavior using local/mocked storage.
 - [ ] **TEST-03**: Integration tests cover staging writes using an isolated PostgreSQL database or equivalent test harness.
 - [ ] **TEST-04**: Tests prove the fetcher does not write forbidden `server-2` business tables.
 - [x] **TEST-05**: Dry-run mode is tested to prove it does not mutate S3 or staging state.
@@ -118,11 +118,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SRC-03 | Phase 2 | Complete |
 | SRC-04 | Phase 2 | Complete |
 | SRC-05 | Phase 2 | Complete |
-| STOR-01 | Phase 3 | Pending |
-| STOR-02 | Phase 3 | Pending |
-| STOR-03 | Phase 3 | Pending |
-| STOR-04 | Phase 3 | Pending |
-| STOR-05 | Phase 3 | Pending |
+| STOR-01 | Phase 3 | Complete |
+| STOR-02 | Phase 3 | Complete |
+| STOR-03 | Phase 3 | Complete |
+| STOR-04 | Phase 3 | Complete |
+| STOR-05 | Phase 3 | Complete |
 | STAGE-01 | Phase 4 | Pending |
 | STAGE-02 | Phase 4 | Pending |
 | STAGE-03 | Phase 4 | Pending |
@@ -133,7 +133,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | OPS-03 | Phase 5 | Pending |
 | OPS-04 | Phase 5 | Pending |
 | TEST-01 | Phase 5 | Pending |
-| TEST-02 | Phase 3 | Pending |
+| TEST-02 | Phase 3 | Complete |
 | TEST-03 | Phase 5 | Pending |
 | TEST-04 | Phase 4 | Pending |
 | TEST-05 | Phase 2 | Complete |
@@ -145,4 +145,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-05-09*
-*Last updated: 2026-05-09 after Phase 1 completion*
+*Last updated: 2026-05-09 after Phase 4 planning*

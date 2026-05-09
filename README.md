@@ -2,7 +2,7 @@
 
 `replays-fetcher` is the ingest service for Solid Stats. It discovers new OCAP replay files from the external replay source, stores raw replay objects in S3-compatible storage, and writes ingestion staging records that `server-2` promotes into canonical replay records and parse jobs.
 
-This repository now contains the Phase 3 TypeScript raw storage path: package scripts, strict compiler settings, config validation, a `check` command, `discover --dry-run`, `discover --store-raw`, tests, and integration-contract docs. Staging schema integration and scheduled execution are planned in later phases.
+This repository now contains the Phase 3 TypeScript raw storage path: package scripts, strict compiler settings, config validation, a `check` command, `discover --dry-run`, `discover --store-raw`, tests, and integration-contract docs. Phase 4 staging handoff is planned against `server-2`'s existing `ingest_staging_records` table; scheduled execution remains planned for a later phase.
 
 ## Product Boundary
 
@@ -37,7 +37,7 @@ Project planning lives in `.planning/`:
 - `.planning/STATE.md` - current GSD state.
 - `.planning/research/SUMMARY.md` - architecture findings and risks.
 
-Current phase: Phase 3, Raw Replay Storage. Phase 3 reads the configured replay source, fetches opaque replay bytes, computes SHA-256 evidence, and stores raw objects in S3-compatible storage without staging or parsing.
+Current phase: Phase 4, Staging and Promotion Handoff. Phase 4 will write pending `ingest_staging_records` rows for `server-2` promotion without creating canonical `replays`, `parse_jobs`, parser artifacts, or scheduled `run-once` behavior.
 
 ## Development Workflow
 
@@ -170,7 +170,7 @@ replays-fetcher discover --store-raw
 replays-fetcher run-once
 ```
 
-`discover --dry-run` is implemented for non-mutating source inspection. `discover --store-raw` is implemented for Phase 3 raw object storage. Staging/outbox writes are planned for Phase 4. `run-once` scheduled operation is planned for Phase 5.
+`discover --dry-run` is implemented for non-mutating source inspection. `discover --store-raw` is implemented for Phase 3 raw object storage. Staging writes to `ingest_staging_records` are planned for Phase 4. `run-once` scheduled operation is planned for Phase 5.
 
 ## Contract Docs
 

@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: initial ingest service
-status: ready_to_plan
-last_updated: "2026-05-09T13:05:30.000Z"
+status: ready_to_execute
+last_updated: "2026-05-09T13:12:00.000Z"
 last_activity: 2026-05-09
 progress:
   total_phases: 5
   completed_phases: 3
-  total_plans: 9
+  total_plans: 13
   completed_plans: 9
   percent: 60
 ---
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 
 Phase: 4
 Plan: Not started
-Status: Ready to plan Phase 4 work
+Status: Ready to execute planned Phase 4 work
 Last activity: 2026-05-09
 
 Progress: [██████░░░░] 60%
@@ -64,6 +64,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 03]: S3 raw storage performs HEAD-before-PUT, skips matching existing objects, and reports conflict on mismatched evidence without overwrite.
 - [Phase 03]: `discover --store-raw` is the operator command for raw storage; it emits structured per-candidate evidence and stored/skipped/conflict/failed counts.
 - [Phase 03]: Raw storage remains boundary-safe: no parsing, no parser artifacts, no staging/outbox rows, no `server-2` business-table writes, and no scheduled `run-once`.
+- [Phase 04]: Use `server-2`'s existing `ingest_staging_records` table for staging handoff; do not invent a new staging table.
+- [Phase 04]: No separate outbox table exists in current `server-2`; parser publish lifecycle is backed by durable `parse_jobs` after server promotion.
+- [Phase 04]: Fetcher writes only pending staging evidence. `server-2` owns promotion into canonical `replays`, `parse_jobs`, RabbitMQ publishing, duplicate handling, and operator APIs.
 
 ### Execution Metrics
 
@@ -81,10 +84,10 @@ None yet.
 
 ### Blockers/Concerns
 
-- Exact staging table/schema and whether it lives in the `server-2` database or separate schema still need to be planned with `server-2`.
+- Phase 4 writes to `server-2` database staging table `ingest_staging_records`; credentials and local PostgreSQL integration availability still need verification during execution.
 - Rate-limit/backoff expectations for the external source are not locked yet.
 - GSD subagents are not installed in this runtime, so new-project research/roadmap generation was performed inline.
 
 ## Next Step
 
-Run `$gsd-plan-phase 4` to plan staging/outbox integration with `server-2` compatibility evidence.
+Run `$gsd-execute-phase 4` to execute staging/promotion handoff plans.
