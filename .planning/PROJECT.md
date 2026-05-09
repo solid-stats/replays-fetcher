@@ -2,9 +2,9 @@
 
 ## What This Is
 
-`replays-fetcher` is the Solid Stats ingest service for discovering new OCAP replay files from the external replay source. It stores raw replay objects in S3-compatible storage and writes ingestion staging records that `server-2` promotes into durable replay records and parse jobs.
+`replays-fetcher` is the Solid Stats ingest service for discovering new OCAP replay files from the external replay source. It stores raw replay objects in S3-compatible storage and writes ingestion staging/outbox records that `server-2` promotes into durable replay records and parse jobs.
 
-The service is intentionally narrow. It fetches and records source evidence; it does not parse replay contents, create parser jobs directly, calculate statistics, resolve player identity, or own public APIs.
+The service is intentionally narrow. It fetches replay bytes and records source evidence; it does not parse replay contents, create canonical replay or parse-job records, calculate statistics, resolve player identity, or own public APIs.
 
 ## Core Value
 
@@ -19,15 +19,16 @@ Reliably discover and stage new replay files without corrupting `server-2` busin
 ### Active
 
 - [ ] Discover new replay candidates from the external replay source through an idempotent scheduled job.
+- [ ] Support dry-run discovery so operators can inspect candidates without writing S3 objects or staging rows.
 - [ ] Store fetched raw replay files in S3-compatible storage under a deterministic `raw/` object layout.
-- [ ] Compute and persist replay checksum, object key, size, source URL/ID, and fetch metadata.
+- [ ] Compute and persist replay checksum, object key, size, source URL/ID, discovered timestamp, fetch timestamp, and fetch status evidence.
 - [ ] Write only ingestion staging/outbox records for `server-2` promotion.
 - [ ] Avoid direct writes to `server-2` business tables such as `replays`, `parse_jobs`, `parse_results`, identity, stats, requests, or moderation tables.
 - [ ] Keep `.planning/config.json` identical to `replay-parser-2`'s GSD config unless a product-wide change explicitly updates both.
 - [ ] Support checksum plus source identity deduplication evidence.
-- [ ] Surface conflicting duplicates for manual review by `server-2` instead of auto-merging ambiguous cases.
-- [ ] Provide dry-run discovery and explicit run summaries for operator review.
-- [ ] Use structured logs and machine-checkable failures suitable for scheduled operation.
+- [ ] Preserve conflicting duplicate evidence for manual review by `server-2` instead of auto-merging ambiguous cases.
+- [ ] Provide structured run summaries, failure categories, and exit codes suitable for scheduled operation.
+- [ ] Use strict TypeScript, linting, formatting, and tests.
 - [ ] Keep production historical import from `~/sg_stats` out of v1.
 
 ### Out of Scope
@@ -50,18 +51,18 @@ Solid Stats is a multi-project product:
 - `server-2` owns PostgreSQL business state, parse jobs, RabbitMQ orchestration, canonical identity, corrections, aggregate/bounty calculation, APIs, and operational visibility.
 - `web` owns the browser experience through `server-2` APIs.
 
-The accepted ingest architecture from discussion is:
+The accepted ingest architecture is:
 
 1. `replays-fetcher` runs as a scheduled job.
 2. It discovers replay candidates from the external source.
 3. It fetches raw replay bytes and writes them to S3-compatible storage under `raw/`.
-4. It writes staging/outbox records with source identity, checksum, object key, size, and status evidence.
+4. It writes staging/outbox records with source identity, checksum, object key, size, timestamps, and status evidence.
 5. `server-2` polls pending staging records.
 6. `server-2` performs product-level deduplication and conflict handling.
 7. `server-2` creates canonical `replays` and `parse_jobs` rows.
 8. `server-2` publishes RabbitMQ parse requests for `replay-parser-2`.
 
-The current parser project already expects `server-2` to publish parse requests containing `job_id`, `replay_id`, `object_key`, `checksum`, and `parser_contract_version`. This service must feed that flow without taking ownership of parse lifecycle.
+The current parser project expects parse requests containing `job_id`, `replay_id`, `object_key`, `checksum`, and `parser_contract_version`. This service must feed that flow without taking ownership of parse lifecycle.
 
 ## Constraints
 
@@ -109,4 +110,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state.
 
 ---
-*Last updated: 2026-04-26 after GSD initialization*
+*Last updated: 2026-05-09 after GSD initialization*
