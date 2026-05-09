@@ -13,6 +13,14 @@ import {
 import { discoverReplaysDryRun } from "./discovery/discover.js";
 import { createSourceClient } from "./discovery/source-client.js";
 import {
+  createPostgresStagingRepositoryFromDatabaseUrl,
+  type PostgresStagingRepository,
+} from "./staging/postgres-staging-repository.js";
+import {
+  stageRawReplay,
+  type StagingRepository,
+} from "./staging/stage-raw-replay.js";
+import {
   createReplayByteClient,
   type ReplayByteClient,
 } from "./storage/replay-byte-client.js";
@@ -26,6 +34,7 @@ import {
 } from "./storage/store-raw-replay.js";
 
 import type { DiscoveryReport, SourceClient } from "./discovery/types.js";
+import type { IngestStagingResult } from "./staging/types.js";
 
 type SourceConfigResult =
   | {
@@ -52,15 +61,20 @@ interface BuildCliDependencies {
   readonly createS3RawReplayStorageFromConfig?: (
     config: AppConfig["s3"],
   ) => S3RawReplayStorage;
+  readonly createPostgresStagingRepositoryFromDatabaseUrl?: (
+    databaseUrl: string,
+  ) => PostgresStagingRepository;
   readonly createSourceClient?: (config: SourceConfig) => SourceClient;
   readonly discoverReplaysDryRun?: typeof discoverReplaysDryRun;
   readonly loadConfig?: () => AppConfig;
   readonly loadSourceConfig?: () => SourceConfig;
+  readonly stageRawReplay?: typeof stageRawReplay;
   readonly storeRawReplay?: typeof storeRawReplay;
 }
 
 interface DiscoverOptions {
   readonly dryRun?: boolean;
+  readonly stage?: boolean;
   readonly storeRaw?: boolean;
 }
 
@@ -71,6 +85,21 @@ interface RawStorageCounts {
   readonly failed: number;
   readonly skipped: number;
   readonly stored: number;
+}
+
+interface StagingCounts {
+  readonly alreadyStaged: number;
+  readonly conflict: number;
+  readonly failed: number;
+  readonly skipped: number;
+  readonly staged: number;
+}
+
+interface StoreRawResources {
+  readonly byteClient: ReplayByteClient;
+  readonly sourceClient: SourceClient;
+  readonly stagingRepository: StagingRepository | undefined;
+  readonly storage: S3RawReplayStorage;
 }
 
 export function buildCli(dependencies: BuildCliDependencies = {}): Command {
@@ -94,11 +123,13 @@ function resolveDependencies(
 ): Required<BuildCliDependencies> {
   return {
     createReplayByteClient,
+    createPostgresStagingRepositoryFromDatabaseUrl,
     createS3RawReplayStorageFromConfig,
     createSourceClient,
     discoverReplaysDryRun,
     loadConfig,
     loadSourceConfig,
+    stageRawReplay,
     storeRawReplay,
     ...dependencies,
   };
@@ -157,6 +188,7 @@ function registerDiscoverCommand(
       "--store-raw",
       "discover candidates and store raw replay objects without staging",
     )
+    .option("--stage", "write pending server-2 staging rows after raw storage")
     .action(async (options: DiscoverOptions) => {
       if (options.dryRun === true && options.storeRaw === true) {
         writeJson({
@@ -167,8 +199,17 @@ function registerDiscoverCommand(
         return;
       }
 
+      if (options.stage === true && options.storeRaw !== true) {
+        writeJson({
+          ok: false,
+          error: "discover --stage requires --store-raw",
+        });
+        process.exitCode = 2;
+        return;
+      }
+
       if (options.storeRaw === true) {
-        await runStoreRawDiscovery(dependencies);
+        await runStoreRawDiscovery(dependencies, options.stage === true);
         return;
       }
 
@@ -217,6 +258,7 @@ function registerRunOnceCommand(program: Command): void {
 
 async function runStoreRawDiscovery(
   dependencies: Required<BuildCliDependencies>,
+  shouldStage: boolean,
 ): Promise<void> {
   const configResult = loadStoreRawConfig(dependencies);
   if (!configResult.ok) {
@@ -229,47 +271,154 @@ async function runStoreRawDiscovery(
     return;
   }
 
-  const sourceClient = dependencies.createSourceClient(configResult.config);
+  const resources = createStoreRawResources(
+    dependencies,
+    configResult.config,
+    shouldStage,
+  );
   const discoveryReport = await dependencies.discoverReplaysDryRun({
-    sourceClient,
+    sourceClient: resources.sourceClient,
     sourceUrl: new URL(configResult.config.sourceUrl),
   });
-  const byteClient = dependencies.createReplayByteClient(configResult.config);
-  const storage = dependencies.createS3RawReplayStorageFromConfig(
-    configResult.config.s3,
-  );
   const storageResults: StoreRawReplayResult[] = [];
+  const stagingResults: IngestStagingResult[] = [];
 
   if (discoveryReport.ok) {
     for (const candidate of discoveryReport.candidates) {
       // Raw replay storage is intentionally sequential for clear source/storage evidence.
       // eslint-disable-next-line no-await-in-loop
       const result = await dependencies.storeRawReplay({
-        byteClient,
+        byteClient: resources.byteClient,
         candidate,
-        storage,
+        storage: resources.storage,
       });
       storageResults.push(result);
+
+      if (shouldStage) {
+        // Staging follows the raw evidence for the same candidate in order.
+        // eslint-disable-next-line no-await-in-loop
+        const stagingResult = await stageRawEvidence(
+          dependencies,
+          resources.stagingRepository,
+          result,
+        );
+        stagingResults.push(stagingResult);
+      }
     }
   }
 
-  const counts = countRawStorage(discoveryReport, storageResults);
-  const ok = discoveryReport.ok && counts.conflict === 0 && counts.failed === 0;
+  const rawCounts = countRawStorage(discoveryReport, storageResults);
+  const stagingCounts = countStaging(stagingResults);
+  const ok =
+    discoveryReport.ok &&
+    rawCounts.conflict === 0 &&
+    rawCounts.failed === 0 &&
+    stagingCounts.conflict === 0 &&
+    stagingCounts.failed === 0;
 
-  writeJson({
+  const report = {
     ok,
-    mode: "store-raw",
+    mode: storeRawMode(shouldStage),
     sourceUrl: discoveryReport.sourceUrl,
     generatedAt: discoveryReport.generatedAt,
-    counts,
+    counts: storeRawCounts(shouldStage, rawCounts, stagingCounts),
     candidates: discoveryReport.candidates,
     diagnostics: discoveryReport.diagnostics,
     storage: storageResults,
-  });
+  };
+
+  if (shouldStage) {
+    writeJson({
+      ...report,
+      staging: stagingResults,
+    });
+  } else {
+    writeJson(report);
+  }
 
   if (!ok) {
     process.exitCode = 2;
   }
+}
+
+function createStoreRawResources(
+  dependencies: Required<BuildCliDependencies>,
+  config: AppConfig,
+  shouldStage: boolean,
+): StoreRawResources {
+  return {
+    byteClient: dependencies.createReplayByteClient(config),
+    sourceClient: dependencies.createSourceClient(config),
+    stagingRepository: createStagingRepository(
+      dependencies,
+      config,
+      shouldStage,
+    ),
+    storage: dependencies.createS3RawReplayStorageFromConfig(config.s3),
+  };
+}
+
+function createStagingRepository(
+  dependencies: Pick<
+    Required<BuildCliDependencies>,
+    "createPostgresStagingRepositoryFromDatabaseUrl"
+  >,
+  config: AppConfig,
+  shouldStage: boolean,
+): StagingRepository | undefined {
+  if (!shouldStage) {
+    return undefined;
+  }
+
+  return dependencies.createPostgresStagingRepositoryFromDatabaseUrl(
+    config.staging.databaseUrl,
+  );
+}
+
+function storeRawMode(
+  shouldStage: boolean,
+): "store-raw" | "store-raw-and-stage" {
+  if (shouldStage) {
+    return "store-raw-and-stage";
+  }
+
+  return "store-raw";
+}
+
+function storeRawCounts(
+  shouldStage: boolean,
+  rawCounts: RawStorageCounts,
+  stagingCounts: StagingCounts,
+):
+  | RawStorageCounts
+  | {
+      readonly rawStorage: RawStorageCounts;
+      readonly staging: StagingCounts;
+    } {
+  if (shouldStage) {
+    return {
+      rawStorage: rawCounts,
+      staging: stagingCounts,
+    };
+  }
+
+  return rawCounts;
+}
+
+async function stageRawEvidence(
+  dependencies: Pick<Required<BuildCliDependencies>, "stageRawReplay">,
+  repository: StagingRepository | undefined,
+  rawResult: StoreRawReplayResult,
+): Promise<IngestStagingResult> {
+  /* v8 ignore next -- registerDiscoverCommand only calls staging when the repository was created. */
+  if (repository === undefined) {
+    throw new Error("Expected staging repository for stage mode");
+  }
+
+  return dependencies.stageRawReplay({
+    rawResult,
+    repository,
+  });
 }
 
 function loadDryRunSourceConfig(
@@ -328,6 +477,25 @@ function countRawStorage(
     skipped: storageResults.filter((result) => result.status === "skipped")
       .length,
     stored: storageResults.filter((result) => result.status === "stored")
+      .length,
+  };
+}
+
+function countStaging(
+  stagingResults: readonly IngestStagingResult[],
+): StagingCounts {
+  return {
+    alreadyStaged: stagingResults.filter(
+      (result) => result.status === "already_staged",
+    ).length,
+    conflict: stagingResults.filter((result) => result.status === "conflict")
+      .length,
+    failed: stagingResults.filter((result) => result.status === "failed")
+      .length,
+    skipped: stagingResults.filter(
+      (result) => result.status === "not_stageable",
+    ).length,
+    staged: stagingResults.filter((result) => result.status === "staged")
       .length,
   };
 }

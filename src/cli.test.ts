@@ -8,6 +8,7 @@ import * as configModule from "./config.js";
 
 import type { AppConfig, SourceConfig } from "./config.js";
 import type { DiscoveryReport, ReplayCandidate } from "./discovery/types.js";
+import type { IngestStagingResult } from "./staging/types.js";
 import type { ReplayByteClient } from "./storage/replay-byte-client.js";
 import type { StoreRawReplayResult } from "./storage/store-raw-replay.js";
 
@@ -38,7 +39,22 @@ interface CliOutput {
     readonly conflict?: number;
     readonly diagnostics?: number;
     readonly failed?: number;
+    readonly rawStorage?: {
+      readonly candidates?: number;
+      readonly conflict?: number;
+      readonly diagnostics?: number;
+      readonly failed?: number;
+      readonly skipped?: number;
+      readonly stored?: number;
+    };
     readonly skipped?: number;
+    readonly staging?: {
+      readonly alreadyStaged?: number;
+      readonly conflict?: number;
+      readonly failed?: number;
+      readonly skipped?: number;
+      readonly staged?: number;
+    };
     readonly stored?: number;
   };
   readonly diagnostics?: readonly {
@@ -50,6 +66,7 @@ interface CliOutput {
   readonly issues?: readonly string[];
   readonly mode?: string;
   readonly ok: boolean;
+  readonly staging?: readonly IngestStagingResult[];
   readonly storage?: readonly StoreRawReplayResult[];
 }
 
@@ -149,6 +166,36 @@ function createStorageResult(
       "raw/sha256/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.ocap",
     source: candidate.source,
     sourceFilename: candidate.identity.filename,
+    status,
+  };
+}
+
+function createStagingResult(
+  status: IngestStagingResult["status"],
+): IngestStagingResult {
+  if (status === "staged") {
+    return {
+      stagingId: "00000000-0000-4000-8000-000000000001",
+      status,
+    };
+  }
+
+  if (status === "already_staged") {
+    return {
+      stagingId: "00000000-0000-4000-8000-000000000001",
+      status,
+    };
+  }
+
+  if (status === "not_stageable") {
+    return {
+      reason: "Raw storage status failed is not stageable",
+      status,
+    };
+  }
+
+  return {
+    reason: `${status} staging result`,
     status,
   };
 }
@@ -504,6 +551,90 @@ test("buildCli should report successful raw storage when all candidates store cl
   expect(process.exitCode).toBeUndefined();
 });
 
+test("buildCli should discover, store raw objects, and stage successful raw evidence", async () => {
+  stubValidEnvironment();
+  const candidates = [
+    createCandidate("100"),
+    createCandidate("101"),
+    createCandidate("102"),
+    createCandidate("103"),
+    createCandidate("104"),
+  ];
+  const stagingStatuses: readonly IngestStagingResult["status"][] = [
+    "staged",
+    "already_staged",
+    "conflict",
+    "failed",
+    "not_stageable",
+  ];
+  const stagedRawResults: StoreRawReplayResult[] = [];
+  const writes: string[] = [];
+  vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+    writes.push(String(chunk));
+    return true;
+  });
+
+  await buildCli({
+    createPostgresStagingRepositoryFromDatabaseUrl(databaseUrl) {
+      expect(databaseUrl).toBe(validEnvironment.DATABASE_URL);
+      return { stage: vi.fn() };
+    },
+    createReplayByteClient: () => ({ fetchBytes: vi.fn() }),
+    createS3RawReplayStorageFromConfig: () => ({ storeRawReplay: vi.fn() }),
+    createSourceClient: () => ({ fetchText: vi.fn() }),
+    async discoverReplaysDryRun() {
+      return createDiscoveryReport(candidates);
+    },
+    async stageRawReplay({ rawResult }) {
+      stagedRawResults.push(rawResult);
+
+      return createStagingResult(
+        stagingStatuses[stagedRawResults.length - 1] ?? "failed",
+      );
+    },
+    async storeRawReplay({ candidate }) {
+      if (candidate.source.externalId === "104") {
+        return createStorageResult(candidate, "failed");
+      }
+
+      return createStorageResult(candidate, "stored");
+    },
+  }).parseAsync([
+    "node",
+    "replays-fetcher",
+    "discover",
+    "--store-raw",
+    "--stage",
+  ]);
+
+  expect(stagedRawResults).toHaveLength(candidates.length);
+  expect(parseCliOutput(writes)).toMatchObject({
+    counts: {
+      rawStorage: {
+        failed: 1,
+        stored: 4,
+      },
+      staging: {
+        alreadyStaged: 1,
+        conflict: 1,
+        failed: 1,
+        skipped: 1,
+        staged: 1,
+      },
+    },
+    mode: "store-raw-and-stage",
+    ok: false,
+    staging: [
+      { status: "staged" },
+      { status: "already_staged" },
+      { status: "conflict" },
+      { status: "failed" },
+      { status: "not_stageable" },
+    ],
+  });
+  expect(process.exitCode).toBe(2);
+});
+
 test("buildCli should report store-raw config errors before discovery or storage", async () => {
   const writes: string[] = [];
   const discover = vi.fn();
@@ -629,6 +760,27 @@ test("buildCli should reject discover when multiple modes are provided", async (
   const output = parseCliOutput(writes);
   expect(output).toStrictEqual({
     error: "discover accepts only one mode: --dry-run or --store-raw",
+    ok: false,
+  });
+  expect(process.exitCode).toBe(2);
+});
+
+test("buildCli should reject staging without raw storage", async () => {
+  const writes: string[] = [];
+  vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+    writes.push(String(chunk));
+    return true;
+  });
+
+  await buildCli().parseAsync([
+    "node",
+    "replays-fetcher",
+    "discover",
+    "--stage",
+  ]);
+
+  expect(parseCliOutput(writes)).toStrictEqual({
+    error: "discover --stage requires --store-raw",
     ok: false,
   });
   expect(process.exitCode).toBe(2);
