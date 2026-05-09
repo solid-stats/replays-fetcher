@@ -351,6 +351,42 @@ test("discoverReplaysDryRun should report duplicate filenames and changed metada
   );
 });
 
+test("discoverReplaysDryRun should report duplicate filenames without optional evidence", async () => {
+  const sourceClient: SourceClient = {
+    async fetchText() {
+      return JSON.stringify({
+        candidates: [
+          {
+            filename: "duplicate.json",
+            url: "https://example.test/replays/a",
+          },
+          {
+            filename: "duplicate.json",
+            url: "https://example.test/replays/b",
+          },
+        ],
+      });
+    },
+  };
+
+  const report = await discoverReplaysDryRun({
+    sourceClient,
+    sourceUrl: new URL("https://example.test/replays"),
+  });
+
+  expect(report.ok).toBe(true);
+  expect(report.candidates).toHaveLength(2);
+  expect(report.diagnostics).toStrictEqual([
+    {
+      candidateIndex: 1,
+      code: "duplicate_filename",
+      message: "Filename appeared more than once in source discovery",
+      severity: "warning",
+      sourceUrl: "https://example.test/replays/b",
+    },
+  ]);
+});
+
 test("discoverReplaysDryRun should apply default pacing between source requests", async () => {
   const sleeps: number[] = [];
   const responses = new Map([
