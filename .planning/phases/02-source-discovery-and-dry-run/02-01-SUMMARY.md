@@ -88,7 +88,7 @@ Additional refinement commits preserving useful Wave 2 work and coverage:
 - `934aca5` (test): generic SSH source failures
 - `f908023` (fix): discovery edge handling and SSH host guard
 
-**Plan metadata:** pending final docs commit
+**Plan metadata:** `e631411` (docs)
 
 ## Files Created/Modified
 
