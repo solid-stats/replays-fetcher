@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: initial ingest service
-status: ready_to_plan
-last_updated: "2026-05-09T12:06:00.313Z"
+status: ready_to_execute
+last_updated: "2026-05-09T12:45:00.000Z"
 last_activity: 2026-05-09
 progress:
   total_phases: 5
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 
 Phase: 3
 Plan: Not started
-Status: Ready to plan
+Status: Ready to execute planned Phase 3 work
 Last activity: 2026-05-09
 
 Progress: [████░░░░░░] 40%
@@ -73,10 +73,10 @@ None yet.
 ### Blockers/Concerns
 
 - Exact staging table/schema and whether it lives in the `server-2` database or separate schema still need to be planned with `server-2`.
-- Exact raw replay S3 object key format is not locked yet.
+- Exact raw replay S3 object key format is locked in Phase 3 context as `raw/sha256/<sha256>.ocap`.
 - Rate-limit/backoff expectations for the external source are not locked yet.
 - GSD subagents are not installed in this runtime, so new-project research/roadmap generation was performed inline.
 
 ## Next Step
 
-Run `$gsd-plan-phase 3` to plan raw replay storage.
+Run `$gsd-execute-phase 3` to execute raw replay storage plans.

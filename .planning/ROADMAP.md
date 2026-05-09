@@ -71,7 +71,13 @@ This roadmap builds `replays-fetcher` as a narrow TypeScript scheduled ingest se
 4. Storage failures are structured and do not create promoted business state.
 5. S3-compatible storage behavior is tested with local or mocked storage.
 
-**Plans:** TBD
+**Plans:** 4 planned
+
+Plans:
+- [ ] 03-01-PLAN.md — Define checksum, object-key, and raw storage evidence contracts.
+- [ ] 03-02-PLAN.md — Implement fake-tested S3-compatible idempotent raw object adapter.
+- [ ] 03-03-PLAN.md — Fetch replay bytes and orchestrate candidate-to-storage evidence.
+- [ ] 03-04-PLAN.md — Expose raw storage through CLI, docs, and boundary guards.
 
 ### Phase 4: Staging and Promotion Handoff
 
@@ -118,7 +124,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 |-------|----------------|--------|-----------|
 | 1. Project Foundation and Integration Contract | 1/1 | Complete | 2026-05-09 |
 | 2. Source Discovery and Dry Run | 4/4 | Complete | 2026-05-09 |
-| 3. Raw Replay Storage | 0/TBD | Not started | - |
+| 3. Raw Replay Storage | 0/4 | Planned | - |
 | 4. Staging and Promotion Handoff | 0/TBD | Not started | - |
 | 5. Scheduled Operations and Validation | 0/TBD | Not started | - |
 

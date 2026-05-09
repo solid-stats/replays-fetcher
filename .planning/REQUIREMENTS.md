@@ -133,7 +133,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | OPS-03 | Phase 5 | Pending |
 | OPS-04 | Phase 5 | Pending |
 | TEST-01 | Phase 5 | Pending |
-| TEST-02 | Phase 5 | Pending |
+| TEST-02 | Phase 3 | Pending |
 | TEST-03 | Phase 5 | Pending |
 | TEST-04 | Phase 4 | Pending |
 | TEST-05 | Phase 2 | Complete |
