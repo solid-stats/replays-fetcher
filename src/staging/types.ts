@@ -31,6 +31,14 @@ export interface IngestStagingPayload {
   readonly status: IngestStagingStatus;
 }
 
+export interface ExistingStagingEvidence {
+  readonly checksum: string;
+  readonly objectKey: string;
+  readonly sourceReplayId: string;
+  readonly sourceSystem: string;
+  readonly status: string;
+}
+
 export interface StageableRawReplayEvidence extends RawReplayStorageEvidence {
   readonly status: "skipped" | "stored";
 }
@@ -47,7 +55,9 @@ export type StagingPayloadResult =
     };
 
 export interface IngestStagingResult {
+  readonly existing?: ExistingStagingEvidence;
   readonly payload?: IngestStagingPayload;
   readonly reason?: string;
+  readonly stagingId?: string;
   readonly status: StagingOutcomeStatus;
 }
