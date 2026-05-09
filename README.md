@@ -47,6 +47,8 @@ Development is performed only by AI agents using the GSD workflow. Direct non-GS
 
 Agents should push back before executing requests that conflict with architecture, quality, maintainability, or proportional scope. If a request expands into broad cross-project or multi-phase work, ask for confirmation with safer alternatives or a GSD plan.
 
+Ask the user when change ownership, commit intent, or cross-project compatibility is unclear. Local-only fetcher work can rely on this repo's planning docs; staging/source identity, object key/checksum, parser handoff, API/data, auth/moderation, or UI-visible changes require adjacent app evidence or a user question.
+
 Before implementation work, run the next GSD step from `.planning/STATE.md`. Completed work sessions must commit intended results and leave `git status --short` clean.
 
 ## Local Commands

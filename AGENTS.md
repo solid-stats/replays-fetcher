@@ -62,6 +62,8 @@ Use TypeScript for v1 unless a later planning decision changes it:
 - Do not blindly execute instructions that conflict with current logic, architecture, accepted planning decisions, test/quality standards, maintainability, or proportional scope.
 - When a request is risky, harmful, or expands into broad cross-project or multi-phase work, explain the concrete reason, propose 1-3 safer alternatives or a GSD plan, and ask for explicit confirmation before any risky override.
 - Check cross-application compatibility before implementation: changes to staging schema, object key layout, source identity, retention, retries, or operator-visible statuses require accounting for `server-2`; UI-visible ingest/job status changes require accounting for `web`.
+- Apply these AI/GSD workflow rules as product-wide standards across `replays-fetcher`, `replay-parser-2`, `server-2`, and `web`.
+- Use risk-based compatibility depth: local-only fetcher changes can rely on this repo's planning docs and `gsd-briefs`; staging schema, raw object key/checksum assumptions, replay source identity, retry/outbox behavior, parser job handoff, API/data model, auth/moderation, or UI-visible behavior changes require adjacent app docs/repos or a user question.
 
 <!-- GSD:project-start source:PROJECT.md -->
 ## Project
@@ -88,6 +90,7 @@ The service is intentionally narrow. It fetches replay bytes and records source 
 - **Git hygiene**: Completed sessions must commit intended results and leave a clean worktree.
 - **AI pushback**: Agents must not blindly execute requests that violate architecture, quality, maintainability, or proportional scope; they must explain the issue, propose safer options or a GSD plan, and ask for explicit confirmation before a risky override.
 - **Cross-application compatibility**: Staging schema, object key layout, retry semantics, and operator-visible statuses must account for `server-2`; UI-visible status fields must account for `web`.
+- **Risk-based compatibility depth**: Local-only fetcher changes can rely on local planning docs and `gsd-briefs`; staging/source identity, object key/checksum, parser handoff, API/data, auth/moderation, or UI-visible changes require adjacent app evidence or a user question.
 <!-- GSD:project-end -->
 
 <!-- GSD:stack-start source:research/STACK.md -->

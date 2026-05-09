@@ -78,6 +78,7 @@ The current parser project expects parse requests containing `job_id`, `replay_i
 - **Git hygiene**: Completed sessions must commit intended results and leave a clean worktree.
 - **AI pushback**: Agents must not blindly execute requests that violate architecture, quality, maintainability, or proportional scope; they must explain the issue, propose safer options or a GSD plan, and ask for explicit confirmation before a risky override.
 - **Cross-application compatibility**: Staging schema, object key layout, retry semantics, and operator-visible statuses must account for `server-2`; UI-visible status fields must account for `web`.
+- **Risk-based compatibility depth**: Local-only fetcher changes can rely on local planning docs and `gsd-briefs`; staging/source identity, object key/checksum, parser handoff, API/data, auth/moderation, or UI-visible changes require adjacent app evidence or a user question.
 
 ## Key Decisions
 
@@ -93,6 +94,7 @@ The current parser project expects parse requests containing `job_id`, `replay_i
 | Keep production historical import out of v1 | Prevents mixing parser validation data with production ingestion. | Accepted |
 | Keep GSD workflow aligned with `replay-parser-2` and stack-aware skills | These repos are coupled product infrastructure and should share planning rigor, review depth, and workflow gates, while each repo's agents use skills for its actual stack. | Accepted |
 | Require AI pushback on risky or disproportionate work | Blind compliance can damage architecture, cross-app contracts, and project velocity; agents should explain the risk and ask before broad or risky overrides. | Accepted |
+| Apply risk-based compatibility checks product-wide | Fetcher changes can stay local only when they do not affect adjacent contracts; staging, object storage, parser handoff, API/data, auth/moderation, and UI-visible behavior require adjacent evidence or a user question. | Accepted |
 
 ## Evolution
 
