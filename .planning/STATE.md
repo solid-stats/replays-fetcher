@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: initial ingest service
-status: ready_to_plan
-last_updated: "2026-05-09T13:26:40.000Z"
+status: ready_to_execute
+last_updated: "2026-05-09T13:32:00.000Z"
 last_activity: 2026-05-09
 progress:
   total_phases: 5
   completed_phases: 4
-  total_plans: 13
+  total_plans: 17
   completed_plans: 13
   percent: 80
 ---
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 
 Phase: 5
 Plan: Not started
-Status: Ready to plan Phase 5 work
+Status: Ready to execute planned Phase 5 work
 Last activity: 2026-05-09
 
 Progress: [████████░░] 80%
@@ -69,6 +69,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 04]: Fetcher writes only pending staging evidence. `server-2` owns promotion into canonical `replays`, `parse_jobs`, RabbitMQ publishing, duplicate handling, and operator APIs.
 - [Phase 04]: `discover --store-raw --stage` is the operator command for raw storage plus pending staging writes.
 - [Phase 04]: Staging repository classifies matching source/object evidence as `already_staged`, source evidence mismatch as `conflict`, and raw object identity under another source as `conflict`.
+- [Phase 05]: `run-once` should wrap existing discovery -> raw storage -> staging behavior into one bounded scheduled cycle.
+- [Phase 05]: Expected operational failures use exit code 2; unexpected programmer errors still throw.
+- [Phase 05]: Run summaries must include run ID, timestamps, source URL, counts, diagnostics, raw storage evidence, staging evidence, and failure categories without secrets/raw bytes.
 
 ### Execution Metrics
 
@@ -95,4 +98,4 @@ None yet.
 
 ## Next Step
 
-Run `$gsd-plan-phase 5` to plan scheduled operations and validation.
+Run `$gsd-execute-phase 5` to execute scheduled operations and validation plans.

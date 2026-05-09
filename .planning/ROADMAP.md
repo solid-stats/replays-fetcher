@@ -119,7 +119,13 @@ Plans:
 4. Failures distinguish source unavailable, fetch failed, checksum/storage failed, staging failed, and config invalid.
 5. Unit tests cover idempotency, checksums, key generation, staging payloads, dry-run behavior, and failure classification.
 
-**Plans:** TBD
+**Plans:** 4 planned
+
+Plans:
+- [ ] 05-01-PLAN.md — Define run summary and failure taxonomy contracts.
+- [ ] 05-02-PLAN.md — Implement reusable run-once orchestration.
+- [ ] 05-03-PLAN.md — Wire CLI run-once command.
+- [ ] 05-04-PLAN.md — Document scheduled operations and verify v1.
 
 ## Progress
 
@@ -132,7 +138,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 2. Source Discovery and Dry Run | 4/4 | Complete | 2026-05-09 |
 | 3. Raw Replay Storage | 4/4 | Complete | 2026-05-09 |
 | 4. Staging and Promotion Handoff | 4/4 | Complete | 2026-05-09 |
-| 5. Scheduled Operations and Validation | 0/TBD | Not started | - |
+| 5. Scheduled Operations and Validation | 0/4 | Planned | - |
 
 ---
 *Roadmap created: 2026-05-09*
