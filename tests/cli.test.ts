@@ -134,6 +134,38 @@ test("buildCli should write dry-run discovery output", async () => {
   });
 });
 
+test("buildCli should set a failing exit code for source-level dry-run failures", async () => {
+  for (const [key, value] of Object.entries(validEnvironment)) {
+    vi.stubEnv(key, value);
+  }
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: false,
+      status: 429,
+      text: async () => "",
+    })),
+  );
+  const writes: string[] = [];
+  vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+    writes.push(String(chunk));
+    return true;
+  });
+
+  await buildCli().parseAsync([
+    "node",
+    "replays-fetcher",
+    "discover",
+    "--dry-run",
+  ]);
+
+  const output = parseCliOutput(writes);
+  expect(output).toMatchObject({
+    ok: false,
+  });
+  expect(process.exitCode).toBe(2);
+});
+
 test("buildCli should reject discover without dry-run until Phase 3", async () => {
   const writes: string[] = [];
   vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
