@@ -23,12 +23,23 @@ interface CheckOutput {
   readonly ok: boolean;
 }
 
+interface CliOutput {
+  readonly error?: string;
+  readonly mode?: string;
+  readonly ok: boolean;
+}
+
 function parseCheckOutput(writes: readonly string[]): CheckOutput {
   return JSON.parse(writes.join("")) as CheckOutput;
 }
 
+function parseCliOutput(writes: readonly string[]): CliOutput {
+  return JSON.parse(writes.join("")) as CliOutput;
+}
+
 afterEach(() => {
   vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
   vi.restoreAllMocks();
   process.exitCode = undefined;
 });
@@ -83,10 +94,59 @@ test("buildCli should rethrow unexpected check failures when configuration loadi
   ).rejects.toThrow("unexpected config crash");
 });
 
+test("buildCli should write dry-run discovery output", async () => {
+  for (const [key, value] of Object.entries(validEnvironment)) {
+    vi.stubEnv(key, value);
+  }
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: true,
+      text: async () =>
+        JSON.stringify({
+          candidates: [
+            {
+              externalId: "100",
+              filename: "replay-a.json",
+              url: "https://example.test/replays/100",
+            },
+          ],
+        }),
+    })),
+  );
+  const writes: string[] = [];
+  vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+    writes.push(String(chunk));
+    return true;
+  });
+
+  await buildCli().parseAsync(["node", "replays-fetcher", "discover", "--dry-run"]);
+
+  const output = parseCliOutput(writes);
+  expect(output).toMatchObject({
+    mode: "dry-run",
+    ok: true,
+  });
+});
+
+test("buildCli should reject discover without dry-run until Phase 3", async () => {
+  const writes: string[] = [];
+  vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+    writes.push(String(chunk));
+    return true;
+  });
+
+  await buildCli().parseAsync(["node", "replays-fetcher", "discover"]);
+
+  const output = parseCliOutput(writes);
+  expect(output).toStrictEqual({
+    error: "discover requires --dry-run until Phase 3",
+    ok: false,
+  });
+  expect(process.exitCode).toBe(2);
+});
+
 test("buildCli should throw explicit planned-phase errors when future commands are used", async () => {
-  await expect(
-    buildCli().parseAsync(["node", "replays-fetcher", "discover", "--dry-run"]),
-  ).rejects.toThrow("discover is planned for Phase 2");
   await expect(
     buildCli().parseAsync(["node", "replays-fetcher", "run-once"]),
   ).rejects.toThrow("run-once is planned for Phase 5");

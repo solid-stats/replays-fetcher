@@ -2,6 +2,8 @@
 import { Command } from "commander";
 
 import { ConfigError, loadConfig, redactConfig } from "./config.js";
+import { discoverReplaysDryRun } from "./discovery/discover.js";
+import { createSourceClient } from "./discovery/source-client.js";
 
 export function buildCli(): Command {
   const program = new Command();
@@ -51,8 +53,24 @@ export function buildCli(): Command {
       "--dry-run",
       "report candidates without writing S3 or staging records",
     )
-    .action(() => {
-      throw new Error("discover is planned for Phase 2");
+    .action(async (options: { readonly dryRun?: boolean }) => {
+      if (options.dryRun !== true) {
+        writeJson({
+          ok: false,
+          error: "discover requires --dry-run until Phase 3",
+        });
+        process.exitCode = 2;
+        return;
+      }
+
+      const config = loadConfig();
+      const sourceClient = createSourceClient();
+      const report = await discoverReplaysDryRun({
+        sourceClient,
+        sourceUrl: new URL(config.sourceUrl),
+      });
+
+      writeJson(report);
     });
 
   program
