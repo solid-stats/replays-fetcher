@@ -2,7 +2,7 @@
 
 `replays-fetcher` is the ingest service for Solid Stats. It discovers new OCAP replay files from the external replay source, stores raw replay objects in S3-compatible storage, and writes ingestion staging records that `server-2` promotes into canonical replay records and parse jobs.
 
-This repository now contains the Phase 2 TypeScript dry-run discovery path: package scripts, strict compiler settings, config validation, a `check` command, `discover --dry-run`, tests, and integration-contract docs. Raw S3 writes, staging schema integration, and scheduled execution are planned in later phases.
+This repository now contains the Phase 3 TypeScript raw storage path: package scripts, strict compiler settings, config validation, a `check` command, `discover --dry-run`, `discover --store-raw`, tests, and integration-contract docs. Staging schema integration and scheduled execution are planned in later phases.
 
 ## Product Boundary
 
@@ -37,7 +37,7 @@ Project planning lives in `.planning/`:
 - `.planning/STATE.md` - current GSD state.
 - `.planning/research/SUMMARY.md` - architecture findings and risks.
 
-Current phase: Phase 2, Source Discovery and Dry Run. Phase 2 reads the configured replay source and emits a non-mutating candidate report for operator inspection.
+Current phase: Phase 3, Raw Replay Storage. Phase 3 reads the configured replay source, fetches opaque replay bytes, computes SHA-256 evidence, and stores raw objects in S3-compatible storage without staging or parsing.
 
 ## Development Workflow
 
@@ -89,6 +89,23 @@ pnpm exec tsx src/cli.ts discover --dry-run
 
 Dry-run discovery reads the configured source and emits JSON to stdout. It does not write S3 objects, staging rows, parser artifacts, local replay-list files, or `server-2` business tables.
 
+Store raw replay objects:
+
+```bash
+pnpm exec tsx src/cli.ts discover --store-raw
+```
+
+`discover --store-raw` loads full source and S3 configuration, discovers candidates, fetches each replay as opaque bytes, computes the SHA-256 checksum before deriving the final key, and stores raw objects at `raw/sha256/<sha256>.ocap`.
+
+The storage path performs `HEAD` before `PUT` for idempotency:
+
+- Missing object: writes the raw bytes with `sha256` object metadata and reports `stored`.
+- Existing object with matching size and checksum metadata: does not rewrite and reports `skipped`.
+- Existing object with mismatched evidence: does not overwrite and reports `conflict`.
+- Source or storage failure: reports structured `failed` evidence.
+
+The raw storage command does not write staging rows, outbox rows, parser artifacts, local replay-list files, or `server-2` business tables. Scheduled `run-once` remains planned for Phase 5.
+
 Top-level report fields:
 
 - `ok` - whether discovery completed without source-level errors.
@@ -126,6 +143,15 @@ pnpm exec tsx src/cli.ts discover --dry-run
 
 The SSH path is an operator-managed source transport, not the old relay service.
 
+For `discover --store-raw`, the same SSH transport can be used for source page reads and replay byte downloads. The mutating storage path additionally requires valid S3-compatible object storage settings:
+
+- `S3_ENDPOINT`
+- `S3_REGION`
+- `S3_BUCKET`
+- `S3_ACCESS_KEY_ID`
+- `S3_SECRET_ACCESS_KEY`
+- `S3_FORCE_PATH_STYLE` when the provider does not use the default path-style behavior.
+
 ## Planned Commands
 
 Expected v1 command shape:
@@ -137,11 +163,14 @@ replays-fetcher check
 # Dry-run discovery without writing S3 or staging records
 replays-fetcher discover --dry-run
 
+# Discover and store raw replay objects without staging records
+replays-fetcher discover --store-raw
+
 # Run one scheduled fetch cycle
 replays-fetcher run-once
 ```
 
-`discover --dry-run` is implemented for Phase 2. Raw S3 writes are planned for Phase 3. Staging/outbox writes are planned for Phase 4. `run-once` scheduled operation is planned for Phase 5.
+`discover --dry-run` is implemented for non-mutating source inspection. `discover --store-raw` is implemented for Phase 3 raw object storage. Staging/outbox writes are planned for Phase 4. `run-once` scheduled operation is planned for Phase 5.
 
 ## Contract Docs
 
