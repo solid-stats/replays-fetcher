@@ -80,10 +80,95 @@
   },
   "parallelization": true,
   "model_overrides": null,
-  "agent_skills": {},
-  "sub_repos": [],
+  "agent_skills": {
+    "gsd-phase-researcher": [
+      ".agents/skills/rust-best-practices",
+      ".agents/skills/rust-testing",
+      ".agents/skills/rust-async-patterns",
+      ".agents/skills/cargo-fuzz",
+      ".agents/skills/coverage-analysis"
+    ],
+    "gsd-planner": [
+      ".agents/skills/rust-best-practices",
+      ".agents/skills/rust-testing",
+      ".agents/skills/rust-async-patterns",
+      ".agents/skills/cargo-fuzz",
+      ".agents/skills/coverage-analysis"
+    ],
+    "gsd-plan-checker": [
+      ".agents/skills/rust-best-practices",
+      ".agents/skills/rust-testing",
+      ".agents/skills/rust-async-patterns",
+      ".agents/skills/cargo-fuzz",
+      ".agents/skills/coverage-analysis"
+    ],
+    "gsd-executor": [
+      ".agents/skills/rust-best-practices",
+      ".agents/skills/rust-testing",
+      ".agents/skills/rust-async-patterns",
+      ".agents/skills/cargo-fuzz",
+      ".agents/skills/coverage-analysis"
+    ],
+    "gsd-verifier": [
+      ".agents/skills/rust-best-practices",
+      ".agents/skills/rust-testing",
+      ".agents/skills/rust-async-patterns",
+      ".agents/skills/cargo-fuzz",
+      ".agents/skills/coverage-analysis"
+    ],
+    "gsd-nyquist-auditor": [
+      ".agents/skills/rust-best-practices",
+      ".agents/skills/rust-testing",
+      ".agents/skills/rust-async-patterns",
+      ".agents/skills/cargo-fuzz",
+      ".agents/skills/coverage-analysis"
+    ],
+    "gsd-code-reviewer": [
+      ".agents/skills/rust-best-practices",
+      ".agents/skills/rust-testing",
+      ".agents/skills/rust-async-patterns",
+      ".agents/skills/cargo-fuzz",
+      ".agents/skills/coverage-analysis"
+    ],
+    "gsd-code-fixer": [
+      ".agents/skills/rust-best-practices",
+      ".agents/skills/rust-testing",
+      ".agents/skills/rust-async-patterns",
+      ".agents/skills/cargo-fuzz",
+      ".agents/skills/coverage-analysis"
+    ],
+    "gsd-debugger": [
+      ".agents/skills/rust-best-practices",
+      ".agents/skills/rust-testing",
+      ".agents/skills/rust-async-patterns",
+      ".agents/skills/cargo-fuzz",
+      ".agents/skills/coverage-analysis"
+    ],
+    "gsd-integration-checker": [
+      ".agents/skills/rust-best-practices",
+      ".agents/skills/rust-testing",
+      ".agents/skills/rust-async-patterns",
+      ".agents/skills/cargo-fuzz",
+      ".agents/skills/coverage-analysis"
+    ],
+    "gsd-security-auditor": [
+      ".agents/skills/rust-best-practices",
+      ".agents/skills/rust-testing",
+      ".agents/skills/rust-async-patterns",
+      ".agents/skills/cargo-fuzz",
+      ".agents/skills/coverage-analysis"
+    ],
+    "gsd-codebase-mapper": [
+      ".agents/skills/rust-best-practices",
+      ".agents/skills/rust-testing",
+      ".agents/skills/rust-async-patterns",
+      ".agents/skills/cargo-fuzz",
+      ".agents/skills/coverage-analysis"
+    ]
+  },
   "planning": {
     "commit_docs": true,
-    "search_gitignored": false
+    "search_gitignored": false,
+    "sub_repos": []
   }
 }
