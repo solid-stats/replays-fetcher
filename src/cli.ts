@@ -71,6 +71,10 @@ export function buildCli(): Command {
       });
 
       writeJson(report);
+
+      if (!report.ok) {
+        process.exitCode = 2;
+      }
     });
 
   program

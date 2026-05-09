@@ -120,7 +120,12 @@ test("buildCli should write dry-run discovery output", async () => {
     return true;
   });
 
-  await buildCli().parseAsync(["node", "replays-fetcher", "discover", "--dry-run"]);
+  await buildCli().parseAsync([
+    "node",
+    "replays-fetcher",
+    "discover",
+    "--dry-run",
+  ]);
 
   const output = parseCliOutput(writes);
   expect(output).toMatchObject({
