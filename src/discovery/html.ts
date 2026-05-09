@@ -95,12 +95,15 @@ function parseReplayRow(
     source.url = url;
   }
 
-  if (link?.groups?.["text"] !== undefined) {
-    metadata.missionText = stripTags(link.groups["text"]).trim();
+  const missionText = stripTags(link?.groups?.["text"] ?? "").trim();
+  const world = stripTags(cells[1] ?? "").trim();
+
+  if (missionText.length > 0) {
+    metadata.missionText = missionText;
   }
 
-  if (cells[1] !== undefined) {
-    metadata.world = stripTags(cells[1]).trim();
+  if (world.length > 0) {
+    metadata.world = world;
   }
 
   if (!Number.isNaN(serverId)) {

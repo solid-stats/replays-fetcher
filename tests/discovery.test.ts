@@ -387,6 +387,48 @@ test("discoverReplaysDryRun should report duplicate filenames without optional e
   ]);
 });
 
+test("discoverReplaysDryRun should omit metadata for sparse HTML rows", async () => {
+  const responses = new Map([
+    [
+      "https://example.test/replays",
+      `
+        <table class="common-table">
+          <tbody>
+            <tr><td><a href="/downloads/custom"></a></td></tr>
+          </tbody>
+        </table>
+      `,
+    ],
+    [
+      "https://example.test/downloads/custom",
+      `<html><body data-ocap="custom.json"></body></html>`,
+    ],
+  ]);
+  const sourceClient: SourceClient = {
+    async fetchText(url) {
+      return responses.get(url.toString()) ?? "";
+    },
+  };
+
+  const report = await discoverReplaysDryRun({
+    requestDelayMs: 0,
+    sourceClient,
+    sourceUrl: new URL("https://example.test/replays"),
+  });
+
+  expect(report.candidates).toStrictEqual([
+    {
+      identity: {
+        filename: "custom.json",
+      },
+      source: {
+        page: 1,
+        url: "https://example.test/downloads/custom",
+      },
+    },
+  ]);
+});
+
 test("discoverReplaysDryRun should apply default pacing between source requests", async () => {
   const sleeps: number[] = [];
   const responses = new Map([
