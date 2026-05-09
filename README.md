@@ -37,6 +37,8 @@ Project planning lives in `.planning/`:
 - `.planning/STATE.md` - current GSD state.
 - `.planning/research/SUMMARY.md` - architecture findings and risks.
 
+Current phase: Phase 1, Project Foundation and Integration Contract. Run `$gsd-plan-phase 1` to create executable plans.
+
 ## Development Workflow
 
 Development is performed only by AI agents using the GSD workflow. Direct non-GSD development is out of process for this product.

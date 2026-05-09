@@ -4,8 +4,8 @@ milestone: v1.0
 milestone_name: initial ingest service
 status: planning
 stopped_at: GSD initialization complete
-last_updated: "2026-04-26T15:45:12+07:00"
-last_activity: "2026-04-26 - Initialized replays-fetcher planning"
+last_updated: "2026-05-09T11:22:50+07:00"
+last_activity: "2026-05-09 - Initialized replays-fetcher planning from gsd-briefs/replays-fetcher.md"
 progress:
   total_phases: 5
   completed_phases: 0
@@ -18,7 +18,7 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-26)
+See: .planning/PROJECT.md (updated 2026-05-09)
 
 **Core value:** Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
 **Current focus:** Phase 1 - Project Foundation and Integration Contract
@@ -28,16 +28,15 @@ See: .planning/PROJECT.md (updated 2026-04-26)
 Phase: 1 (project-foundation-and-integration-contract)
 Plan: Not created
 Status: Ready to plan
-Last activity: 2026-04-26 - Initialized replays-fetcher planning
+Last activity: 2026-05-09 - Initialized replays-fetcher planning from `gsd-briefs/replays-fetcher.md`
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [----------] 0%
 
 ## Accumulated Context
 
 ### Decisions
 
-Decisions are logged in PROJECT.md Key Decisions table.
-Recent decisions affecting current work:
+Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecting current work:
 
 - `replays-fetcher` is a separate ingest service.
 - v1 runtime is TypeScript.
@@ -60,6 +59,7 @@ None yet.
 - Exact external replay source URL/API/HTML shape is not documented yet.
 - Exact staging table/schema and whether it lives in the `server-2` database or separate schema still need to be planned with `server-2`.
 - Exact raw replay S3 object key format is not locked yet.
+- Rate-limit/backoff expectations for the external source are not locked yet.
 - GSD subagents are not installed in this runtime, so new-project research/roadmap generation was performed inline.
 
 ## Next Step

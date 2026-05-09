@@ -60,3 +60,105 @@ Use TypeScript for v1 unless a later planning decision changes it:
 - Every completed work session must leave `git status --short` clean by committing intended results.
 - Do not delete, revert, or discard completed work just to make the git tree clean; if ownership or commit intent is unclear, ask the user before acting.
 - Check cross-application compatibility before implementation: changes to staging schema, object key layout, source identity, retention, retries, or operator-visible statuses require accounting for `server-2`; UI-visible ingest/job status changes require accounting for `web`.
+
+<!-- GSD:project-start source:PROJECT.md -->
+## Project
+
+**replays-fetcher**
+
+`replays-fetcher` is the Solid Stats ingest service for discovering new OCAP replay files from the external replay source. It stores raw replay objects in S3-compatible storage and writes ingestion staging/outbox records that `server-2` promotes into durable replay records and parse jobs.
+
+The service is intentionally narrow. It fetches replay bytes and records source evidence; it does not parse replay contents, create canonical replay or parse-job records, calculate statistics, resolve player identity, or own public APIs.
+
+**Core Value:** Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
+
+### Constraints
+
+- **Runtime**: TypeScript - aligns with `server-2` operational patterns and integration libraries.
+- **Runtime shape**: Scheduled job - simpler v1 operations than an always-on crawler.
+- **Storage**: S3-compatible raw object storage - parser worker consumes replay bytes by object key/checksum.
+- **Database boundary**: Staging/outbox writes only - `server-2` remains source of truth for business state.
+- **Identity**: Checksum plus external source identity - supports idempotency while preserving source lineage.
+- **Duplicates**: Manual review for ambiguous conflicts - avoids corrupting replay history through unsafe merges.
+- **History**: No `~/sg_stats` production import in v1 - historical data remains validation baseline for parser work.
+- **Workflow**: AI agents plus GSD only - README and planning docs must stay current.
+- **GSD config**: Match `replay-parser-2` `.planning/config.json` exactly - fetcher and parser should use the same planning rigor and workflow gates.
+- **Git hygiene**: Completed sessions must commit intended results and leave a clean worktree.
+- **Cross-application compatibility**: Staging schema, object key layout, retry semantics, and operator-visible statuses must account for `server-2`; UI-visible status fields must account for `web`.
+<!-- GSD:project-end -->
+
+<!-- GSD:stack-start source:research/STACK.md -->
+## Technology Stack
+
+## Recommendation
+## Runtime and Language
+- **Node.js:** target current Active LTS for new work. As of 2026-05-09, Node.js 24 is Active LTS according to the Node.js release schedule.
+- **TypeScript:** use the latest stable TypeScript release available at implementation time. TypeScript 5.9 docs are current as of April 2026 and include `node20` module behavior; phase planning should lock exact compiler settings.
+- **Module style:** prefer ESM unless implementation discovers a dependency constraint.
+- **Package manager:** align with adjacent Solid Games repos during Phase 1.
+## Service Libraries
+- **S3-compatible storage:** use AWS SDK for JavaScript v3 `@aws-sdk/client-s3`. It is modular, TypeScript-oriented, and supports S3-compatible endpoints with explicit endpoint/region/path-style configuration.
+- **PostgreSQL:** use `pg` directly for staging/outbox writes unless Phase 1 chooses a schema/migration tool. The staging contract is narrow enough that raw SQL plus typed payloads is easier to audit than a broad ORM.
+- **Database migrations:** defer exact tool choice until staging table ownership is locked with `server-2`. If this repo owns staging migrations, prefer a TypeScript-friendly migration path that can emit plain SQL and be reviewed by `server-2`.
+- **Configuration validation:** use a schema validator such as Zod or a small typed validator. Fail before mutating S3 or PostgreSQL.
+- **Logging:** use structured JSON logs. Pino is a strong default if a library is needed; direct JSON-to-stdout is also acceptable for the initial skeleton.
+- **Testing:** use Vitest for unit tests and TypeScript test execution. Use Testcontainers or local mocks for PostgreSQL and MinIO/S3-compatible integration tests when Docker is available.
+## Commands to Plan
+- `replays-fetcher check` - validate config and connectivity.
+- `replays-fetcher discover --dry-run` - discover candidates without writes.
+- `replays-fetcher run-once` - execute one full scheduled cycle.
+## What Not To Use
+- Do not introduce a web server in v1 unless a later phase proves a need. Scheduled `run-once` is the accepted runtime shape.
+- Do not use a parser library or OCAP replay content reader in this repo.
+- Do not introduce an ORM that hides staging writes from audit unless `server-2` compatibility requires it.
+- Do not write `server-2` business tables from this service.
+## Sources
+- Node.js Releases: https://nodejs.org/en/about/releases/
+- Node.js Release Working Group schedule: https://github.com/nodejs/Release
+- TypeScript 5.9 release notes: https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-9.html
+- AWS SDK for JavaScript v3 guide: https://docs.aws.amazon.com/en_us/sdk-for-javascript/v3/developer-guide/welcome.html
+- AWS S3 JavaScript v3 examples: https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/javascript_s3_code_examples.html
+- node-postgres pooling docs: https://node-postgres.com/features/pooling
+- Vitest writing tests guide: https://main.vitest.dev/guide/learn/writing-tests
+- Testcontainers for Node.js: https://node.testcontainers.org/
+- Testcontainers MinIO module: https://node.testcontainers.org/modules/minio/
+- Pino repository/docs: https://github.com/pinojs/pino
+<!-- GSD:stack-end -->
+
+<!-- GSD:conventions-start source:CONVENTIONS.md -->
+## Conventions
+
+Conventions not yet established. Will populate as patterns emerge during development.
+<!-- GSD:conventions-end -->
+
+<!-- GSD:architecture-start source:ARCHITECTURE.md -->
+## Architecture
+
+Architecture not yet mapped. Follow existing patterns found in the codebase.
+<!-- GSD:architecture-end -->
+
+<!-- GSD:skills-start source:skills/ -->
+## Project Skills
+
+No project skills found. Add skills to any of: `.claude/skills/`, `.agents/skills/`, `.cursor/skills/`, `.github/skills/`, or `.codex/skills/` with a `SKILL.md` index file.
+<!-- GSD:skills-end -->
+
+<!-- GSD:workflow-start source:GSD defaults -->
+## GSD Workflow Enforcement
+
+Before using Edit, Write, or other file-changing tools, start work through a GSD command so planning artifacts and execution context stay in sync.
+
+Use these entry points:
+- `/gsd-quick` for small fixes, doc updates, and ad-hoc tasks
+- `/gsd-debug` for investigation and bug fixing
+- `/gsd-execute-phase` for planned phase work
+
+Do not make direct repo edits outside a GSD workflow unless the user explicitly asks to bypass it.
+<!-- GSD:workflow-end -->
+
+<!-- GSD:profile-start -->
+## Developer Profile
+
+> Profile not yet configured. Run `/gsd-profile-user` to generate your developer profile.
+> This section is managed by `generate-claude-profile` -- do not edit manually.
+<!-- GSD:profile-end -->
