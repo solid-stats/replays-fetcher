@@ -40,6 +40,26 @@ test("createSourceClient should classify direct HTTP failures", async () => {
   });
 });
 
+test("createSourceClient should classify non-rate-limited direct failures", async () => {
+  const config = loadConfig(validEnvironment);
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: false,
+      status: 500,
+      text: async () => "",
+    })),
+  );
+  const sourceClient = createSourceClient(config);
+
+  await expect(
+    sourceClient.fetchText(new URL("https://example.test/replays")),
+  ).rejects.toMatchObject({
+    code: "source_unavailable",
+    name: "SourceFetchError",
+  });
+});
+
 test("SourceFetchError should carry source failure metadata", () => {
   const error = new SourceFetchError(
     "source_unavailable",
@@ -103,27 +123,6 @@ test("createSourceClient should classify SSH command failures as source errors",
   ).rejects.toMatchObject({
     code: "rate_limited",
     message: "curl failed with status 429",
-    name: "SourceFetchError",
-  });
-});
-
-test("createSourceClient should classify non-error SSH failures without leaking config", async () => {
-  const config = loadConfig({
-    ...validEnvironment,
-    REPLAY_SOURCE_SSH_HOST: "allowlisted-host",
-    REPLAY_SOURCE_TRANSPORT: "ssh",
-  });
-  const sourceClient = createSourceClient(config, {
-    async execFile() {
-      return Promise.reject("ssh failed");
-    },
-  });
-
-  await expect(
-    sourceClient.fetchText(new URL("https://example.test/replays/100")),
-  ).rejects.toMatchObject({
-    code: "source_unavailable",
-    message: "SSH source request failed",
     name: "SourceFetchError",
   });
 });

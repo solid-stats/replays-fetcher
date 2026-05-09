@@ -64,6 +64,8 @@ export async function discoverReplaysDryRun(
       // eslint-disable-next-line no-await-in-loop
       const sourceText = await options.sourceClient.fetchText(pageUrl);
       const fixture = parseSourceFixture(sourceText);
+      // Page detail fetches are part of the same source-order sequence.
+      // eslint-disable-next-line no-await-in-loop
       const pageCandidates = await discoverPageCandidates({
         fixture,
         page,
