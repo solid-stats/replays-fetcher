@@ -77,7 +77,7 @@ Additional verification/refinement commits:
 - `27e06d1` (test): cover duplicate diagnostics without optional evidence
 - `c0c53c6` (test): keep discovery diagnostics tests lint-friendly
 - `5f90d68` (refactor): omit empty candidate metadata from dry-run reports
-- `9e5ce8c` (fix): omit sparse HTML row metadata
+- `9e5ce8c` (fix): omit sparse HTML row metadata and restore 100% coverage
 
 **Plan metadata:** pending final docs commit
 
@@ -116,13 +116,12 @@ Additional verification/refinement commits:
 
 ## Issues Encountered
 
-- Local commands run under Node v22.16.0 while `package.json` requires Node `>=25 <26`. `pnpm test` and `pnpm run typecheck` passed with pnpm engine warnings.
+- Local commands run under Node v22.22.2 while `package.json` requires Node `>=25 <26`. Verification passed with pnpm engine warnings.
 - A pacing change briefly made existing multi-request tests wait real timer delays; tests now pass `requestDelayMs: 0` except for the injected-sleep pacing test.
 
 ## Verification
 
-- `pnpm test` - passed, 5 test files and 41 tests.
-- `pnpm run typecheck` - passed.
+- `pnpm run verify` - passed, including format, lint, typecheck, 5 test files / 41 tests, 100% coverage, and build.
 - Acceptance greps passed for diagnostic codes, `REPLAY_SOURCE_TRANSPORT`, `process.exitCode`, `requestDelayMs`, `sleep`, and `2000`.
 
 ## Known Stubs
@@ -143,9 +142,9 @@ Phase 2 can continue with any remaining dry-run validation without mutating S3 o
 
 ## Self-Check: PASSED
 
-- Created/modified files exist: `src/discovery/types.ts`, `src/discovery/discover.ts`, `src/discovery/source-client.ts`, `src/cli.ts`, `tests/discovery.test.ts`, `tests/cli.test.ts`, `tests/source-client.test.ts`.
+- Created/modified files exist: `src/discovery/types.ts`, `src/discovery/discover.ts`, `src/discovery/html.ts`, `src/discovery/source-client.ts`, `src/cli.ts`, `tests/discovery.test.ts`, `tests/cli.test.ts`, `tests/source-client.test.ts`.
 - Task/refinement commits exist: `f915f0d`, `492cec8`, `dfaa6dc`, `dc9883a`, `27e06d1`, `c0c53c6`, `5f90d68`, `9e5ce8c`.
-- Plan verification commands passed after the last code change: `pnpm test`, `pnpm run typecheck`.
+- Plan verification command passed after the last code change: `pnpm run verify`.
 
 ---
 *Phase: 02-source-discovery-and-dry-run*
