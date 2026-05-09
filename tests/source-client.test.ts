@@ -126,3 +126,23 @@ test("createSourceClient should classify SSH command failures as source errors",
     name: "SourceFetchError",
   });
 });
+
+test("createSourceClient should classify generic SSH command failures as unavailable", async () => {
+  const config = loadConfig({
+    ...validEnvironment,
+    REPLAY_SOURCE_SSH_HOST: "allowlisted-host",
+    REPLAY_SOURCE_TRANSPORT: "ssh",
+  });
+  const sourceClient = createSourceClient(config, {
+    async execFile() {
+      throw new Error("connection failed");
+    },
+  });
+
+  await expect(
+    sourceClient.fetchText(new URL("https://example.test/replays/100")),
+  ).rejects.toMatchObject({
+    code: "source_unavailable",
+    name: "SourceFetchError",
+  });
+});
