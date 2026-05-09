@@ -25,13 +25,13 @@ Requirements for the initial ingest service release. Each maps to roadmap phases
 
 - [x] **RUN-01**: Service is implemented as a strict TypeScript application.
 - [ ] **RUN-02**: Service supports a scheduled `run-once` execution mode suitable for cron/container scheduling.
-- [ ] **RUN-03**: Service supports a dry-run discovery mode that reads the source and reports candidates without writing S3 or staging records.
+- [x] **RUN-03**: Service supports a dry-run discovery mode that reads the source and reports candidates without writing S3 or staging records.
 - [x] **RUN-04**: Service supports a config/connectivity check mode for source, S3, and staging database settings.
 - [x] **RUN-05**: Required environment/config values are validated before a fetch cycle mutates storage or staging state.
 
 ### Source Discovery
 
-- [ ] **SRC-01**: Fetcher discovers replay candidates from the external replay source and records source URL plus external source replay ID when available.
+- [x] **SRC-01**: Fetcher discovers replay candidates from the external replay source and records source URL plus external source replay ID when available.
 - [ ] **SRC-02**: Discovery is idempotent across repeated scheduled runs.
 - [ ] **SRC-03**: Source adapter handles missing, malformed, duplicate, and changed source metadata with structured diagnostics instead of silent corruption.
 - [ ] **SRC-04**: Fetcher respects configurable rate limits, timeouts, and bounded retry behavior for external source requests.
@@ -66,7 +66,7 @@ Requirements for the initial ingest service release. Each maps to roadmap phases
 - [ ] **TEST-02**: Integration tests cover S3-compatible storage behavior using local/mocked storage.
 - [ ] **TEST-03**: Integration tests cover staging writes using an isolated PostgreSQL database or equivalent test harness.
 - [ ] **TEST-04**: Tests prove the fetcher does not write forbidden `server-2` business tables.
-- [ ] **TEST-05**: Dry-run mode is tested to prove it does not mutate S3 or staging state.
+- [x] **TEST-05**: Dry-run mode is tested to prove it does not mutate S3 or staging state.
 
 ## v2 Requirements
 
@@ -110,10 +110,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INT-04 | Phase 1 | Complete |
 | RUN-01 | Phase 1 | Complete |
 | RUN-02 | Phase 5 | Pending |
-| RUN-03 | Phase 2 | Pending |
+| RUN-03 | Phase 2 | Complete |
 | RUN-04 | Phase 1 | Complete |
 | RUN-05 | Phase 1 | Complete |
-| SRC-01 | Phase 2 | Pending |
+| SRC-01 | Phase 2 | Complete |
 | SRC-02 | Phase 2 | Pending |
 | SRC-03 | Phase 2 | Pending |
 | SRC-04 | Phase 2 | Pending |
@@ -136,7 +136,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TEST-02 | Phase 5 | Pending |
 | TEST-03 | Phase 5 | Pending |
 | TEST-04 | Phase 4 | Pending |
-| TEST-05 | Phase 2 | Pending |
+| TEST-05 | Phase 2 | Complete |
 
 **Coverage:**
 - v1 requirements: 37 total

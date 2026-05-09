@@ -2,16 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: initial ingest service
-status: planning
-stopped_at: Phase 1 complete
-last_updated: "2026-05-09T11:22:50+07:00"
-last_activity: "2026-05-09 - Completed Phase 1 project foundation and integration contract"
+status: executing
+last_updated: "2026-05-09T11:29:46.597Z"
+last_activity: 2026-05-09
 progress:
   total_phases: 5
   completed_phases: 1
-  total_plans: 1
-  completed_plans: 1
-  percent: 20
+  total_plans: 5
+  completed_plans: 2
+  percent: 40
 ---
 
 # Project State
@@ -21,16 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-09)
 
 **Core value:** Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
-**Current focus:** Phase 2 - Source Discovery and Dry Run
+**Current focus:** Phase 02 — source-discovery-and-dry-run
 
 ## Current Position
 
-Phase: 2 (source-discovery-and-dry-run)
-Plan: Not created
-Status: Ready to plan
-Last activity: 2026-05-09 - Completed Phase 1 project foundation and integration contract
+Phase: 02 (source-discovery-and-dry-run) — EXECUTING
+Plan: 2 of 4
+Status: Ready to execute
+Last activity: 2026-05-09
 
-Progress: [##--------] 20%
+Progress: [████░░░░░░] 40%
 
 ## Accumulated Context
 
@@ -50,6 +49,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - Production historical import from `~/sg_stats` is out of scope for v1.
 - v1 replay submission sources are admin/ingest only.
 - Phase 1 established strict TypeScript, Vitest, ESLint, Prettier, config validation, the `check` command, and integration-contract docs.
+- [Phase 02]: Discovery core accepts a SourceClient seam so dry-run behavior stays independent from direct HTTP or future SSH transport.
+- [Phase 02]: The discover command remains non-mutating and rejects non-dry-run execution until Phase 3.
 
 ### Pending Todos
 
