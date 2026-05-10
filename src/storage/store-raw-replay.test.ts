@@ -26,6 +26,7 @@ const candidate: ReplayCandidate = {
   },
   source: {
     externalId: "1778269931",
+    rawUrl: "https://sg.zone/data/2026_05_09__00_32_44__1_ocap.json",
     url: "https://sg.zone/replays/1778269931",
   },
 };
@@ -78,7 +79,9 @@ test("storeRawReplay should fetch bytes and return raw storage evidence", async 
     storage,
   });
 
-  expect(fetchedUrls).toStrictEqual([new URL(candidate.source.url)]);
+  expect(fetchedUrls).toStrictEqual([
+    new URL("https://sg.zone/data/2026_05_09__00_32_44__1_ocap.json"),
+  ]);
   expect(storageCalls).toStrictEqual([
     { bytes, candidate, checksum, fetchedAt, objectKey },
   ]);
@@ -123,6 +126,49 @@ test("storeRawReplay should omit absent source-discovered timestamps", async () 
   });
 
   expect(JSON.stringify(result)).not.toContain("discoveredAt");
+});
+
+test("storeRawReplay should fall back to the detail URL for legacy candidates", async () => {
+  const fetchedUrls: URL[] = [];
+  const legacyCandidate: ReplayCandidate = {
+    identity: candidate.identity,
+    source: {
+      externalId: "1778269931",
+      url: "https://sg.zone/replays/1778269931",
+    },
+  };
+  const byteClient: ReplayByteClient = {
+    async fetchBytes(url) {
+      fetchedUrls.push(url);
+
+      return bytes;
+    },
+  };
+  const storage: S3RawReplayStorage = {
+    async storeRawReplay(input) {
+      return {
+        bucket: "solid-stats-replays",
+        byteSize: input.bytes.byteLength,
+        checksum,
+        fetchedAt: input.fetchedAt,
+        objectKey,
+        source: input.candidate.source,
+        sourceFilename: input.candidate.identity.filename,
+        status: "stored",
+      };
+    },
+  };
+
+  await storeRawReplay({
+    byteClient,
+    candidate: legacyCandidate,
+    now: () => new Date(fetchedAt),
+    storage,
+  });
+
+  expect(fetchedUrls).toStrictEqual([
+    new URL("https://sg.zone/replays/1778269931"),
+  ]);
 });
 
 test("storeRawReplay should return failed evidence and skip storage on fetch failure", async () => {

@@ -17,6 +17,7 @@ test("discoverReplaysDryRun should map a source fixture into a dry-run report", 
             filename: "replay-a.json",
             missionText: "sg@test",
             page: 2,
+            rawUrl: "https://example.test/data/replay-a.json",
             serverId: 1,
             url: "https://example.test/replays/100",
             world: "Altis",
@@ -53,6 +54,7 @@ test("discoverReplaysDryRun should map a source fixture into a dry-run report", 
     source: {
       externalId: "100",
       page: 2,
+      rawUrl: "https://example.test/data/replay-a.json",
       url: "https://example.test/replays/100",
     },
   });
@@ -151,6 +153,7 @@ test("discoverReplaysDryRun should parse HTML list and detail pages with stable 
     source: {
       externalId: "100",
       page: 1,
+      rawUrl: "https://example.test/data/replay-a.json",
       url: "https://example.test/replays/100",
     },
   });
@@ -238,6 +241,9 @@ test("discoverReplaysDryRun should support maxPages and skip incomplete HTML can
   expect(report.maxPages).toBe(2);
   expect(report.candidates).toHaveLength(1);
   expect(report.candidates[0]?.identity.filename).toBe("page-two.json");
+  expect(report.candidates[0]?.source.rawUrl).toBe(
+    "https://example.test/data/page-two.json",
+  );
   expect(report.diagnostics.map((diagnostic) => diagnostic.code)).toContain(
     "malformed_row",
   );
@@ -486,6 +492,7 @@ test("discoverReplaysDryRun should omit metadata for sparse HTML rows", async ()
       source: {
         externalId: "custom",
         page: 1,
+        rawUrl: "https://example.test/data/custom.json",
         url: "https://example.test/replays/custom",
       },
     },
@@ -531,6 +538,7 @@ test("discoverReplaysDryRun should allow replay detail URLs without external IDs
       },
       source: {
         page: 1,
+        rawUrl: "https://example.test/data/no-id.json",
         url: "https://example.test/replays/",
       },
     },
@@ -569,8 +577,43 @@ test("discoverReplaysDryRun should preserve external IDs for sparse HTML rows", 
   expect(report.candidates[0]?.source).toStrictEqual({
     externalId: "100",
     page: 1,
+    rawUrl: "https://example.test/data/custom.json",
     url: "https://example.test/replays/100",
   });
+});
+
+test("discoverReplaysDryRun should derive raw JSON URLs for filenames without extensions", async () => {
+  const responses = new Map([
+    [
+      "https://example.test/replays",
+      `
+        <table class="common-table">
+          <tbody>
+            <tr><td><a href="/replays/100">extensionless</a></td></tr>
+          </tbody>
+        </table>
+      `,
+    ],
+    [
+      "https://example.test/replays/100",
+      `<html><body data-ocap="extensionless"></body></html>`,
+    ],
+  ]);
+  const sourceClient: SourceClient = {
+    async fetchText(url) {
+      return responses.get(url.toString()) ?? "";
+    },
+  };
+
+  const report = await discoverReplaysDryRun({
+    requestDelayMs: 0,
+    sourceClient,
+    sourceUrl: new URL("https://example.test/replays"),
+  });
+
+  expect(report.candidates[0]?.source.rawUrl).toBe(
+    "https://example.test/data/extensionless.json",
+  );
 });
 
 test("discoverReplaysDryRun should apply default pacing between source requests", async () => {

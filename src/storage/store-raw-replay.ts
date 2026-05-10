@@ -36,7 +36,7 @@ export async function storeRawReplay(
 
   try {
     const bytes = await input.byteClient.fetchBytes(
-      new URL(input.candidate.source.url),
+      new URL(input.candidate.source.rawUrl ?? input.candidate.source.url),
     );
     const checksum = calculateSha256(bytes);
     const objectKey = toRawReplayObjectKey(checksum);

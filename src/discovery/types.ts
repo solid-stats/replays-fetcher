@@ -25,6 +25,7 @@ export interface ReplayCandidate {
   readonly source: {
     readonly externalId?: string;
     readonly page?: number;
+    readonly rawUrl?: string;
     readonly url: string;
   };
 }

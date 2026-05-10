@@ -24,6 +24,7 @@ interface SourceCandidateFixture {
   readonly filename: string;
   readonly missionText?: string;
   readonly page?: number;
+  readonly rawUrl?: string;
   readonly serverId?: number;
   readonly url: string;
   readonly world?: string;
@@ -43,6 +44,7 @@ interface MutableReplayMetadata {
 interface MutableReplaySource {
   externalId?: string;
   page?: number;
+  rawUrl?: string;
   url: string;
 }
 
@@ -254,14 +256,20 @@ async function discoverRowCandidate(
   row: ReturnType<typeof extractReplayRows>[number],
   sourceUrl: string,
 ): Promise<ReplayCandidate | undefined> {
-  const detailHtml = await sourceClient.fetchText(new URL(sourceUrl));
+  const detailUrl = new URL(sourceUrl);
+  const detailHtml = await sourceClient.fetchText(detailUrl);
   const filename = extractFilenameFromDetailHtml(detailHtml);
 
   if (filename === undefined) {
     return undefined;
   }
 
-  return toReplayCandidateFromHtmlRow(filename, row, sourceUrl);
+  return toReplayCandidateFromHtmlRow({
+    filename,
+    rawUrl: toRawReplayUrl(filename, detailUrl),
+    row,
+    sourceUrl,
+  });
 }
 
 function collectCandidateDiagnostics(
@@ -396,29 +404,31 @@ function hasChangedMetadata(
   });
 }
 
-function toReplayCandidateFromHtmlRow(
-  filename: string,
-  row: ReturnType<typeof extractReplayRows>[number],
-  sourceUrl: string,
-): ReplayCandidate {
+function toReplayCandidateFromHtmlRow(input: {
+  readonly filename: string;
+  readonly rawUrl: string;
+  readonly row: ReturnType<typeof extractReplayRows>[number];
+  readonly sourceUrl: string;
+}): ReplayCandidate {
   const source: MutableReplaySource = {
-    page: row.page,
-    url: sourceUrl,
+    page: input.row.page,
+    rawUrl: input.rawUrl,
+    url: input.sourceUrl,
   };
 
-  if (row.source.externalId !== undefined) {
-    source.externalId = row.source.externalId;
+  if (input.row.source.externalId !== undefined) {
+    source.externalId = input.row.source.externalId;
   }
 
   const candidate: ReplayCandidate = {
-    identity: { filename },
+    identity: { filename: input.filename },
     source,
   };
 
-  if (Object.keys(row.metadata).length > 0) {
+  if (Object.keys(input.row.metadata).length > 0) {
     return {
       ...candidate,
-      metadata: row.metadata,
+      metadata: input.row.metadata,
     };
   }
 
@@ -476,6 +486,10 @@ function toReplayCandidate(
     source.page = candidate.page;
   }
 
+  if (candidate.rawUrl !== undefined) {
+    source.rawUrl = candidate.rawUrl;
+  }
+
   const metadata: MutableReplayMetadata = {};
 
   if (candidate.discoveredAt !== undefined) {
@@ -528,6 +542,18 @@ function toPageUrl(sourceUrl: URL, page: number): URL {
   pageUrl.searchParams.set("p", String(page));
 
   return pageUrl;
+}
+
+function toRawReplayUrl(filename: string, detailUrl: URL): string {
+  let rawFilename = filename;
+
+  if (!rawFilename.endsWith(".json")) {
+    rawFilename = `${rawFilename}.json`;
+  }
+
+  return new URL(`/data/${encodeURIComponent(rawFilename)}`, detailUrl)
+    .toString()
+    .replaceAll("%2F", "/");
 }
 
 /* v8 ignore next 5 -- tested through injected sleep to avoid real timer delay. */
