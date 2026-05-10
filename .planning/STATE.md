@@ -4,7 +4,7 @@ milestone: v1.0
 milestone_name: initial ingest service
 status: verifying
 last_updated: "2026-05-10T02:23:09.000Z"
-last_activity: 2026-05-10 -- Quick task cleaned Phase 02 validation metadata
+last_activity: 2026-05-10 -- Quick task fixed Phase 02 UAT milestone-close audit metadata
 progress:
   total_phases: 6
   completed_phases: 6
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 Phase: 06 (close-v1-audit-gaps-connectivity-checks-and-discovered-times) — COMPLETE
 Plan: 6 of 6
 Status: Phase 06 verified
-Last activity: 2026-05-10 -- Phase 06 execution and verification complete
+Last activity: 2026-05-10 -- Phase 02 UAT milestone-close audit metadata fixed
 
 Progress: [██████████] 100%
 
@@ -116,6 +116,7 @@ None yet.
 | Date | Quick Task | Status |
 |------|------------|--------|
 | 2026-05-10 | clean-phase-02-validation-metadata | complete |
+| 2026-05-10 | fix-milestone-close-audit-false-positive | complete |
 
 ### Blockers/Concerns
 
