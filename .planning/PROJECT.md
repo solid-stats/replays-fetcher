@@ -16,20 +16,11 @@ Reliably discover and stage new replay files without corrupting `server-2` busin
 
 - [x] Phase 1 established a current README, AGENTS instructions, GSD planning docs, strict TypeScript foundation, config validation, and explicit cross-app ownership contract.
 - [x] Phase 2 established source discovery dry-run mode with direct/SSH source transport, structured candidate reports, diagnostics, pacing, no-mutation guards, and live validation against `https://sg.zone/replays`.
+- [x] v1.0 shipped the full scheduled ingest service: idempotent discovery, S3-compatible raw object storage, staging handoff for `server-2`, connectivity checks, structured run summaries, failure taxonomy, Docker-backed integration tests, and boundary guards.
 
 ### Active
 
-- [ ] Discover new replay candidates from the external replay source through an idempotent scheduled job.
-- [ ] Store fetched raw replay files in S3-compatible storage under a deterministic `raw/` object layout.
-- [ ] Compute and persist replay checksum, object key, size, source URL/ID, discovered timestamp, fetch timestamp, and fetch status evidence.
-- [ ] Write only ingestion staging/outbox records for `server-2` promotion.
-- [ ] Avoid direct writes to `server-2` business tables such as `replays`, `parse_jobs`, `parse_results`, identity, stats, requests, or moderation tables.
-- [ ] Keep workflow-critical `.planning/config.json` settings aligned with `replay-parser-2`, while keeping `agent_skills` stack-aware for this TypeScript/Node ingest service.
-- [ ] Support checksum plus source identity deduplication evidence.
-- [ ] Preserve conflicting duplicate evidence for manual review by `server-2` instead of auto-merging ambiguous cases.
-- [ ] Provide structured run summaries, failure categories, and exit codes suitable for scheduled operation.
-- [x] Use strict TypeScript, linting, formatting, and tests.
-- [ ] Keep production historical import from `~/sg_stats` out of v1.
+No active next-milestone requirements are defined yet. Start the next milestone with `$gsd-new-milestone` so fresh requirements are scoped deliberately instead of carrying v1 scope forward.
 
 ### Out of Scope
 
@@ -64,6 +55,18 @@ The accepted ingest architecture is:
 
 The current parser project expects parse requests containing `job_id`, `replay_id`, `object_key`, `checksum`, and `parser_contract_version`. This service must feed that flow without taking ownership of parse lifecycle.
 
+## Current State
+
+v1.0 Initial Ingest Service shipped on 2026-05-10.
+
+The codebase is a strict TypeScript scheduled ingest CLI with implemented `check`, `discover --dry-run`, `discover --store-raw`, `discover --store-raw --stage`, and `run-once` flows. It stores raw replay bytes under deterministic `raw/sha256/<sha256>.ocap` object keys, writes only `ingest_staging_records`, carries source-discovered timestamp evidence without parsing replay contents, and keeps `server-2` responsible for promotion, canonical replay state, parse jobs, RabbitMQ publishing, retries, duplicate conflict handling, and operator APIs.
+
+Verification for the shipped milestone passed `pnpm run verify`: format, ESLint, typecheck, 131 unit tests, 2 Docker-backed integration tests, 100% V8 coverage, and build. The local machine still emits the expected Node engine warning because it runs Node.js v22 while the project target is Node.js 25.
+
+## Next Milestone Goals
+
+No next milestone has been selected yet. Candidate directions should be defined through `$gsd-new-milestone`, with special attention to cross-project compatibility if scope touches staging schema, object identity, parser handoff, operator-visible statuses, `server-2`, or `web`.
+
 ## Constraints
 
 - **Runtime**: TypeScript - aligns with `server-2` operational patterns and integration libraries.
@@ -96,6 +99,8 @@ The current parser project expects parse requests containing `job_id`, `replay_i
 | Require AI pushback on risky or disproportionate work | Blind compliance can damage architecture, cross-app contracts, and project velocity; agents should explain the risk and ask before broad or risky overrides. | Accepted |
 | Apply risk-based compatibility checks product-wide | Fetcher changes can stay local only when they do not affect adjacent contracts; staging, object storage, parser handoff, API/data, auth/moderation, and UI-visible behavior require adjacent evidence or a user question. | Accepted |
 | Keep source discovery dry-run read-only | Operators need to inspect replay candidates safely before storage/staging phases; Phase 2 validates direct and SSH source reads without S3, database, parser, local replay-list, or `server-2` writes. | Accepted |
+| Preserve discovered timestamp as source evidence only | Source-discovered time belongs in promotion evidence; trusted replay time remains unset until parser/backend logic owns it. | Accepted |
+| Require Docker-backed S3 and PostgreSQL integration validation for v1 readiness | Fake adapters were not enough for milestone closure; MinIO and PostgreSQL Testcontainers now block `pnpm run verify`. | Accepted |
 
 ## Evolution
 
@@ -115,4 +120,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state.
 
 ---
-*Last updated: 2026-05-09 after Phase 2 completion*
+*Last updated: 2026-05-10 after v1.0 milestone completion*

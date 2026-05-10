@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: initial ingest service
-status: verifying
-last_updated: "2026-05-10T02:23:09.000Z"
-last_activity: 2026-05-10 -- Quick task fixed Phase 02 UAT milestone-close audit metadata
+status: Awaiting next milestone
+last_updated: "2026-05-10T02:34:30.239Z"
+last_activity: 2026-05-10 — Milestone v1.0 completed and archived
 progress:
   total_phases: 6
   completed_phases: 6
@@ -17,19 +17,17 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-09)
+See: .planning/PROJECT.md (updated 2026-05-10)
 
 **Core value:** Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
-**Current focus:** v1 milestone archival readiness
+**Current focus:** Planning next milestone
 
 ## Current Position
 
-Phase: 06 (close-v1-audit-gaps-connectivity-checks-and-discovered-times) — COMPLETE
-Plan: 6 of 6
-Status: Phase 06 verified
-Last activity: 2026-05-10 -- Phase 02 UAT milestone-close audit metadata fixed
-
-Progress: [██████████] 100%
+Phase: Milestone v1.0 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-05-10 — Milestone v1.0 completed and archived
 
 ## Accumulated Context
 
@@ -124,4 +122,8 @@ None yet.
 
 ## Next Step
 
-Run `$gsd-complete-milestone` to archive v1.0, or review Phase 06 artifacts first if desired.
+Start the next milestone with `$gsd-new-milestone`.
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone
