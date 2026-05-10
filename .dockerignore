@@ -1,0 +1,7 @@
+.git/
+.codex/
+.planning/generated/
+coverage/
+dist/
+node_modules/
+__pycache__/
