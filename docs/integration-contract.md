@@ -42,7 +42,9 @@ Required staging fields:
 - `promotion_evidence`
 - `conflict_details`
 
-`promotion_evidence` carries source URL, external source ID when available, source filename, fetched timestamp, bucket, object key, checksum, byte size, and raw storage status.
+`promotion_evidence` carries source URL, external source ID when available, source filename, fetched timestamp, optional `discoveredAt` from source discovery evidence, bucket, object key, checksum, byte size, and raw storage status.
+
+`promotionEvidence.discoveredAt` is source lineage evidence only. The `replay_timestamp` column remains nullable and is reserved for trusted replay time metadata; the fetcher must not copy source discovery time into `replay_timestamp`.
 
 The fetcher does not create canonical `replays`, does not create `parse_jobs`, does not publish RabbitMQ messages, and does not resolve duplicate conflicts. Those decisions remain in `server-2`.
 
@@ -63,6 +65,8 @@ Run summaries include:
 - failure categories: `config_invalid`, `source_unavailable`, `fetch_failed`, `storage_failed`, `storage_conflict`, `staging_failed`, `staging_conflict`, and `not_stageable`.
 
 Run summaries must not include S3 secrets, database credentials, SSH secrets, raw replay bytes, parser artifacts, canonical replay records, parse jobs, parser results, identity records, stats rows, roles, requests, or moderation data.
+
+`replays-fetcher check` emits the same class of structured operational JSON. Its successful output includes concrete `sourceConnectivity`, `s3Connectivity`, and `stagingConnectivity` statuses, not `not-implemented` placeholders. Check output and run summaries must not include S3 secrets, database credentials, SSH command secrets, raw replay bytes, parser artifacts, canonical replay records, parse jobs, parser results, identity records, stats rows, roles, requests, or moderation data.
 
 ## `replay-parser-2` Responsibilities
 

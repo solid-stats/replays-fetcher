@@ -40,7 +40,9 @@ afterEach(async () => {
 });
 
 test("S3 raw storage should store, skip, and pass read-only connectivity against MinIO", async () => {
-  const container = await new MinioContainer("minio/minio:RELEASE.2025-09-07T16-13-09Z")
+  const container = await new MinioContainer(
+    "minio/minio:RELEASE.2025-09-07T16-13-09Z",
+  )
     .withUsername("solid")
     .withPassword("solidsecret")
     .start();

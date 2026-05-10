@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: initial ingest service
-status: executing
-last_updated: "2026-05-09T17:44:56.494Z"
-last_activity: 2026-05-09 -- Phase 06 planning complete
+status: verifying
+last_updated: "2026-05-10T03:10:00.000Z"
+last_activity: 2026-05-10 -- Phase 06 execution and verification complete
 progress:
   total_phases: 6
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 23
-  completed_plans: 17
-  percent: 74
+  completed_plans: 23
+  percent: 100
 ---
 
 # Project State
@@ -20,16 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-09)
 
 **Core value:** Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
-**Current focus:** Phase 6 - Close v1 audit gaps
+**Current focus:** v1 milestone archival readiness
 
 ## Current Position
 
-Phase: 6
-Plan: 6 plans ready
-Status: Ready to execute
-Last activity: 2026-05-09 -- Phase 06 planning complete
+Phase: 06 (close-v1-audit-gaps-connectivity-checks-and-discovered-times) — COMPLETE
+Plan: 6 of 6
+Status: Phase 06 verified
+Last activity: 2026-05-10 -- Phase 06 execution and verification complete
 
-Progress: [████████░░] 83%
+Progress: [██████████] 100%
 
 ## Accumulated Context
 
@@ -74,6 +74,10 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 05]: Run summaries must include run ID, timestamps, source URL, counts, diagnostics, raw storage evidence, staging evidence, and failure categories without secrets/raw bytes.
 - [Phase 05]: `run-once` is implemented as the scheduled v1 entrypoint and emits one structured JSON summary.
 - [Phase 05]: Unit tests remain colocated beside source files under `src/`.
+- [Phase 06]: `replays-fetcher check` now performs real source, S3-compatible bucket, and PostgreSQL staging connectivity probes.
+- [Phase 06]: Source-discovered timestamps flow through raw storage evidence and `promotionEvidence.discoveredAt` only; `replay_timestamp` remains reserved for trusted replay time.
+- [Phase 06]: `pnpm run test:integration` uses Docker-backed MinIO and PostgreSQL Testcontainers and is part of `pnpm run verify`.
+- [Phase 06]: Validation backfills exist for phases 1, 3, 4, and 5, and Phase 6 verification passed.
 
 ### Roadmap Evolution
 
@@ -96,6 +100,12 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 | 05 | 02 | complete | 2 | 3 |
 | 05 | 03 | complete | 2 | 3 |
 | 05 | 04 | complete | 2 | 5 |
+| 06 | 01 | complete | 2 | 9 |
+| 06 | 02 | complete | 2 | 5 |
+| 06 | 03 | complete | 2 | 6 |
+| 06 | 04 | complete | 2 | 9 |
+| 06 | 05 | complete | 3 | 8 |
+| 06 | 06 | complete | 2 | 10 |
 
 ### Pending Todos
 
@@ -103,9 +113,8 @@ None yet.
 
 ### Blockers/Concerns
 
-- Rate-limit/backoff expectations for the external source are not locked yet.
 - GSD subagents are not installed in this runtime, so new-project research/roadmap generation was performed inline.
 
 ## Next Step
 
-Run `$gsd-plan-phase 6` to plan closure work for the v1 milestone audit blockers.
+Run `$gsd-complete-milestone` to archive v1.0, or review Phase 06 artifacts first if desired.

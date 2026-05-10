@@ -131,9 +131,7 @@ test("redactConfig should redact full S3 credentials when configuration is logge
 
   expect(redacted.sourceTransport).toBe("ssh");
   expect(redacted.sourceSshHost).toBe("allowlisted-host");
-  expect(redacted.sourceSshCommand).toBe(
-    "[redacted-source-ssh-command]",
-  );
+  expect(redacted.sourceSshCommand).toBe("[redacted-source-ssh-command]");
   expect(redacted.staging.databaseUrl).toBe("[redacted-database-url]");
   expect(redacted.s3.accessKeyId).toBe("ac****ey");
   expect(redacted.s3.secretAccessKey).toBe("se****ey");

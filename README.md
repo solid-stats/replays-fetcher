@@ -37,11 +37,11 @@ Project planning lives in `.planning/`:
 - `.planning/STATE.md` - current GSD state.
 - `.planning/research/SUMMARY.md` - architecture findings and risks.
 
-Current state: Phase 5, Scheduled Operations and Validation, is complete. The v1 ingest service includes scheduled `run-once` behavior, structured run summaries, and operational validation over the discovery, raw storage, and staging paths.
+Current state: Phase 6, Close v1 audit gaps, is complete pending final milestone archival. The v1 ingest service includes scheduled `run-once` behavior, real `check` connectivity probes, structured run summaries, and Docker-backed validation over the raw storage and staging paths.
 
 ## Development Workflow
 
-Development is performed only by AI agents using the GSD workflow. Direct non-GSD development is out of process for this product.
+Development is performed only by AI agents plus GSD workflow. Direct non-GSD development is out of process for this product.
 
 `.planning/config.json` keeps workflow-critical GSD settings aligned with `/home/afgan0r/Projects/SolidGames/replay-parser-2/.planning/config.json`. `agent_skills` are intentionally stack-aware for this TypeScript/Node ingest service and should use this repo's local skills rather than the parser's Rust skill set.
 
@@ -70,16 +70,21 @@ pnpm run format
 pnpm run lint
 pnpm run typecheck
 pnpm test
+pnpm run test:integration
 pnpm run test:coverage
 pnpm run build
 pnpm run verify
 ```
+
+`pnpm run test:integration` starts Docker-backed PostgreSQL and MinIO services with Testcontainers. `pnpm run verify` includes this integration gate after the unit suite and before coverage/build, so Docker must be available for full verification.
 
 Validate runtime configuration:
 
 ```bash
 pnpm run check
 ```
+
+`replays-fetcher check` validates required configuration and then runs real read-only probes for the external source, the configured S3-compatible bucket, and PostgreSQL staging access. Successful full-config output includes concrete `sourceConnectivity`, `s3Connectivity`, and `stagingConnectivity` objects; it must not contain `not-implemented`. Expected config or connectivity failures emit structured JSON and set exit code `2`.
 
 Run dry-run discovery:
 
@@ -164,6 +169,8 @@ Failure categories:
 - `not_stageable`
 
 Run summaries must not include S3 secrets, database credentials, SSH command secrets, raw replay bytes, parser artifacts, or canonical `server-2` business records.
+
+The `check` command JSON and the single `run-once` JSON summary are the structured operational log surfaces for this service. They must not include S3 secrets, database credentials, SSH command secrets, raw replay bytes, parser artifacts, canonical replay records, parse jobs, parser results, identity records, stats rows, roles, requests, or moderation data.
 
 Top-level report fields:
 

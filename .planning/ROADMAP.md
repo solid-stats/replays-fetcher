@@ -15,7 +15,7 @@ This roadmap builds `replays-fetcher` as a narrow TypeScript scheduled ingest se
 - [x] **Phase 3: Raw Replay Storage** - Fetch replay bytes, compute checksums, and write idempotent S3 raw objects.
 - [x] **Phase 4: Staging and Promotion Handoff** - Write staging/outbox records compatible with `server-2` promotion and conflict handling.
 - [x] **Phase 5: Scheduled Operations and Validation** - Add run-once scheduling behavior, observability, failure taxonomy, and integration tests.
-- [ ] **Phase 6: Close v1 audit gaps: connectivity checks and discovered timestamp staging evidence** - Close milestone audit blockers before v1 archival.
+- [x] **Phase 6: Close v1 audit gaps: connectivity checks and discovered timestamp staging evidence** - Close milestone audit blockers before v1 archival.
 
 ## Phase Details
 
@@ -140,22 +140,22 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 3. Raw Replay Storage | 4/4 | Complete | 2026-05-09 |
 | 4. Staging and Promotion Handoff | 4/4 | Complete | 2026-05-09 |
 | 5. Scheduled Operations and Validation | 4/4 | Complete | 2026-05-09 |
-| 6. Close v1 audit gaps: connectivity checks and discovered timestamp staging evidence | 0/6 | Planned | - |
+| 6. Close v1 audit gaps: connectivity checks and discovered timestamp staging evidence | 6/6 | Complete | 2026-05-10 |
 
 ### Phase 6: Close v1 audit gaps: connectivity checks and discovered timestamp staging evidence
 
 **Goal:** Milestone audit gaps are closed by real connectivity checks, discovered timestamp staging evidence, Docker-backed integration validation, OPS-02 leakage safeguards, and Nyquist validation backfill.
 **Requirements**: RUN-04, INT-04, STAGE-01, STAGE-03, OPS-02, TEST-02, TEST-03, NYQ-01
 **Depends on:** Phase 5
-**Plans:** 6 plans
+**Plans:** 6/6 complete
 
 Plans:
-- [ ] 06-01-PLAN.md - Define read-only source, S3, and PostgreSQL connectivity helpers.
-- [ ] 06-02-PLAN.md - Preserve source-discovered timestamp evidence in raw storage output.
-- [ ] 06-03-PLAN.md - Carry discovered timestamp into staging promotion evidence without replay timestamp misuse.
-- [ ] 06-04-PLAN.md - Wire real connectivity probes into the CLI check command.
-- [ ] 06-05-PLAN.md - Add blocking PostgreSQL and MinIO Testcontainers integration validation.
-- [ ] 06-06-PLAN.md - Update docs and backfill Nyquist validation artifacts.
+- [x] 06-01-PLAN.md - Define read-only source, S3, and PostgreSQL connectivity helpers.
+- [x] 06-02-PLAN.md - Preserve source-discovered timestamp evidence in raw storage output.
+- [x] 06-03-PLAN.md - Carry discovered timestamp into staging promotion evidence without replay timestamp misuse.
+- [x] 06-04-PLAN.md - Wire real connectivity probes into the CLI check command.
+- [x] 06-05-PLAN.md - Add blocking PostgreSQL and MinIO Testcontainers integration validation.
+- [x] 06-06-PLAN.md - Update docs and backfill Nyquist validation artifacts.
 
 ---
 *Roadmap created: 2026-05-09*

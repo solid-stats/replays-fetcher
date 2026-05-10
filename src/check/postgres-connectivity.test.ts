@@ -2,6 +2,7 @@ import { expect, test } from "vitest";
 
 import {
   checkPostgresConnectivity,
+  checkPostgresConnectivityFromDatabaseUrl,
   type PostgresConnectivityQueryClient,
 } from "./postgres-connectivity.js";
 
@@ -45,6 +46,17 @@ test("checkPostgresConnectivity should classify query failures", async () => {
   ).resolves.toStrictEqual({
     failureCategory: "staging_unavailable",
     message: "staging table unavailable",
+    status: "failed",
+  });
+});
+
+test("checkPostgresConnectivityFromDatabaseUrl should close owned pools", async () => {
+  await expect(
+    checkPostgresConnectivityFromDatabaseUrl(
+      "postgres://user:pass@127.0.0.1:1/replays",
+    ),
+  ).resolves.toMatchObject({
+    failureCategory: "staging_unavailable",
     status: "failed",
   });
 });

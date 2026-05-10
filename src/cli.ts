@@ -173,11 +173,10 @@ function registerCheckCommand(
         const sourceClient = dependencies.createSourceClient(config);
         const s3ConnectivitySender =
           dependencies.createS3ConnectivitySenderFromConfig(config.s3);
-        const sourceConnectivity =
-          await dependencies.checkSourceConnectivity({
-            sourceClient,
-            sourceUrl: new URL(config.sourceUrl),
-          });
+        const sourceConnectivity = await dependencies.checkSourceConnectivity({
+          sourceClient,
+          sourceUrl: new URL(config.sourceUrl),
+        });
         const s3Connectivity = await dependencies.checkS3Connectivity({
           bucket: config.s3.bucket,
           sender: s3ConnectivitySender,

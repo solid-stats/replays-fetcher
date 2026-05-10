@@ -325,7 +325,9 @@ test("buildCli should write redacted real check output when valid configuration 
 
   await buildCli({
     async checkPostgresConnectivityFromDatabaseUrl(databaseUrl) {
-      expect(databaseUrl).toBe("postgres://user:password@localhost:5432/replays");
+      expect(databaseUrl).toBe(
+        "postgres://user:password@localhost:5432/replays",
+      );
 
       return { status: "passed" };
     },
@@ -335,7 +337,9 @@ test("buildCli should write redacted real check output when valid configuration 
       return { status: "passed" };
     },
     async checkSourceConnectivity({ sourceUrl }) {
-      expect(sourceUrl).toStrictEqual(new URL(validEnvironment.REPLAY_SOURCE_URL));
+      expect(sourceUrl).toStrictEqual(
+        new URL(validEnvironment.REPLAY_SOURCE_URL),
+      );
 
       return { status: "passed" };
     },
@@ -346,7 +350,9 @@ test("buildCli should write redacted real check output when valid configuration 
       return { send: vi.fn() };
     },
     createSourceClient(config) {
-      expect(config.sourceSshCommand).toBe("sshpass -p source-secret curl -fsSL");
+      expect(config.sourceSshCommand).toBe(
+        "sshpass -p source-secret curl -fsSL",
+      );
 
       return { fetchText: vi.fn() };
     },

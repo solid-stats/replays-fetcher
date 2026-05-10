@@ -25,6 +25,7 @@ export async function checkS3Connectivity(
     return { status: "passed" };
   } catch (error) {
     let message = "S3 check failed";
+    /* v8 ignore next -- defensive guard for non-Error promise rejections. */
     if (error instanceof Error) {
       ({ message } = error);
     }
