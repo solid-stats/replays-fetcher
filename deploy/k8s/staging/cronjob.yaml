@@ -33,7 +33,7 @@ spec:
                 - name: S3_ENDPOINT
                   value: https://s3.twcstorage.ru
                 - name: S3_REGION
-                  value: ru:ru-1-hot
+                  value: ru-1
                 - name: S3_FORCE_PATH_STYLE
                   value: "true"
               envFrom:
