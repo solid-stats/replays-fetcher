@@ -30,12 +30,12 @@ created: 2026-05-09
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 02-00-01 | 00 | 1 | RUN-03, SRC-01, TEST-05 | T-02-01 | Dry-run emits report without writes | unit | `pnpm test` | yes | pending |
-| 02-00-02 | 00 | 1 | RUN-03, SRC-01 | T-02-01 | CLI stays a thin non-mutating adapter | unit | `pnpm test` | yes | pending |
-| 02-01-01 | 01 | 2 | SRC-01, SRC-02, SRC-05 | T-02-02 | Filename identity preserves source evidence | unit | `pnpm test` | yes | pending |
-| 02-01-02 | 01 | 2 | SRC-02, SRC-05 | T-02-02 | Candidate order and identity stay stable | unit | `pnpm test` | yes | pending |
-| 02-02-01 | 02 | 3 | SRC-03, SRC-04 | T-02-03 | Source failures are explicit and non-secret | unit | `pnpm test` | yes | pending |
-| 02-02-02 | 02 | 3 | SRC-03, SRC-04 | T-02-04 | Rate limiting avoids aggressive polling | unit | `pnpm test` | yes | pending |
+| 02-00-01 | 00 | 1 | RUN-03, SRC-01, TEST-05 | T-02-01 | Dry-run emits report without writes | unit | `pnpm test` | yes | passed |
+| 02-00-02 | 00 | 1 | RUN-03, SRC-01 | T-02-01 | CLI stays a thin non-mutating adapter | unit | `pnpm test` | yes | passed |
+| 02-01-01 | 01 | 2 | SRC-01, SRC-02, SRC-05 | T-02-02 | Filename identity preserves source evidence | unit | `pnpm test` | yes | passed |
+| 02-01-02 | 01 | 2 | SRC-02, SRC-05 | T-02-02 | Candidate order and identity stay stable | unit | `pnpm test` | yes | passed |
+| 02-02-01 | 02 | 3 | SRC-03, SRC-04 | T-02-03 | Source failures are explicit and non-secret | unit | `pnpm test` | yes | passed |
+| 02-02-02 | 02 | 3 | SRC-03, SRC-04 | T-02-04 | Rate limiting avoids aggressive polling | unit | `pnpm test` | yes | passed |
 | 02-03-01 | 03 | 4 | TEST-05 | T-02-01 | Dry-run cannot mutate S3/staging/parser outputs | unit/grep | `pnpm run verify` | yes | passed |
 | 02-03-02 | 03 | 4 | RUN-03, SRC-01, TEST-05 | T-02-05 | Docs match command behavior | docs/grep | `pnpm run verify` | yes | passed |
 
@@ -60,4 +60,4 @@ All phase behaviors have automated verification. Optional live-source smoke test
 - [x] Feedback latency under 60 seconds.
 - [x] `nyquist_compliant: true` set in frontmatter.
 
-**Approval:** pending execution
+**Approval:** passed
