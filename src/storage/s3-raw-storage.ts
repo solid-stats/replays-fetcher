@@ -134,6 +134,9 @@ function toBaseEvidence(input: {
     bucket: input.bucket,
     byteSize: input.byteSize,
     checksum: input.checksum,
+    ...(input.candidate.metadata?.discoveredAt === undefined
+      ? {}
+      : { discoveredAt: input.candidate.metadata.discoveredAt }),
     fetchedAt: input.fetchedAt,
     objectKey: input.objectKey,
     source: input.candidate.source,

@@ -15,14 +15,22 @@ const bytes = new TextEncoder().encode("stored replay bytes");
 const checksum = calculateSha256(bytes);
 const objectKey = toRawReplayObjectKey(checksum);
 const fetchedAt = "2026-05-09T12:00:00.000Z";
+const discoveredAt = "2026-05-09T00:32:44.000Z";
 const candidate: ReplayCandidate = {
   identity: {
     filename: "2026_05_09__00_32_44__1_ocap",
+  },
+  metadata: {
+    discoveredAt,
   },
   source: {
     externalId: "1778269931",
     url: "https://sg.zone/replays/1778269931",
   },
+};
+const candidateWithoutMetadata: ReplayCandidate = {
+  identity: candidate.identity,
+  source: candidate.source,
 };
 
 test("storeRawReplay should fetch bytes and return raw storage evidence", async () => {
@@ -44,6 +52,9 @@ test("storeRawReplay should fetch bytes and return raw storage evidence", async 
         bucket: "solid-stats-replays",
         byteSize: input.bytes.byteLength,
         checksum,
+        ...(input.candidate.metadata?.discoveredAt === undefined
+          ? {}
+          : { discoveredAt: input.candidate.metadata.discoveredAt }),
         fetchedAt: input.fetchedAt,
         objectKey,
         source: input.candidate.source,
@@ -67,12 +78,44 @@ test("storeRawReplay should fetch bytes and return raw storage evidence", async 
   expect(result).toMatchObject({
     byteSize: bytes.byteLength,
     checksum,
+    discoveredAt,
     fetchedAt,
     objectKey,
     source: candidate.source,
     sourceFilename: candidate.identity.filename,
     status: "stored",
   });
+});
+
+test("storeRawReplay should omit absent source-discovered timestamps", async () => {
+  const byteClient: ReplayByteClient = {
+    async fetchBytes() {
+      return bytes;
+    },
+  };
+  const storage: S3RawReplayStorage = {
+    async storeRawReplay(input) {
+      return {
+        bucket: "solid-stats-replays",
+        byteSize: input.bytes.byteLength,
+        checksum,
+        fetchedAt: input.fetchedAt,
+        objectKey,
+        source: input.candidate.source,
+        sourceFilename: input.candidate.identity.filename,
+        status: "stored",
+      };
+    },
+  };
+
+  const result = await storeRawReplay({
+    byteClient,
+    candidate: candidateWithoutMetadata,
+    now: () => new Date(fetchedAt),
+    storage,
+  });
+
+  expect(JSON.stringify(result)).not.toContain("discoveredAt");
 });
 
 test("storeRawReplay should return failed evidence and skip storage on fetch failure", async () => {

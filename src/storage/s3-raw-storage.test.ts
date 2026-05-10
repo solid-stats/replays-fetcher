@@ -18,6 +18,7 @@ const bytes = new TextEncoder().encode("raw replay bytes");
 const checksum = calculateSha256(bytes);
 const objectKey = `raw/sha256/${checksum}.ocap`;
 const fetchedAt = "2026-05-09T12:00:00.000Z";
+const discoveredAt = "2026-05-09T00:32:44.000Z";
 const candidate: ReplayCandidate = {
   identity: {
     filename: "2026_05_09__00_32_44__1_ocap",
@@ -25,6 +26,12 @@ const candidate: ReplayCandidate = {
   source: {
     externalId: "1778269931",
     url: "https://sg.zone/replays/1778269931",
+  },
+};
+const candidateWithDiscoveredAt: ReplayCandidate = {
+  ...candidate,
+  metadata: {
+    discoveredAt,
   },
 };
 
@@ -94,6 +101,60 @@ test("storeRawReplay should HEAD then PUT missing raw replay objects", async () 
       sha256: checksum,
     },
   });
+});
+
+test("storeRawReplay should preserve source-discovered timestamps", async () => {
+  const storage = createS3RawReplayStorage({
+    bucket,
+    sender: {
+      async send(command) {
+        if (command instanceof HeadObjectCommand) {
+          throw createS3Error("NotFound");
+        }
+
+        return {};
+      },
+    },
+  });
+
+  const result = await storage.storeRawReplay({
+    bytes,
+    candidate: candidateWithDiscoveredAt,
+    checksum,
+    fetchedAt,
+    objectKey,
+  });
+
+  expect(result).toMatchObject({
+    discoveredAt,
+    fetchedAt,
+    status: "stored",
+  });
+});
+
+test("storeRawReplay should omit absent source-discovered timestamps", async () => {
+  const storage = createS3RawReplayStorage({
+    bucket,
+    sender: {
+      async send(command) {
+        if (command instanceof HeadObjectCommand) {
+          throw createS3Error("NotFound");
+        }
+
+        return {};
+      },
+    },
+  });
+
+  const result = await storage.storeRawReplay({
+    bytes,
+    candidate,
+    checksum,
+    fetchedAt,
+    objectKey,
+  });
+
+  expect(JSON.stringify(result)).not.toContain("discoveredAt");
 });
 
 test("storeRawReplay should skip matching existing raw replay objects", async () => {
