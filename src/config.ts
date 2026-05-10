@@ -70,6 +70,20 @@ export type SourceConfig = z.infer<typeof sourceConfigSchema>;
 
 export type AppConfig = z.infer<typeof configSchema>;
 
+export type RedactedAppConfig = Omit<
+  AppConfig,
+  "s3" | "sourceSshCommand" | "staging"
+> & {
+  readonly s3: Omit<AppConfig["s3"], "accessKeyId" | "secretAccessKey"> & {
+    readonly accessKeyId: string;
+    readonly secretAccessKey: string;
+  };
+  readonly sourceSshCommand: string;
+  readonly staging: {
+    readonly databaseUrl: string;
+  };
+};
+
 export type ConfigSource = Record<string, boolean | string | undefined>;
 
 export class ConfigError extends Error {
@@ -126,18 +140,17 @@ export function loadSourceConfig(
   return result.data;
 }
 
-export function redactConfig(config: AppConfig): Omit<AppConfig, "s3"> & {
-  s3: Omit<AppConfig["s3"], "accessKeyId" | "secretAccessKey"> & {
-    accessKeyId: string;
-    secretAccessKey: string;
-  };
-} {
+export function redactConfig(config: AppConfig): RedactedAppConfig {
   return {
     ...config,
     s3: {
       ...config.s3,
       accessKeyId: redactSecret(config.s3.accessKeyId),
       secretAccessKey: redactSecret(config.s3.secretAccessKey),
+    },
+    sourceSshCommand: "[redacted-source-ssh-command]",
+    staging: {
+      databaseUrl: "[redacted-database-url]",
     },
   };
 }

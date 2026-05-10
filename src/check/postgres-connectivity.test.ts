@@ -1,6 +1,9 @@
 import { expect, test } from "vitest";
 
-import { checkPostgresConnectivity } from "./postgres-connectivity.js";
+import {
+  checkPostgresConnectivity,
+  type PostgresConnectivityQueryClient,
+} from "./postgres-connectivity.js";
 
 interface QueryCall {
   readonly text: string;
@@ -15,9 +18,9 @@ test("checkPostgresConnectivity should run read-only probe SQL", async () => {
       async query(text, values) {
         calls.push({ text, values });
 
-        return { rows: [{ "?column?": 1 }] };
+        return { rows: [] };
       },
-    },
+    } satisfies PostgresConnectivityQueryClient,
   });
 
   expect(result).toStrictEqual({ status: "passed" });

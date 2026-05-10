@@ -24,9 +24,14 @@ export async function checkS3Connectivity(
 
     return { status: "passed" };
   } catch (error) {
+    let message = "S3 check failed";
+    if (error instanceof Error) {
+      ({ message } = error);
+    }
+
     return {
       failureCategory: "s3_unavailable",
-      message: error instanceof Error ? error.message : "S3 check failed",
+      message,
       status: "failed",
     };
   }

@@ -6,6 +6,7 @@ import { afterEach, expect, test, vi } from "vitest";
 import { buildCli } from "./cli.js";
 import * as configModule from "./config.js";
 
+import type { ConnectivityCheck } from "./check/connectivity.js";
 import type { AppConfig, SourceConfig } from "./config.js";
 import type { DiscoveryReport, ReplayCandidate } from "./discovery/types.js";
 import type { RunSummary } from "./run/types.js";
@@ -25,11 +26,13 @@ const validEnvironment = {
 
 interface CheckOutput {
   readonly checks: {
-    readonly config: "failed" | "passed";
-    readonly s3Connectivity?: "not-implemented";
-    readonly sourceConnectivity?: "not-implemented";
-    readonly stagingConnectivity?: "not-implemented";
+    readonly config: ConnectivityCheck;
+    readonly s3Connectivity?: ConnectivityCheck;
+    readonly sourceConnectivity?: ConnectivityCheck;
+    readonly stagingConnectivity?: ConnectivityCheck;
   };
+  readonly config?: unknown;
+  readonly issues?: readonly string[];
   readonly ok: boolean;
 }
 
@@ -304,7 +307,82 @@ afterEach(() => {
   process.exitCode = undefined;
 });
 
-test("buildCli should write redacted check output when valid configuration is provided", async () => {
+test("buildCli should write redacted real check output when valid configuration is provided", async () => {
+  for (const [key, value] of Object.entries({
+    ...validEnvironment,
+    DATABASE_URL: "postgres://user:password@localhost:5432/replays",
+    REPLAY_SOURCE_SSH_COMMAND: "sshpass -p source-secret curl -fsSL",
+    REPLAY_SOURCE_SSH_HOST: "allowlisted-host",
+    REPLAY_SOURCE_TRANSPORT: "ssh",
+  })) {
+    vi.stubEnv(key, value);
+  }
+  const writes: string[] = [];
+  vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+    writes.push(String(chunk));
+    return true;
+  });
+
+  await buildCli({
+    async checkPostgresConnectivityFromDatabaseUrl(databaseUrl) {
+      expect(databaseUrl).toBe("postgres://user:password@localhost:5432/replays");
+
+      return { status: "passed" };
+    },
+    async checkS3Connectivity({ bucket }) {
+      expect(bucket).toBe(validEnvironment.S3_BUCKET);
+
+      return { status: "passed" };
+    },
+    async checkSourceConnectivity({ sourceUrl }) {
+      expect(sourceUrl).toStrictEqual(new URL(validEnvironment.REPLAY_SOURCE_URL));
+
+      return { status: "passed" };
+    },
+    createS3ConnectivitySenderFromConfig(config) {
+      expect(config.accessKeyId).toBe("access-key");
+      expect(config.secretAccessKey).toBe("secret-key");
+
+      return { send: vi.fn() };
+    },
+    createSourceClient(config) {
+      expect(config.sourceSshCommand).toBe("sshpass -p source-secret curl -fsSL");
+
+      return { fetchText: vi.fn() };
+    },
+  }).parseAsync(["node", "replays-fetcher", "check"]);
+
+  const output = parseCheckOutput(writes);
+  expect(output).toMatchObject({
+    checks: {
+      config: { status: "passed" },
+      s3Connectivity: { status: "passed" },
+      sourceConnectivity: { status: "passed" },
+      stagingConnectivity: { status: "passed" },
+    },
+    ok: true,
+  });
+  const serialized = JSON.stringify(output);
+  expect(serialized).toContain("[redacted-database-url]");
+  expect(serialized).toContain("[redacted-source-ssh-command]");
+  expect(serialized).not.toContain("not-implemented");
+  expect(serialized).not.toContain("secret-key");
+  expect(serialized).not.toContain("access-key");
+  expect(serialized).not.toContain("postgres://user:password@");
+  expect(serialized).not.toContain("sshpass");
+  expect(serialized).not.toContain("raw-replay-bytes");
+  expect(serialized).not.toContain("parser_artifact");
+  expect(serialized).not.toContain("parse_jobs");
+  expect(serialized).not.toContain("parse_results");
+  expect(serialized).not.toContain("insert into replays");
+  expect(serialized).not.toContain("identity");
+  expect(serialized).not.toContain("roles");
+  expect(serialized).not.toContain("requests");
+  expect(serialized).not.toContain("moderation_actions");
+  expect(process.exitCode).toBeUndefined();
+});
+
+test("buildCli should set a failing exit code for failed connectivity checks", async () => {
   stubValidEnvironment();
   const writes: string[] = [];
   vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
@@ -312,33 +390,66 @@ test("buildCli should write redacted check output when valid configuration is pr
     return true;
   });
 
-  await buildCli().parseAsync(["node", "replays-fetcher", "check"]);
+  await buildCli({
+    async checkPostgresConnectivityFromDatabaseUrl() {
+      return { failureCategory: "staging_unavailable", status: "failed" };
+    },
+    async checkS3Connectivity() {
+      return {
+        failureCategory: "s3_unavailable",
+        message: "controlled S3 failure",
+        status: "failed",
+      };
+    },
+    async checkSourceConnectivity() {
+      return { status: "passed" };
+    },
+    createS3ConnectivitySenderFromConfig: () => ({ send: vi.fn() }),
+    createSourceClient: () => ({ fetchText: vi.fn() }),
+  }).parseAsync(["node", "replays-fetcher", "check"]);
 
   const output = parseCheckOutput(writes);
   expect(output).toMatchObject({
     checks: {
-      config: "passed",
-      s3Connectivity: "not-implemented",
-      sourceConnectivity: "not-implemented",
-      stagingConnectivity: "not-implemented",
+      config: { status: "passed" },
+      s3Connectivity: {
+        failureCategory: "s3_unavailable",
+        status: "failed",
+      },
+      sourceConnectivity: { status: "passed" },
+      stagingConnectivity: {
+        failureCategory: "staging_unavailable",
+        status: "failed",
+      },
     },
-    ok: true,
+    ok: false,
   });
-  expect(JSON.stringify(output)).not.toContain("secret-key");
+  expect(JSON.stringify(output)).not.toContain("raw-replay-bytes");
+  expect(process.exitCode).toBe(2);
 });
 
 test("buildCli should set a failing exit code when required configuration is missing", async () => {
   const writes: string[] = [];
+  const checkSource = vi.fn();
+  const checkS3 = vi.fn();
+  const checkPostgres = vi.fn();
   vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
     writes.push(String(chunk));
     return true;
   });
 
-  await buildCli().parseAsync(["node", "replays-fetcher", "check"]);
+  await buildCli({
+    checkPostgresConnectivityFromDatabaseUrl: checkPostgres,
+    checkS3Connectivity: checkS3,
+    checkSourceConnectivity: checkSource,
+  }).parseAsync(["node", "replays-fetcher", "check"]);
 
   const output = parseCheckOutput(writes);
   expect(output.ok).toBe(false);
-  expect(output.checks.config).toBe("failed");
+  expect(output.checks.config).toStrictEqual({ status: "failed" });
+  expect(checkSource).not.toHaveBeenCalled();
+  expect(checkS3).not.toHaveBeenCalled();
+  expect(checkPostgres).not.toHaveBeenCalled();
   expect(process.exitCode).toBe(2);
 });
 

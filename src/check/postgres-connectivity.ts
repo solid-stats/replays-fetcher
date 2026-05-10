@@ -29,10 +29,14 @@ export async function checkPostgresConnectivity(
 
     return { status: "passed" };
   } catch (error) {
+    let message = "PostgreSQL check failed";
+    if (error instanceof Error) {
+      ({ message } = error);
+    }
+
     return {
       failureCategory: "staging_unavailable",
-      message:
-        error instanceof Error ? error.message : "PostgreSQL check failed",
+      message,
       status: "failed",
     };
   }

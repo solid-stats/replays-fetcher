@@ -122,6 +122,8 @@ test("redactConfig should redact full S3 credentials when configuration is logge
   const redacted = redactConfig(
     loadConfig({
       ...validEnvironment,
+      DATABASE_URL: "postgres://user:password@localhost:5432/replays",
+      REPLAY_SOURCE_SSH_COMMAND: "sshpass -p source-secret curl -fsSL",
       REPLAY_SOURCE_SSH_HOST: "allowlisted-host",
       REPLAY_SOURCE_TRANSPORT: "ssh",
     }),
@@ -129,8 +131,14 @@ test("redactConfig should redact full S3 credentials when configuration is logge
 
   expect(redacted.sourceTransport).toBe("ssh");
   expect(redacted.sourceSshHost).toBe("allowlisted-host");
+  expect(redacted.sourceSshCommand).toBe(
+    "[redacted-source-ssh-command]",
+  );
+  expect(redacted.staging.databaseUrl).toBe("[redacted-database-url]");
   expect(redacted.s3.accessKeyId).toBe("ac****ey");
   expect(redacted.s3.secretAccessKey).toBe("se****ey");
+  expect(JSON.stringify(redacted)).not.toContain("postgres://user:password@");
+  expect(JSON.stringify(redacted)).not.toContain("sshpass");
 });
 
 test("redactConfig should fully mask short S3 credentials when configuration is logged", () => {

@@ -4,6 +4,13 @@ import { randomUUID } from "node:crypto";
 
 import { Command } from "commander";
 
+import { connectivityOk } from "./check/connectivity.js";
+import { checkPostgresConnectivityFromDatabaseUrl } from "./check/postgres-connectivity.js";
+import {
+  checkS3Connectivity,
+  createS3ConnectivitySenderFromConfig,
+} from "./check/s3-connectivity.js";
+import { checkSourceConnectivity } from "./check/source-connectivity.js";
 import {
   ConfigError,
   loadConfig,
@@ -61,7 +68,11 @@ type AppConfigResult =
     };
 
 interface BuildCliDependencies {
+  readonly checkPostgresConnectivityFromDatabaseUrl?: typeof checkPostgresConnectivityFromDatabaseUrl;
+  readonly checkS3Connectivity?: typeof checkS3Connectivity;
+  readonly checkSourceConnectivity?: typeof checkSourceConnectivity;
   readonly createRunId?: (now: Date) => string;
+  readonly createS3ConnectivitySenderFromConfig?: typeof createS3ConnectivitySenderFromConfig;
   readonly createReplayByteClient?: (config: SourceConfig) => ReplayByteClient;
   readonly createS3RawReplayStorageFromConfig?: (
     config: AppConfig["s3"],
@@ -129,8 +140,12 @@ function resolveDependencies(
   dependencies: BuildCliDependencies,
 ): Required<BuildCliDependencies> {
   return {
+    checkPostgresConnectivityFromDatabaseUrl,
+    checkS3Connectivity,
+    checkSourceConnectivity,
     createRunId,
     createReplayByteClient,
+    createS3ConnectivitySenderFromConfig,
     createPostgresStagingRepositoryFromDatabaseUrl,
     createS3RawReplayStorageFromConfig,
     createSourceClient,
@@ -152,25 +167,50 @@ function registerCheckCommand(
   program
     .command("check")
     .description("Validate required configuration before running ingest work")
-    .action(() => {
+    .action(async () => {
       try {
         const config = dependencies.loadConfig();
+        const sourceClient = dependencies.createSourceClient(config);
+        const s3ConnectivitySender =
+          dependencies.createS3ConnectivitySenderFromConfig(config.s3);
+        const sourceConnectivity =
+          await dependencies.checkSourceConnectivity({
+            sourceClient,
+            sourceUrl: new URL(config.sourceUrl),
+          });
+        const s3Connectivity = await dependencies.checkS3Connectivity({
+          bucket: config.s3.bucket,
+          sender: s3ConnectivitySender,
+        });
+        const stagingConnectivity =
+          await dependencies.checkPostgresConnectivityFromDatabaseUrl(
+            config.staging.databaseUrl,
+          );
+        const checks = {
+          s3Connectivity,
+          sourceConnectivity,
+          stagingConnectivity,
+        };
+        const ok = connectivityOk(checks);
+
         writeJson({
-          ok: true,
+          ok,
           checks: {
-            config: "passed",
-            sourceConnectivity: "not-implemented",
-            s3Connectivity: "not-implemented",
-            stagingConnectivity: "not-implemented",
+            config: { status: "passed" },
+            ...checks,
           },
           config: redactConfig(config),
         });
+
+        if (!ok) {
+          process.exitCode = 2;
+        }
       } catch (error) {
         if (error instanceof ConfigError) {
           writeJson({
             ok: false,
             checks: {
-              config: "failed",
+              config: { status: "failed" },
             },
             issues: error.issues,
           });

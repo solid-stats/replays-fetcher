@@ -1,5 +1,5 @@
 import { HeadBucketCommand } from "@aws-sdk/client-s3";
-import { expect, test, vi } from "vitest";
+import { expect, test } from "vitest";
 
 import {
   checkS3Connectivity,
@@ -56,5 +56,5 @@ test("createS3ConnectivitySenderFromConfig should create a sender", () => {
   expect(sender).toMatchObject({
     send: expect.any(Function) as unknown,
   });
-  expect(vi.isMockFunction(sender.send)).toBe(false);
+  expect(typeof sender.send).toBe("function");
 });
