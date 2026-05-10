@@ -9,6 +9,7 @@ import {
 import { storeRawReplay } from "./store-raw-replay.js";
 
 import type { S3RawReplayStorage } from "./s3-raw-storage.js";
+import type { RawReplayStorageEvidence } from "./types.js";
 import type { ReplayCandidate } from "../discovery/types.js";
 
 const bytes = new TextEncoder().encode("stored replay bytes");
@@ -48,19 +49,25 @@ test("storeRawReplay should fetch bytes and return raw storage evidence", async 
     async storeRawReplay(input) {
       storageCalls.push(input);
 
-      return {
+      const evidence = {
         bucket: "solid-stats-replays",
         byteSize: input.bytes.byteLength,
         checksum,
-        ...(input.candidate.metadata?.discoveredAt === undefined
-          ? {}
-          : { discoveredAt: input.candidate.metadata.discoveredAt }),
         fetchedAt: input.fetchedAt,
         objectKey,
         source: input.candidate.source,
         sourceFilename: input.candidate.identity.filename,
         status: "stored",
-      };
+      } satisfies Omit<RawReplayStorageEvidence, "discoveredAt">;
+
+      if (input.candidate.metadata?.discoveredAt !== undefined) {
+        return {
+          ...evidence,
+          discoveredAt: input.candidate.metadata.discoveredAt,
+        };
+      }
+
+      return evidence;
     },
   };
 
