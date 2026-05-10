@@ -1163,8 +1163,10 @@ test("staging path source should not write forbidden business tables or parser a
 
 test("unit tests should remain colocated beside source files", async () => {
   const projectFiles = await listProjectFiles(new URL("../", import.meta.url));
-  const testFiles = projectFiles.filter((filePath) =>
-    filePath.endsWith(".test.ts"),
+  const testFiles = projectFiles.filter(
+    (filePath) =>
+      filePath.endsWith(".test.ts") &&
+      !filePath.endsWith(".integration.test.ts"),
   );
 
   expect(testFiles.length).toBeGreaterThan(0);

@@ -1,4 +1,17 @@
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
+
+if (process.env["VITEST_INTEGRATION"] === "true") {
+  process.argv.push("src/**/*.integration.test.ts");
+}
+const isIntegrationRun = process.argv.some((argument) =>
+  argument.includes(".integration.test.ts"),
+);
+let exclude = [...configDefaults.exclude, "src/**/*.integration.test.ts"];
+let include = ["src/**/*.test.ts"];
+if (isIntegrationRun) {
+  exclude = [...configDefaults.exclude];
+  include = ["**/*.integration.test.ts"];
+}
 
 export default defineConfig({
   test: {
@@ -13,6 +26,7 @@ export default defineConfig({
         statements: 100,
       },
     },
-    include: ["src/**/*.test.ts"],
+    exclude,
+    include,
   },
 });
