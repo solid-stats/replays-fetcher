@@ -17,6 +17,7 @@ export interface IngestStagingPayload {
     readonly bucket: string;
     readonly byteSize: number;
     readonly checksum: string;
+    readonly discoveredAt?: string;
     readonly fetchedAt: string;
     readonly objectKey: string;
     readonly rawStorageStatus: "skipped" | "stored";

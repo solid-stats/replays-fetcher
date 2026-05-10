@@ -41,7 +41,7 @@ function toPayload(
   evidence: StageableRawReplayEvidence,
   sourceSystem: string,
 ): IngestStagingPayload {
-  const promotionEvidence: IngestStagingPayload["promotionEvidence"] = {
+  let promotionEvidence: IngestStagingPayload["promotionEvidence"] = {
     bucket: evidence.bucket,
     byteSize: evidence.byteSize,
     checksum: evidence.checksum,
@@ -51,6 +51,13 @@ function toPayload(
     sourceFilename: evidence.sourceFilename,
     sourceUrl: evidence.source.url,
   };
+
+  if (evidence.discoveredAt !== undefined) {
+    promotionEvidence = {
+      ...promotionEvidence,
+      discoveredAt: evidence.discoveredAt,
+    };
+  }
 
   if (evidence.source.externalId !== undefined) {
     return {

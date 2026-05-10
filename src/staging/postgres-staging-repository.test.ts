@@ -36,6 +36,7 @@ const payload: IngestStagingPayload = {
     bucket: "solid-stats-replays",
     byteSize: Number("1234"),
     checksum,
+    discoveredAt: "2026-05-09T00:32:44.000Z",
     fetchedAt: "2026-05-09T12:00:00.000Z",
     objectKey,
     rawStorageStatus: "stored",
@@ -83,6 +84,9 @@ test("PostgresStagingRepository should insert pending ingest staging records", a
     JSON.stringify(payload.promotionEvidence),
     JSON.stringify(payload.conflictDetails),
   ]);
+  expect(String(calls[0]?.values?.[7])).toContain(
+    '"discoveredAt":"2026-05-09T00:32:44.000Z"',
+  );
 });
 
 test("createPostgresStagingRepositoryFromDatabaseUrl should create a staging repository", () => {

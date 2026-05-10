@@ -12,6 +12,7 @@ const storedEvidence: RawReplayStorageEvidence = {
   bucket: "solid-stats-replays",
   byteSize: Number("1234"),
   checksum,
+  discoveredAt: "2026-05-09T00:32:44.000Z",
   fetchedAt: "2026-05-09T12:00:00.000Z",
   objectKey: `raw/sha256/${checksum}.ocap`,
   source: {
@@ -35,6 +36,7 @@ test("toIngestStagingPayload should map stored raw evidence to a pending server-
         bucket: "solid-stats-replays",
         byteSize: Number("1234"),
         checksum,
+        discoveredAt: "2026-05-09T00:32:44.000Z",
         fetchedAt: "2026-05-09T12:00:00.000Z",
         objectKey: `raw/sha256/${checksum}.ocap`,
         rawStorageStatus: "stored",
@@ -49,6 +51,28 @@ test("toIngestStagingPayload should map stored raw evidence to a pending server-
     },
     stageable: true,
   });
+  if (result.stageable) {
+    expect(result.payload).not.toHaveProperty("replayTimestamp");
+  }
+});
+
+test("toIngestStagingPayload should omit absent discovered timestamp evidence", () => {
+  const evidenceWithoutDiscoveredAt: RawReplayStorageEvidence = {
+    bucket: storedEvidence.bucket,
+    byteSize: storedEvidence.byteSize,
+    checksum: storedEvidence.checksum,
+    fetchedAt: storedEvidence.fetchedAt,
+    objectKey: storedEvidence.objectKey,
+    source: storedEvidence.source,
+    sourceFilename: storedEvidence.sourceFilename,
+    status: storedEvidence.status,
+  };
+  const result = toIngestStagingPayload(evidenceWithoutDiscoveredAt);
+
+  expect(JSON.stringify(result)).not.toContain("discoveredAt");
+  if (result.stageable) {
+    expect(result.payload).not.toHaveProperty("replayTimestamp");
+  }
 });
 
 test("toIngestStagingPayload should preserve skipped raw storage status as stageable evidence", () => {

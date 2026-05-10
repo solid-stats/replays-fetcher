@@ -125,6 +125,17 @@ test("buildRunSummary should aggregate successful run counts without secrets", (
   });
   expect(JSON.stringify(summary)).not.toContain("secret");
   expect(JSON.stringify(summary)).not.toContain("postgres://");
+  expect(JSON.stringify(summary)).not.toContain("secret-key");
+  expect(JSON.stringify(summary)).not.toContain("postgres://user:password@");
+  expect(JSON.stringify(summary)).not.toContain("sshpass");
+  expect(JSON.stringify(summary)).not.toContain("raw-replay-bytes");
+  expect(JSON.stringify(summary)).not.toContain("parser_artifact");
+  expect(JSON.stringify(summary)).not.toContain("parse_jobs");
+  expect(JSON.stringify(summary)).not.toContain("parse_results");
+  expect(JSON.stringify(summary)).not.toContain("canonical_identity");
+  expect(JSON.stringify(summary)).not.toContain("roles");
+  expect(JSON.stringify(summary)).not.toContain("requests");
+  expect(JSON.stringify(summary)).not.toContain("moderation_actions");
   expect(runExitCode(summary)).toBe(0);
 });
 
