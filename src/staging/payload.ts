@@ -77,7 +77,7 @@ function basePayload(
   sourceSystem: string,
   promotionEvidence: IngestStagingPayload["promotionEvidence"],
 ): IngestStagingPayload {
-  return {
+  const payload: IngestStagingPayload = {
     checksum: evidence.checksum,
     conflictDetails: {},
     objectKey: evidence.objectKey,
@@ -87,6 +87,16 @@ function basePayload(
     sourceSystem,
     status: "pending",
   };
+  const replayTimestamp = replayTimestampFromFilename(evidence.sourceFilename);
+
+  if (replayTimestamp !== undefined) {
+    return {
+      ...payload,
+      replayTimestamp,
+    };
+  }
+
+  return payload;
 }
 
 function toSourceReplayId(evidence: StageableRawReplayEvidence): string {
@@ -99,4 +109,22 @@ function toSourceReplayId(evidence: StageableRawReplayEvidence): string {
       `${evidence.source.url}\n${evidence.sourceFilename}\n${evidence.checksum}`,
     ),
   )}`;
+}
+
+function replayTimestampFromFilename(filename: string): string | undefined {
+  const match =
+    /^(?<year>\d{4})_(?<month>\d{2})_(?<day>\d{2})__(?<hour>\d{2})_(?<minute>\d{2})_(?<second>\d{2})__/u.exec(
+      filename,
+    );
+
+  if (match?.groups === undefined) {
+    return undefined;
+  }
+
+  const { day, hour, minute, month, second, year } = match.groups as Record<
+    "day" | "hour" | "minute" | "month" | "second" | "year",
+    string
+  >;
+
+  return `${year}-${month}-${day}T${hour}:${minute}:${second}.000Z`;
 }

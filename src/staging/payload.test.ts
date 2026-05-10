@@ -44,6 +44,7 @@ test("toIngestStagingPayload should map stored raw evidence to a pending server-
         sourceFilename: "2026_05_09__00_32_44__1_ocap",
         sourceUrl: "https://sg.zone/replays/1778269931",
       },
+      replayTimestamp: "2026-05-09T00:32:44.000Z",
       sizeBytes: Number("1234"),
       sourceReplayId: "1778269931",
       sourceSystem: "sg-zone",
@@ -51,9 +52,6 @@ test("toIngestStagingPayload should map stored raw evidence to a pending server-
     },
     stageable: true,
   });
-  if (result.stageable) {
-    expect(result.payload).not.toHaveProperty("replayTimestamp");
-  }
 });
 
 test("toIngestStagingPayload should omit absent discovered timestamp evidence", () => {
@@ -70,9 +68,12 @@ test("toIngestStagingPayload should omit absent discovered timestamp evidence", 
   const result = toIngestStagingPayload(evidenceWithoutDiscoveredAt);
 
   expect(JSON.stringify(result)).not.toContain("discoveredAt");
-  if (result.stageable) {
-    expect(result.payload).not.toHaveProperty("replayTimestamp");
-  }
+  expect(result).toMatchObject({
+    payload: {
+      replayTimestamp: "2026-05-09T00:32:44.000Z",
+    },
+    stageable: true,
+  });
 });
 
 test("toIngestStagingPayload should preserve skipped raw storage status as stageable evidence", () => {
@@ -103,6 +104,17 @@ test("toIngestStagingPayload should allow overriding source system", () => {
     },
     stageable: true,
   });
+});
+
+test("toIngestStagingPayload should omit replay timestamps for unknown filename formats", () => {
+  const result = toIngestStagingPayload({
+    ...storedEvidence,
+    sourceFilename: "custom-replay-name.ocap",
+  });
+
+  if (result.stageable) {
+    expect(result.payload).not.toHaveProperty("replayTimestamp");
+  }
 });
 
 test("toIngestStagingPayload should derive deterministic source identity when external ID is missing", () => {
