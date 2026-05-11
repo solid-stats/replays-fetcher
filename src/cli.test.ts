@@ -1043,6 +1043,7 @@ test("buildCli run-once should execute one scheduled cycle and write a structure
   expect(injectedRunOnce).toHaveBeenCalledWith({
     byteClient,
     discoverReplays: expect.any(Function) as typeof createDiscoveryReport,
+    maxPages: 1,
     now: expect.any(Function) as () => Date,
     runId: expect.stringMatching(/^run-2026-05-09T12:00:00\.000Z-/u) as string,
     sourceClient,
