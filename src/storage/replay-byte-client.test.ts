@@ -165,6 +165,7 @@ test("createReplayByteClient should map SSH transport failures", async () => {
 
 test("createReplayByteClient should fail SSH transport when host is missing", async () => {
   const sourceConfig: SourceConfig = {
+    sourceMaxPages: 1,
     sourceSshCommand: "curl -fsSL --max-time 30",
     sourceSshHost: undefined,
     sourceTimeoutMs: Number("30000"),

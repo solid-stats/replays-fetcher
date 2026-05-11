@@ -18,6 +18,7 @@ const validEnvironment = {
 };
 const defaultSourceTimeoutMs = Number("30000");
 const overrideSourceTimeoutMs = Number("1500");
+const fullRunMaxPages = Number("786");
 
 test("loadConfig should load required source, S3, and staging settings when valid environment is provided", () => {
   const config = loadConfig(validEnvironment);
@@ -25,6 +26,7 @@ test("loadConfig should load required source, S3, and staging settings when vali
   expect(config.sourceUrl).toBe("https://example.test/replays");
   expect(config.sourceTransport).toBe("direct");
   expect(config.sourceSshCommand).toBe("curl -fsSL --max-time 30");
+  expect(config.sourceMaxPages).toBe(1);
   expect(config.sourceTimeoutMs).toBe(defaultSourceTimeoutMs);
   expect(config.s3.bucket).toBe("solid-stats-replays");
   expect(config.s3.forcePathStyle).toBe(true);
@@ -57,6 +59,24 @@ test("loadSourceConfig should parse source timeout override", () => {
   });
 
   expect(config.sourceTimeoutMs).toBe(overrideSourceTimeoutMs);
+});
+
+test("loadSourceConfig should parse source max pages override", () => {
+  const config = loadSourceConfig({
+    REPLAY_SOURCE_MAX_PAGES: "786",
+    REPLAY_SOURCE_URL: "https://example.test/replays",
+  });
+
+  expect(config.sourceMaxPages).toBe(fullRunMaxPages);
+});
+
+test("loadSourceConfig should treat empty source transport as default direct transport", () => {
+  const config = loadSourceConfig({
+    REPLAY_SOURCE_TRANSPORT: "",
+    REPLAY_SOURCE_URL: "https://example.test/replays",
+  });
+
+  expect(config.sourceTransport).toBe("direct");
 });
 
 test("loadConfig should load SSH source transport settings when provided", () => {

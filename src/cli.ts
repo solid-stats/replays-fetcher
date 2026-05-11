@@ -331,6 +331,7 @@ function registerRunOnceCommand(
         discoverReplays: dependencies.discoverReplaysDryRun,
         now: dependencies.now,
         runId,
+        maxPages: configResult.config.sourceMaxPages,
         sourceClient: resources.sourceClient,
         sourceUrl: new URL(configResult.config.sourceUrl),
         stageRawReplay: dependencies.stageRawReplay,

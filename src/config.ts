@@ -28,6 +28,7 @@ const defaultSourceTimeoutMs = 30_000;
 
 const sourceConfigSchema = z
   .object({
+    sourceMaxPages: z.coerce.number().int().positive().default(1),
     sourceUrl: z.url(),
     sourceTransport: z.enum(["direct", "ssh"]).default("direct"),
     sourceSshHost: z.string().min(1).optional(),
@@ -156,6 +157,7 @@ export function redactConfig(config: AppConfig): RedactedAppConfig {
 }
 
 function readSourceConfigInput(source: ConfigSource): {
+  readonly sourceMaxPages: string | boolean | undefined;
   readonly sourceSshCommand: string | undefined;
   readonly sourceSshHost: string | undefined;
   readonly sourceTimeoutMs: string | boolean | undefined;
@@ -163,10 +165,11 @@ function readSourceConfigInput(source: ConfigSource): {
   readonly sourceUrl: string | boolean | undefined;
 } {
   return {
+    sourceMaxPages: source["REPLAY_SOURCE_MAX_PAGES"],
     sourceUrl: source["REPLAY_SOURCE_URL"],
-    sourceTransport: source["REPLAY_SOURCE_TRANSPORT"] as
-      | SourceTransport
-      | undefined,
+    sourceTransport: sourceTransportOrUndefined(
+      source["REPLAY_SOURCE_TRANSPORT"],
+    ),
     sourceSshHost: stringOrUndefined(source["REPLAY_SOURCE_SSH_HOST"]),
     sourceSshCommand: stringOrUndefined(source["REPLAY_SOURCE_SSH_COMMAND"]),
     sourceTimeoutMs: source["REPLAY_SOURCE_TIMEOUT_MS"],
@@ -181,6 +184,16 @@ function stringOrUndefined(
   }
 
   return undefined;
+}
+
+function sourceTransportOrUndefined(
+  value: boolean | string | undefined,
+): SourceTransport | undefined {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    return undefined;
+  }
+
+  return value as SourceTransport;
 }
 
 function redactSecret(value: string): string {

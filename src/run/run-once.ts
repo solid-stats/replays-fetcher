@@ -2,6 +2,7 @@ import { buildRunSummary, runExitCode } from "./summary.js";
 
 import type { RunExitCode, RunSummary } from "./types.js";
 import type {
+  DiscoveryDiagnostic,
   DiscoveryReport,
   ReplayCandidate,
   SourceClient,
@@ -15,9 +16,12 @@ import type { StoreRawReplayResult } from "../storage/store-raw-replay.js";
 interface RunOnceInput {
   readonly byteClient: ReplayByteClient;
   readonly discoverReplays: (input: {
+    readonly maxPages?: number;
+    readonly requestDelayMs?: number;
     readonly sourceClient: SourceClient;
     readonly sourceUrl: URL;
   }) => Promise<DiscoveryReport>;
+  readonly maxPages?: number;
   readonly now: () => Date;
   readonly runId: string;
   readonly sourceClient: SourceClient;
@@ -40,17 +44,39 @@ export interface RunOnceResult {
   readonly summary: RunSummary;
 }
 
+interface MutableDiscoveryReport {
+  candidates: ReplayCandidate[];
+  counts: DiscoveryReport["counts"];
+  diagnostics: DiscoveryDiagnostic[];
+  generatedAt: string;
+  mode: "dry-run";
+  ok: boolean;
+  sourceUrl: string;
+}
+
 export async function runOnce(input: RunOnceInput): Promise<RunOnceResult> {
   const startedAt = input.now().toISOString();
-  const discoveryReport = await input.discoverReplays({
-    sourceClient: input.sourceClient,
-    sourceUrl: input.sourceUrl,
-  });
+  const discoveryReport = emptyDiscoveryReport(input.sourceUrl.toString());
   const rawStorage: StoreRawReplayResult[] = [];
   const staging: IngestStagingResult[] = [];
+  const maxPages = input.maxPages ?? 1;
 
-  if (discoveryReport.ok) {
-    for (const candidate of discoveryReport.candidates) {
+  for (let page = 1; page <= maxPages; page += 1) {
+    const pageUrl = toPageUrl(input.sourceUrl, page);
+    // Each page is discovered, stored, and staged before moving on so parser work can run in parallel.
+    // eslint-disable-next-line no-await-in-loop
+    const pageReport = await input.discoverReplays({
+      maxPages: 1,
+      sourceClient: input.sourceClient,
+      sourceUrl: pageUrl,
+    });
+    appendDiscoveryReport(discoveryReport, pageReport);
+
+    if (!pageReport.ok) {
+      break;
+    }
+
+    for (const candidate of pageReport.candidates) {
       // Scheduled runs process candidates sequentially for source/storage/staging evidence.
       // eslint-disable-next-line no-await-in-loop
       const rawResult = await input.storeRawReplay({
@@ -83,4 +109,45 @@ export async function runOnce(input: RunOnceInput): Promise<RunOnceResult> {
     exitCode: runExitCode(summary),
     summary,
   };
+}
+
+function emptyDiscoveryReport(sourceUrl: string): MutableDiscoveryReport {
+  return {
+    candidates: [],
+    counts: {
+      candidates: 0,
+      diagnostics: 0,
+      discovered: 0,
+    },
+    diagnostics: [],
+    generatedAt: new Date().toISOString(),
+    mode: "dry-run",
+    ok: true,
+    sourceUrl,
+  };
+}
+
+function appendDiscoveryReport(
+  target: MutableDiscoveryReport,
+  pageReport: DiscoveryReport,
+): void {
+  target.candidates.push(...pageReport.candidates);
+  target.diagnostics.push(...pageReport.diagnostics);
+  target.counts = {
+    candidates: target.candidates.length,
+    diagnostics: target.diagnostics.length,
+    discovered: target.candidates.length,
+  };
+  target.ok &&= pageReport.ok;
+}
+
+function toPageUrl(sourceUrl: URL, page: number): URL {
+  if (page === 1) {
+    return sourceUrl;
+  }
+
+  const pageUrl = new URL(sourceUrl);
+  pageUrl.searchParams.set("p", String(page));
+
+  return pageUrl;
 }
