@@ -1,4 +1,4 @@
-name: CI/CD
+name: CI
 
 on:
   pull_request:
@@ -18,7 +18,6 @@ permissions:
 
 env:
   IMAGE_NAME: ghcr.io/${{ github.repository }}
-  K8S_NAMESPACE: solid-stats-staging
 
 jobs:
   verify:
@@ -52,8 +51,6 @@ jobs:
     timeout-minutes: 30
     needs: verify
     if: github.event_name != 'pull_request'
-    outputs:
-      image: ${{ steps.image.outputs.image }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -81,123 +78,3 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-
-      - name: Select deploy image
-        id: image
-        run: echo "image=${IMAGE_NAME}:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
-
-  deploy:
-    name: Deploy CronJob to k3s
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    needs: image
-    if: github.event_name != 'pull_request'
-    environment: staging
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Install SSH key
-        env:
-          CD_SSH_PRIVATE_KEY: ${{ secrets.CD_SSH_PRIVATE_KEY }}
-        run: |
-          install -m 700 -d ~/.ssh
-          printf '%s\n' "$CD_SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-
-      - name: Trust deploy host
-        env:
-          CD_SSH_HOST: ${{ secrets.CD_SSH_HOST }}
-          CD_SSH_PORT: ${{ secrets.CD_SSH_PORT || '22' }}
-        run: ssh-keyscan -p "$CD_SSH_PORT" "$CD_SSH_HOST" >> ~/.ssh/known_hosts
-
-      - name: Apply manifests and update image
-        env:
-          CD_SSH_HOST: ${{ secrets.CD_SSH_HOST }}
-          CD_SSH_PORT: ${{ secrets.CD_SSH_PORT || '22' }}
-          CD_SSH_USER: ${{ secrets.CD_SSH_USER }}
-          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME || github.actor }}
-          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
-          IMAGE: ${{ needs.image.outputs.image }}
-          REPLAYS_FETCHER_DATABASE_URL: ${{ secrets.REPLAYS_FETCHER_DATABASE_URL }}
-          REPLAYS_FETCHER_REPLAY_SOURCE_SSH_COMMAND: ${{ secrets.REPLAYS_FETCHER_REPLAY_SOURCE_SSH_COMMAND }}
-          REPLAYS_FETCHER_REPLAY_SOURCE_SSH_HOST: ${{ secrets.REPLAYS_FETCHER_REPLAY_SOURCE_SSH_HOST }}
-          REPLAYS_FETCHER_REPLAY_SOURCE_TRANSPORT: ${{ vars.REPLAYS_FETCHER_REPLAY_SOURCE_TRANSPORT || 'direct' }}
-          REPLAYS_FETCHER_REPLAY_SOURCE_URL: ${{ vars.REPLAYS_FETCHER_REPLAY_SOURCE_URL || 'https://sg.zone/replays' }}
-          REPLAYS_FETCHER_S3_ACCESS_KEY_ID: ${{ secrets.REPLAYS_FETCHER_S3_ACCESS_KEY_ID }}
-          REPLAYS_FETCHER_S3_BUCKET: ${{ secrets.REPLAYS_FETCHER_S3_BUCKET }}
-          REPLAYS_FETCHER_S3_SECRET_ACCESS_KEY: ${{ secrets.REPLAYS_FETCHER_S3_SECRET_ACCESS_KEY }}
-        run: |
-          set -euo pipefail
-          target="${CD_SSH_USER}@${CD_SSH_HOST}"
-          ssh -i ~/.ssh/deploy_key -p "$CD_SSH_PORT" "$target" \
-            "kubectl get namespace '$K8S_NAMESPACE' >/dev/null 2>&1 || kubectl create namespace '$K8S_NAMESPACE'"
-          python3 <<'PY' > /tmp/replays-fetcher-secrets.yaml
-          import base64
-          import json
-          import os
-          import sys
-
-          required = [
-              "GHCR_USERNAME",
-              "GHCR_TOKEN",
-              "REPLAYS_FETCHER_DATABASE_URL",
-              "REPLAYS_FETCHER_REPLAY_SOURCE_URL",
-              "REPLAYS_FETCHER_S3_BUCKET",
-              "REPLAYS_FETCHER_S3_ACCESS_KEY_ID",
-              "REPLAYS_FETCHER_S3_SECRET_ACCESS_KEY",
-          ]
-          missing = [name for name in required if not os.environ.get(name)]
-          if os.environ.get("REPLAYS_FETCHER_REPLAY_SOURCE_TRANSPORT") == "ssh" and not os.environ.get("REPLAYS_FETCHER_REPLAY_SOURCE_SSH_HOST"):
-              missing.append("REPLAYS_FETCHER_REPLAY_SOURCE_SSH_HOST")
-          if missing:
-              print(f"Missing required secrets: {', '.join(missing)}", file=sys.stderr)
-              sys.exit(64)
-
-          namespace = os.environ["K8S_NAMESPACE"]
-
-          def encoded(value):
-              return base64.b64encode(value.encode()).decode()
-
-          auth = encoded(f"{os.environ['GHCR_USERNAME']}:{os.environ['GHCR_TOKEN']}")
-          docker_config = json.dumps({
-              "auths": {
-                  "ghcr.io": {
-                      "username": os.environ["GHCR_USERNAME"],
-                      "password": os.environ["GHCR_TOKEN"],
-                      "auth": auth,
-                  }
-              }
-          }, separators=(",", ":"))
-
-          runtime = {
-              "DATABASE_URL": os.environ["REPLAYS_FETCHER_DATABASE_URL"],
-              "REPLAY_SOURCE_URL": os.environ["REPLAYS_FETCHER_REPLAY_SOURCE_URL"],
-              "REPLAY_SOURCE_TRANSPORT": os.environ.get("REPLAYS_FETCHER_REPLAY_SOURCE_TRANSPORT", "direct"),
-              "S3_BUCKET": os.environ["REPLAYS_FETCHER_S3_BUCKET"],
-              "S3_ACCESS_KEY_ID": os.environ["REPLAYS_FETCHER_S3_ACCESS_KEY_ID"],
-              "S3_SECRET_ACCESS_KEY": os.environ["REPLAYS_FETCHER_S3_SECRET_ACCESS_KEY"],
-          }
-          if os.environ.get("REPLAYS_FETCHER_REPLAY_SOURCE_SSH_HOST"):
-              runtime["REPLAY_SOURCE_SSH_HOST"] = os.environ["REPLAYS_FETCHER_REPLAY_SOURCE_SSH_HOST"]
-          if os.environ.get("REPLAYS_FETCHER_REPLAY_SOURCE_SSH_COMMAND"):
-              runtime["REPLAY_SOURCE_SSH_COMMAND"] = os.environ["REPLAYS_FETCHER_REPLAY_SOURCE_SSH_COMMAND"]
-
-          docs = [
-              "apiVersion: v1\nkind: Secret\ntype: kubernetes.io/dockerconfigjson\nmetadata:\n"
-              f"  name: ghcr-pull\n  namespace: {namespace}\ndata:\n"
-              f"  .dockerconfigjson: {encoded(docker_config)}",
-              "apiVersion: v1\nkind: Secret\ntype: Opaque\nmetadata:\n"
-              f"  name: replays-fetcher-runtime\n  namespace: {namespace}\ndata:\n"
-              + "\n".join(f"  {key}: {encoded(value)}" for key, value in runtime.items()),
-          ]
-          print("\n---\n".join(docs))
-          PY
-          scp -i ~/.ssh/deploy_key -P "$CD_SSH_PORT" /tmp/replays-fetcher-secrets.yaml "$target:/tmp/replays-fetcher-secrets.yaml"
-          ssh -i ~/.ssh/deploy_key -p "$CD_SSH_PORT" "$target" \
-            "kubectl apply -f /tmp/replays-fetcher-secrets.yaml && rm -f /tmp/replays-fetcher-secrets.yaml"
-          rm -f /tmp/replays-fetcher-secrets.yaml
-          cat deploy/k8s/staging/*.yaml \
-            | ssh -i ~/.ssh/deploy_key -p "$CD_SSH_PORT" "$target" "kubectl apply -f -"
-          ssh -i ~/.ssh/deploy_key -p "$CD_SSH_PORT" "$target" \
-            "kubectl -n '$K8S_NAMESPACE' set image cronjob/replays-fetcher replays-fetcher='$IMAGE'"
