@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Full-Corpus Ingest Resilience
-status: planning
-last_updated: "2026-06-07T18:20:03.217Z"
-last_activity: 2026-06-07 — v2.0 roadmap written (Phases 7–12)
+status: executing
+last_updated: "2026-06-07T18:33:08.416Z"
+last_activity: 2026-06-07 -- Phase 7 execution started
 progress:
   total_phases: 6
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 3
+  completed_plans: 1
   percent: 0
 ---
 
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-07)
 
 **Core value:** Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
-**Current focus:** v2.0 Full-Corpus Ingest Resilience (roadmap defined, ready to plan Phase 7)
+**Current focus:** Phase 7 — v2 Foundations
 
 ## Current Position
 
-Phase: Phase 7 — v2 Foundations (not started)
-Plan: —
-Status: Roadmap defined; ready to plan
-Last activity: 2026-06-07 — v2.0 roadmap written (Phases 7–12)
+Phase: 7 (v2 Foundations) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
+Last activity: 2026-06-07 -- Completed 07-01-PLAN.md (AppError base)
 
 Progress: `[ ][ ][ ][ ][ ][ ]` 0/6 phases complete
 
@@ -82,6 +82,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [v2.0 Roadmap]: Checkpoint uses a single rolling `checkpoints/<source>/latest.json` S3 object with conditional writes (IfMatch) — no new tables, no server-2 schema change. RESUME-04 uses the existing `promotion_evidence` jsonb for `run_id` visibility.
 - [v2.0 Roadmap]: RANGE-06 explicitly depends on DIAG-02 classifier to prevent silent corpus truncation on transient failures; this drives DIAG before RANGE in the phase order.
 - [v2.0 Roadmap]: GUARD-03 (`contract-check`) reuses DIAG classification; GUARD is the final phase (Phase 12), after DIAG is established.
+- [Phase 07]: AppError base intentionally omits httpStatus (CLI exit-code-2 semantics, Phase 05), unlike the Fastify canonical AppError; do not restore it.
+- [Phase 07]: AppError is generic over Code extends string = string so subclasses keep narrow literal-union codes without widening to string.
 
 ### Roadmap Evolution
 
@@ -134,3 +136,9 @@ Plan Phase 7 (v2 Foundations) with `/gsd:plan-phase 7`.
 ## Operator Next Steps
 
 - Run `/gsd:plan-phase 7` to decompose Phase 7 into executable plans (AppError base + pino logger factory).
+
+## Performance Metrics
+
+| Phase | Plan | Duration | Notes |
+|-------|------|----------|-------|
+| Phase 07 P01 | 5min | 2 tasks | 2 files |

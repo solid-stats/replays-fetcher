@@ -23,7 +23,7 @@ Requirements for this milestone. Categories map to roadmap phases (phase numbers
 
 Cross-cutting prerequisites the convention baseline (`solidstats-backend-ts-conventions`) requires and the themed phases build on.
 
-- [ ] **CORE-01**: A shared typed error base exists (`AppError`-style: stable `code`, `isOperational`, structured `details`, preserved `cause`); `SourceFetchError`/`ReplayByteFetchError` and the new v2 error types (retry-exhausted, checkpoint-conflict, contract-violation) extend it. Existing `code` string unions that drive the diagnostics taxonomy are preserved.
+- [x] **CORE-01**: A shared typed error base exists (`AppError`-style: stable `code`, `isOperational`, structured `details`, preserved `cause`); `SourceFetchError`/`ReplayByteFetchError` and the new v2 error types (retry-exhausted, checkpoint-conflict, contract-violation) extend it. Existing `code` string unions that drive the diagnostics taxonomy are preserved.
 - [ ] **CORE-02**: Structured `pino` logging via an injected `createLogger` factory (child loggers keyed by `runId`/`page`) replaces ad-hoc `JSON.stringify`/`writeJson`, with secret redaction reusing the existing redaction posture. This is the substrate for compact progress events.
 
 ### Source Failure Diagnostics & Retry (DIAG)
