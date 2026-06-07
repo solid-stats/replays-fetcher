@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Full-Corpus Ingest Resilience
-status: executing
-last_updated: "2026-06-07T18:44:16.344Z"
+status: verifying
+last_updated: "2026-06-07T19:01:29.995Z"
 last_activity: 2026-06-07 -- Completed 07-01-PLAN.md (AppError base)
 progress:
   total_phases: 6
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 2
-  percent: 0
+  completed_plans: 3
+  percent: 17
 ---
 
 # Project State
@@ -26,8 +26,8 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 
 Phase: 7 (v2 Foundations) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
-Last activity: 2026-06-07 -- Completed 07-01-PLAN.md (AppError base)
+Status: Phase complete — ready for verification
+Last activity: 2026-06-07 -- Completed 07-03-PLAN.md (Wave-2 integration: error re-parent + logger DI)
 
 Progress: `[ ][ ][ ][ ][ ][ ]` 0/6 phases complete
 
@@ -84,6 +84,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [v2.0 Roadmap]: GUARD-03 (`contract-check`) reuses DIAG classification; GUARD is the final phase (Phase 12), after DIAG is established.
 - [Phase 07]: AppError base intentionally omits httpStatus (CLI exit-code-2 semantics, Phase 05), unlike the Fastify canonical AppError; do not restore it.
 - [Phase 07]: AppError is generic over Code extends string = string so subclasses keep narrow literal-union codes without widening to string.
+- [Phase 07]: SourceFetchError and ReplayByteFetchError are re-parented onto AppError with their exact narrow code unions; throw sites and instanceof guards are unchanged. Subclasses keep a public constructor (eslint-disable no-useless-constructor) because AppError's constructor is protected and the subclass narrows options to omit isOperational.
+- [Phase 07]: createLogger is injected through the CLI DI map (before the ...dependencies spread) and a child({ runId }) logger is created in run-once. The run-once logger logs only at debug (below default info) so the JSON summary stdout contract stays byte-for-byte unchanged; cli.test.ts passes with zero summary-assertion edits.
+- [Phase 07]: pnpm run verify is green for every phase-7 stage individually (typecheck, 157 unit, 2 integration, 100% coverage, build) but the aggregate gate stops at a pre-existing pnpm-lock.yaml format failure and pre-existing .agents/** tooling lint; both are out of scope and logged in 07-v2-foundations/deferred-items.md.
 
 ### Roadmap Evolution
 
@@ -113,6 +116,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 | 06 | 04 | complete | 2 | 9 |
 | 06 | 05 | complete | 3 | 8 |
 | 06 | 06 | complete | 2 | 10 |
+| 07 | 01 | 5min | 2 | 2 |
+| 07 | 02 | 6min | 2 | 4 |
+| 07 | 03 | 11min | 3 | 5 |
 
 ### Pending Todos
 
@@ -143,3 +149,4 @@ Plan Phase 7 (v2 Foundations) with `/gsd:plan-phase 7`.
 |-------|------|----------|-------|
 | Phase 07 P01 | 5min | 2 tasks | 2 files |
 | Phase 07 P02 | 6min | 2 tasks | 4 files |
+| Phase 07 P03 | 11min | 3 tasks | 5 files |

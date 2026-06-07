@@ -21,7 +21,7 @@
 
 ### v2.0 Full-Corpus Ingest Resilience (Phases 7-12)
 
-- [ ] **Phase 7: v2 Foundations** - Typed error base and structured pino logger factory; cross-cutting prerequisites for all v2 phases.
+- [x] **Phase 7: v2 Foundations** - Typed error base and structured pino logger factory; cross-cutting prerequisites for all v2 phases. (completed 2026-06-07)
 - [ ] **Phase 8: Source Failure Diagnostics and Retry** - Rich failure evidence with transient/permanent classification and bounded exponential-backoff retry.
 - [ ] **Phase 9: Checkpoint and Resume** - S3 checkpoint per source with conditional-write guards; resume from last completed page; run/resume status in existing staging evidence.
 - [ ] **Phase 10: Dynamic Source Range and Rate Limiting** - Stop-on-empty page discovery, bounded concurrent detail/byte fan-out, adaptive throttling on 429/403, configurable pacing, and per-page ETA.
@@ -48,7 +48,7 @@
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 07-03-PLAN.md — Re-parent `SourceFetchError`/`ReplayByteFetchError` to `AppError`, wire `createLogger` into CLI DI map with `child({ runId })`, `pnpm run verify` parity gate (CORE-01 + CORE-02 wiring)
+- [x] 07-03-PLAN.md — Re-parent `SourceFetchError`/`ReplayByteFetchError` to `AppError`, wire `createLogger` into CLI DI map with `child({ runId })`, `pnpm run verify` parity gate (CORE-01 + CORE-02 wiring)
 
 **CORE-phase decision:** CORE is a standalone Phase 7 (not folded into DIAG or PROG). Reasoning: CORE-01 (error base) must exist before DIAG can build a typed classifier, and CORE-02 (pino) must exist before PROG can emit structured events. Folding CORE-01 into DIAG would require DIAG to also own the logger stub, polluting its scope; folding CORE-02 into PROG would leave DIAG and RESUME with no logger during their phases — the research notes retry events (warn) and checkpoint reads (info/error) both need pino before PROG is built. At fine granularity a 2-requirement phase is appropriate when the requirements are genuinely cross-cutting prerequisites with different downstream consumers. The phase goal is verifiable (green CI after the refactor) and delivers a real capability to subsequent phases.
 
@@ -145,7 +145,7 @@
 | 4. Staging and Promotion Handoff | v1.0 | 4/4 | Complete | 2026-05-09 |
 | 5. Scheduled Operations and Validation | v1.0 | 4/4 | Complete | 2026-05-09 |
 | 6. Close v1 audit gaps: connectivity checks and discovered timestamp staging evidence | v1.0 | 6/6 | Complete | 2026-05-10 |
-| 7. v2 Foundations | v2.0 | 2/3 | In Progress|  |
+| 7. v2 Foundations | v2.0 | 3/3 | Complete   | 2026-06-07 |
 | 8. Source Failure Diagnostics and Retry | v2.0 | 0/TBD | Not started | - |
 | 9. Checkpoint and Resume | v2.0 | 0/TBD | Not started | - |
 | 10. Dynamic Source Range and Rate Limiting | v2.0 | 0/TBD | Not started | - |
