@@ -315,9 +315,11 @@ function registerRunOnceCommand(
       const runId = dependencies.createRunId(startedAt);
       const rootLogger = dependencies.createLogger();
       const log = rootLogger.child({ runId });
-      // CORE-02 substrate: the per-run child logger is keyed by runId. It logs
-      // only at debug (below the default info level) so no record interleaves
-      // with the JSON summary stdout contract parsed by cli.test.ts.
+      // CORE-02 substrate: the per-run child logger is keyed by runId. stdout
+      // cleanliness for the JSON summary contract (parsed by cli.test.ts) is
+      // guaranteed by the logger writing to stderr (createLogger defaults its
+      // destination to process.stderr), not by the log level — so emitting at
+      // debug or any level cannot interleave with the stdout summary.
       log.debug({ runId }, "run-once started");
       const configResult = loadStoreRawConfig(dependencies);
 

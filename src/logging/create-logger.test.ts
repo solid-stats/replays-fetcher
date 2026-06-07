@@ -1,8 +1,12 @@
 import { Writable } from "node:stream";
 
-import { expect, test } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 
 import { createLogger } from "./create-logger.js";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 interface CaptureSink {
   readonly stream: Writable;
@@ -114,4 +118,19 @@ test("createLogger honours explicit level option", () => {
   const logger = createLogger({ destination: sink.stream, level: "debug" });
 
   expect(logger.level).toBe("debug");
+});
+
+test("createLogger defaults to stderr so a debug record never reaches stdout", () => {
+  const stdoutSpy = vi
+    .spyOn(process.stdout, "write")
+    .mockImplementation(() => true);
+  const stderrSpy = vi
+    .spyOn(process.stderr, "write")
+    .mockImplementation(() => true);
+  const logger = createLogger({ level: "debug" });
+
+  logger.debug({ runId: "run-123" }, "run-once started");
+
+  expect(stdoutSpy).not.toHaveBeenCalled();
+  expect(stderrSpy).toHaveBeenCalled();
 });

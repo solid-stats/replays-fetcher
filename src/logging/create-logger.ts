@@ -40,10 +40,11 @@ export function createLogger(options: CreateLoggerOptions = {}): Logger {
     level: options.level ?? process.env["LOG_LEVEL"] ?? "info",
     redact: { paths: [...REDACT_PATHS], censor: "[redacted]" },
   };
+  // Default to stderr (NOT fd 1 / stdout) so the machine-readable JSON summary
+  // on stdout stays a clean single document regardless of LOG_LEVEL. CR-01:
+  // routing logs to stderr is what guarantees stdout cleanliness, not the
+  // happen-to-be-quiet default log level.
+  const destination = options.destination ?? process.stderr;
 
-  if (options.destination === undefined) {
-    return pino(loggerOptions);
-  }
-
-  return pino(loggerOptions, options.destination);
+  return pino(loggerOptions, destination);
 }
