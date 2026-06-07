@@ -104,7 +104,11 @@ function createSshReplayByteClient(
         ]);
 
         return new Uint8Array(Buffer.from(result.stdout, "base64"));
-      } catch {
+      } catch (error) {
+        if (error instanceof ReplayByteFetchError) {
+          throw error;
+        }
+
         throw new ReplayByteFetchError(
           "fetch_failed",
           "SSH replay byte request failed",

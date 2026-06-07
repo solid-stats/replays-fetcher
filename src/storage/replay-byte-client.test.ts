@@ -181,7 +181,7 @@ test("createReplayByteClient should fail SSH transport when host is missing", as
 
   await expect(client.fetchBytes(replayUrl)).rejects.toMatchObject({
     code: "fetch_failed",
-    message: "SSH replay byte request failed",
+    message: "SSH source host is not configured",
     name: "ReplayByteFetchError",
   });
 });
