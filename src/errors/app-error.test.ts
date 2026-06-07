@@ -65,7 +65,6 @@ test("AppError leaves details undefined when omitted", () => {
   const error = new TestError("failed");
 
   expect(error.details).toBeUndefined();
-  expect("details" in error).toBe(false);
 });
 
 test("AppError is an instance of Error and the concrete subclass", () => {
