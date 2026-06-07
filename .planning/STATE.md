@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Full-Corpus Ingest Resilience
 status: planning
-last_updated: "2026-06-07T07:54:47.001Z"
+last_updated: "2026-06-07T00:00:00.000Z"
 last_activity: 2026-06-07
 progress:
-  total_phases: 0
+  total_phases: 6
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,14 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-07)
 
 **Core value:** Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
-**Current focus:** v2.0 Full-Corpus Ingest Resilience (defining requirements)
+**Current focus:** v2.0 Full-Corpus Ingest Resilience (roadmap defined, ready to plan Phase 7)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: Phase 7 — v2 Foundations (not started)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-06-07 — Milestone v2.0 started
+Status: Roadmap defined; ready to plan
+Last activity: 2026-06-07 — v2.0 roadmap written (Phases 7–12)
+
+Progress: `[ ][ ][ ][ ][ ][ ]` 0/6 phases complete
 
 ## Accumulated Context
 
@@ -76,10 +78,15 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 06]: Source-discovered timestamps flow through raw storage evidence and `promotionEvidence.discoveredAt` only; `replay_timestamp` remains reserved for trusted replay time.
 - [Phase 06]: `pnpm run test:integration` uses Docker-backed MinIO and PostgreSQL Testcontainers and is part of `pnpm run verify`.
 - [Phase 06]: Validation backfills exist for phases 1, 3, 4, and 5, and Phase 6 verification passed.
+- [v2.0 Roadmap]: CORE is a standalone Phase 7 (not folded into DIAG or PROG). CORE-01 (AppError base) must exist before DIAG builds a typed classifier; CORE-02 (pino) must exist before RETRY/RESUME emit warn/info events, well before PROG is built. At fine granularity, 2 cross-cutting prerequisites with different downstream consumers justify their own phase.
+- [v2.0 Roadmap]: Checkpoint uses a single rolling `checkpoints/<source>/latest.json` S3 object with conditional writes (IfMatch) — no new tables, no server-2 schema change. RESUME-04 uses the existing `promotion_evidence` jsonb for `run_id` visibility.
+- [v2.0 Roadmap]: RANGE-06 explicitly depends on DIAG-02 classifier to prevent silent corpus truncation on transient failures; this drives DIAG before RANGE in the phase order.
+- [v2.0 Roadmap]: GUARD-03 (`contract-check`) reuses DIAG classification; GUARD is the final phase (Phase 12), after DIAG is established.
 
 ### Roadmap Evolution
 
 - Phase 6 added: Close v1 audit gaps: connectivity checks and discovered timestamp staging evidence
+- v2.0 Phases 7–12 added: 2026-06-07
 
 ### Execution Metrics
 
@@ -107,7 +114,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ### Pending Todos
 
-None yet.
+None.
 
 ### Quick Tasks Completed
 
@@ -122,8 +129,8 @@ None yet.
 
 ## Next Step
 
-Define v2.0 requirements, then create the roadmap (phases continue from Phase 7).
+Plan Phase 7 (v2 Foundations) with `/gsd:plan-phase 7`.
 
 ## Operator Next Steps
 
-- Continue the v2.0 milestone setup (requirements -> roadmap).
+- Run `/gsd:plan-phase 7` to decompose Phase 7 into executable plans (AppError base + pino logger factory).

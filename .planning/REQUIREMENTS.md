@@ -96,13 +96,34 @@ Deferred. Tracked but not in this roadmap.
 
 ## Traceability
 
-Each category maps to a brief phase (`plans/replays-fetcher/briefs/v2-backend-parity-and-full-run.md`) and an implementation-research area. Roadmap phase numbers are assigned in `ROADMAP.md` (continuing from Phase 7).
+Each category maps to a brief phase (`plans/replays-fetcher/briefs/v2-backend-parity-and-full-run.md`) and an implementation-research area. Roadmap phase numbers continue from Phase 7.
 
-| Category | Brief phase | Research area | Notes |
-|----------|-------------|---------------|-------|
-| CORE | (cross-cutting) | Convention-fit baseline (gaps #1, #2) | Foundation for DIAG (error base) and PROG (pino). |
-| DIAG | Phase 1 — Source Failure Diagnostics and Retry Policy | Area 1 | Classifier reused by RANGE-06 and GUARD-03. |
-| RESUME | Phase 2 — Checkpoint and Resume | Area 2 | S3 checkpoint; `run_id` via existing `promotion_evidence` (no server-2 change). |
-| RANGE | Phase 3 — Dynamic Source Range and Rate Limiting | Area 3 | Adaptive throttling included; ~1–2h target. |
-| PROG | Phase 4 — Progress Events and Compact Evidence | Area 4 | Requires CORE-02 (pino). |
-| GUARD | Phase 5 — Source Contract Guards | Area 5 | Reuses DIAG classification. |
+| Requirement | Roadmap Phase | Research area | Status |
+|-------------|---------------|---------------|--------|
+| CORE-01 | Phase 7 — v2 Foundations | Convention-fit baseline (gap #1) | Pending |
+| CORE-02 | Phase 7 — v2 Foundations | Convention-fit baseline (gap #2) | Pending |
+| DIAG-01 | Phase 8 — Source Failure Diagnostics and Retry | Area 1 | Pending |
+| DIAG-02 | Phase 8 — Source Failure Diagnostics and Retry | Area 1 | Pending |
+| DIAG-03 | Phase 8 — Source Failure Diagnostics and Retry | Area 1 | Pending |
+| DIAG-04 | Phase 8 — Source Failure Diagnostics and Retry | Area 1 | Pending |
+| RESUME-01 | Phase 9 — Checkpoint and Resume | Area 2 | Pending |
+| RESUME-02 | Phase 9 — Checkpoint and Resume | Area 2 | Pending |
+| RESUME-03 | Phase 9 — Checkpoint and Resume | Area 2 | Pending |
+| RESUME-04 | Phase 9 — Checkpoint and Resume | Area 2 | Pending |
+| RESUME-05 | Phase 9 — Checkpoint and Resume | Area 2 | Pending |
+| RANGE-01 | Phase 10 — Dynamic Source Range and Rate Limiting | Area 3 | Pending |
+| RANGE-02 | Phase 10 — Dynamic Source Range and Rate Limiting | Area 3 | Pending |
+| RANGE-03 | Phase 10 — Dynamic Source Range and Rate Limiting | Area 3 | Pending |
+| RANGE-04 | Phase 10 — Dynamic Source Range and Rate Limiting | Area 3 | Pending |
+| RANGE-05 | Phase 10 — Dynamic Source Range and Rate Limiting | Area 3 | Pending |
+| RANGE-06 | Phase 10 — Dynamic Source Range and Rate Limiting | Area 3 | Pending |
+| PROG-01 | Phase 11 — Progress Events and Compact Evidence | Area 4 | Pending |
+| PROG-02 | Phase 11 — Progress Events and Compact Evidence | Area 4 | Pending |
+| PROG-03 | Phase 11 — Progress Events and Compact Evidence | Area 4 | Pending |
+| PROG-04 | Phase 11 — Progress Events and Compact Evidence | Area 4 | Pending |
+| GUARD-01 | Phase 12 — Source Contract Guards | Area 5 | Pending |
+| GUARD-02 | Phase 12 — Source Contract Guards | Area 5 | Pending |
+| GUARD-03 | Phase 12 — Source Contract Guards | Area 5 | Pending |
+| GUARD-04 | Phase 12 — Source Contract Guards | Area 5 | Pending |
+
+**Coverage check:** 25 v2 requirements mapped across 6 phases (7–12). No requirement appears in more than one phase. No requirement is orphaned.
