@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Full-Corpus Ingest Resilience
 status: planning
-last_updated: "2026-06-07T00:00:00.000Z"
-last_activity: 2026-06-07
+last_updated: "2026-06-07T18:20:03.217Z"
+last_activity: 2026-06-07 — v2.0 roadmap written (Phases 7–12)
 progress:
   total_phases: 6
   completed_phases: 0
