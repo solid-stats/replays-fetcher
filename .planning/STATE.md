@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Full-Corpus Ingest Resilience
 status: verifying
-last_updated: "2026-06-07T19:01:29.995Z"
-last_activity: 2026-06-07 -- Completed 07-01-PLAN.md (AppError base)
+last_updated: "2026-06-07T19:34:44.315Z"
+last_activity: 2026-06-07
 progress:
   total_phases: 6
   completed_phases: 1
@@ -24,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 
 ## Current Position
 
-Phase: 7 (v2 Foundations) — EXECUTING
-Plan: 3 of 3
+Phase: 8
+Plan: Not started
 Status: Phase complete — ready for verification
-Last activity: 2026-06-07 -- Completed 07-03-PLAN.md (Wave-2 integration: error re-parent + logger DI)
+Last activity: 2026-06-07
 
 Progress: `[ ][ ][ ][ ][ ][ ]` 0/6 phases complete
 

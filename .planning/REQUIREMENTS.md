@@ -100,7 +100,7 @@ Each category maps to a brief phase (`plans/replays-fetcher/briefs/v2-backend-pa
 
 | Requirement | Roadmap Phase | Research area | Status |
 |-------------|---------------|---------------|--------|
-| CORE-01 | Phase 7 — v2 Foundations | Convention-fit baseline (gap #1) | Pending |
+| CORE-01 | Phase 7 — v2 Foundations | Convention-fit baseline (gap #1) | Complete |
 | CORE-02 | Phase 7 — v2 Foundations | Convention-fit baseline (gap #2) | Complete |
 | DIAG-01 | Phase 8 — Source Failure Diagnostics and Retry | Area 1 | Pending |
 | DIAG-02 | Phase 8 — Source Failure Diagnostics and Retry | Area 1 | Pending |
