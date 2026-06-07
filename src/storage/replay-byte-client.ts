@@ -1,6 +1,8 @@
 import { execFile as execFileCallback } from "node:child_process";
 import { promisify } from "node:util";
 
+import { AppError } from "../errors/app-error.js";
+
 import type { SourceConfig } from "../config.js";
 
 type ExecFile = (
@@ -14,13 +16,16 @@ export interface ReplayByteClient {
   fetchBytes(url: URL): Promise<Uint8Array>;
 }
 
-export class ReplayByteFetchError extends Error {
-  readonly code: "fetch_failed";
-
-  constructor(code: ReplayByteFetchError["code"], message: string) {
-    super(message);
-    this.name = "ReplayByteFetchError";
-    this.code = code;
+export class ReplayByteFetchError extends AppError<"fetch_failed"> {
+  constructor(
+    code: ReplayByteFetchError["code"],
+    message: string,
+    options?: {
+      readonly cause?: unknown;
+      readonly details?: Readonly<Record<string, unknown>>;
+    },
+  ) {
+    super(code, message, options);
   }
 }
 

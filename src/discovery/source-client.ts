@@ -1,6 +1,8 @@
 import { execFile as execFileCallback } from "node:child_process";
 import { promisify } from "node:util";
 
+import { AppError } from "../errors/app-error.js";
+
 import type { SourceConfig } from "../config.js";
 import type { SourceClient } from "./types.js";
 
@@ -12,13 +14,18 @@ type ExecFile = (
 const defaultExecFile = promisify(execFileCallback) as ExecFile;
 const httpTooManyRequestsStatus = 429;
 
-export class SourceFetchError extends Error {
-  readonly code: "rate_limited" | "source_unavailable";
-
-  constructor(code: SourceFetchError["code"], message: string) {
-    super(message);
-    this.name = "SourceFetchError";
-    this.code = code;
+export class SourceFetchError extends AppError<
+  "rate_limited" | "source_unavailable"
+> {
+  constructor(
+    code: SourceFetchError["code"],
+    message: string,
+    options?: {
+      readonly cause?: unknown;
+      readonly details?: Readonly<Record<string, unknown>>;
+    },
+  ) {
+    super(code, message, options);
   }
 }
 

@@ -2,6 +2,7 @@
 import { afterEach, expect, test, vi } from "vitest";
 
 import { loadConfig, type AppConfig } from "../config.js";
+import { AppError } from "../errors/app-error.js";
 
 import { createSourceClient, SourceFetchError } from "./source-client.js";
 
@@ -149,6 +150,34 @@ test("SourceFetchError should carry source failure metadata", () => {
     message: "source unavailable",
     name: "SourceFetchError",
   });
+});
+
+test("SourceFetchError should extend AppError while keeping its narrow code union", () => {
+  const error = new SourceFetchError("rate_limited", "rate limited");
+
+  expect(error).toBeInstanceOf(SourceFetchError);
+  expect(error).toBeInstanceOf(AppError);
+  expect(error).toBeInstanceOf(Error);
+  expect(error.name).toBe("SourceFetchError");
+
+  const code: "rate_limited" | "source_unavailable" = error.code;
+
+  expect(code).toBe("rate_limited");
+});
+
+test("SourceFetchError should preserve an optional cause when provided", () => {
+  const cause = new Error("underlying transport failure");
+  const error = new SourceFetchError("source_unavailable", "wrapped", {
+    cause,
+  });
+
+  expect(error.cause).toBe(cause);
+});
+
+test("SourceFetchError should leave cause undefined when omitted", () => {
+  const error = new SourceFetchError("source_unavailable", "no cause");
+
+  expect(error.cause).toBeUndefined();
 });
 
 test("createSourceClient should invoke SSH transport with configured host and URL", async () => {

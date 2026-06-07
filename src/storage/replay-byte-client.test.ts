@@ -1,6 +1,7 @@
 import { afterEach, expect, test, vi } from "vitest";
 
 import { loadSourceConfig, type SourceConfig } from "../config.js";
+import { AppError } from "../errors/app-error.js";
 
 import {
   createReplayByteClient,
@@ -193,4 +194,30 @@ test("ReplayByteFetchError should carry byte fetch metadata", () => {
     message: "byte fetch failed",
     name: "ReplayByteFetchError",
   });
+});
+
+test("ReplayByteFetchError should extend AppError while keeping its narrow code", () => {
+  const error = new ReplayByteFetchError("fetch_failed", "fetch failed");
+
+  expect(error).toBeInstanceOf(ReplayByteFetchError);
+  expect(error).toBeInstanceOf(AppError);
+  expect(error).toBeInstanceOf(Error);
+  expect(error.name).toBe("ReplayByteFetchError");
+
+  const code: "fetch_failed" = error.code;
+
+  expect(code).toBe("fetch_failed");
+});
+
+test("ReplayByteFetchError should preserve an optional cause when provided", () => {
+  const cause = new Error("underlying transport failure");
+  const error = new ReplayByteFetchError("fetch_failed", "wrapped", { cause });
+
+  expect(error.cause).toBe(cause);
+});
+
+test("ReplayByteFetchError should leave cause undefined when omitted", () => {
+  const error = new ReplayByteFetchError("fetch_failed", "no cause");
+
+  expect(error.cause).toBeUndefined();
 });
