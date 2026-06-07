@@ -25,6 +25,12 @@
       "skillPath": "solidstats-backend-ts-tests/SKILL.md",
       "computedHash": "3cf0f18607710d732b875d8111f2b9e0e03e8c3c69d1e3b7cfe0fe1456d7eca5"
     },
+    "solidstats-process-project-standards": {
+      "source": "solid-stats/skills",
+      "sourceType": "github",
+      "skillPath": "solidstats-process-project-standards/SKILL.md",
+      "computedHash": "4333ac10b8f09bea8e3bfc79f3ad041de5b19a95eac4d14d8a810eae98bf33d6"
+    },
     "solidstats-process-review-standards": {
       "source": "solid-stats/skills",
       "sourceType": "github",
@@ -36,6 +42,12 @@
       "sourceType": "github",
       "skillPath": "solidstats-process-testing-standards/SKILL.md",
       "computedHash": "e569f9ed94b6e687d6034f46d2743209459e50befe88e60bdbe564dd1a26cbc6"
+    },
+    "solidstats-process-ts-standards": {
+      "source": "solid-stats/skills",
+      "sourceType": "github",
+      "skillPath": "solidstats-process-ts-standards/SKILL.md",
+      "computedHash": "07f24e5006f9536281a3f2613b50594cbf49f57411eb3dd4c4a564c931ebe063"
     }
   }
 }
