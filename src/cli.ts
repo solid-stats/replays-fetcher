@@ -4,6 +4,8 @@ import { randomUUID } from "node:crypto";
 
 import { Command } from "commander";
 
+import type { Logger } from "pino";
+
 import { connectivityOk } from "./check/connectivity.js";
 import { checkPostgresConnectivityFromDatabaseUrl } from "./check/postgres-connectivity.js";
 import {
@@ -21,6 +23,10 @@ import {
 } from "./config.js";
 import { discoverReplaysDryRun } from "./discovery/discover.js";
 import { createSourceClient } from "./discovery/source-client.js";
+import {
+  createLogger,
+  type CreateLoggerOptions,
+} from "./logging/create-logger.js";
 import { runOnce } from "./run/run-once.js";
 import { buildConfigInvalidRunSummary, runExitCode } from "./run/summary.js";
 import {
@@ -71,6 +77,7 @@ interface BuildCliDependencies {
   readonly checkPostgresConnectivityFromDatabaseUrl?: typeof checkPostgresConnectivityFromDatabaseUrl;
   readonly checkS3Connectivity?: typeof checkS3Connectivity;
   readonly checkSourceConnectivity?: typeof checkSourceConnectivity;
+  readonly createLogger?: (options?: CreateLoggerOptions) => Logger;
   readonly createRunId?: (now: Date) => string;
   readonly createS3ConnectivitySenderFromConfig?: typeof createS3ConnectivitySenderFromConfig;
   readonly createReplayByteClient?: (config: SourceConfig) => ReplayByteClient;
@@ -143,6 +150,7 @@ function resolveDependencies(
     checkPostgresConnectivityFromDatabaseUrl,
     checkS3Connectivity,
     checkSourceConnectivity,
+    createLogger,
     createRunId,
     createReplayByteClient,
     createS3ConnectivitySenderFromConfig,
@@ -306,6 +314,12 @@ function registerRunOnceCommand(
     .action(async () => {
       const startedAt = dependencies.now();
       const runId = dependencies.createRunId(startedAt);
+      const rootLogger = dependencies.createLogger();
+      const log = rootLogger.child({ runId });
+      // CORE-02 substrate: the per-run child logger is keyed by runId. It logs
+      // only at debug (below the default info level) so no record interleaves
+      // with the JSON summary stdout contract parsed by cli.test.ts.
+      log.debug({ runId }, "run-once started");
       const configResult = loadStoreRawConfig(dependencies);
 
       if (!configResult.ok) {
