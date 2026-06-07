@@ -24,7 +24,7 @@ Requirements for this milestone. Categories map to roadmap phases (phase numbers
 Cross-cutting prerequisites the convention baseline (`solidstats-backend-ts-conventions`) requires and the themed phases build on.
 
 - [x] **CORE-01**: A shared typed error base exists (`AppError`-style: stable `code`, `isOperational`, structured `details`, preserved `cause`); `SourceFetchError`/`ReplayByteFetchError` and the new v2 error types (retry-exhausted, checkpoint-conflict, contract-violation) extend it. Existing `code` string unions that drive the diagnostics taxonomy are preserved.
-- [ ] **CORE-02**: Structured `pino` logging via an injected `createLogger` factory (child loggers keyed by `runId`/`page`) replaces ad-hoc `JSON.stringify`/`writeJson`, with secret redaction reusing the existing redaction posture. This is the substrate for compact progress events.
+- [x] **CORE-02**: Structured `pino` logging via an injected `createLogger` factory (child loggers keyed by `runId`/`page`) replaces ad-hoc `JSON.stringify`/`writeJson`, with secret redaction reusing the existing redaction posture. This is the substrate for compact progress events.
 
 ### Source Failure Diagnostics & Retry (DIAG)
 
@@ -101,7 +101,7 @@ Each category maps to a brief phase (`plans/replays-fetcher/briefs/v2-backend-pa
 | Requirement | Roadmap Phase | Research area | Status |
 |-------------|---------------|---------------|--------|
 | CORE-01 | Phase 7 — v2 Foundations | Convention-fit baseline (gap #1) | Pending |
-| CORE-02 | Phase 7 — v2 Foundations | Convention-fit baseline (gap #2) | Pending |
+| CORE-02 | Phase 7 — v2 Foundations | Convention-fit baseline (gap #2) | Complete |
 | DIAG-01 | Phase 8 — Source Failure Diagnostics and Retry | Area 1 | Pending |
 | DIAG-02 | Phase 8 — Source Failure Diagnostics and Retry | Area 1 | Pending |
 | DIAG-03 | Phase 8 — Source Failure Diagnostics and Retry | Area 1 | Pending |

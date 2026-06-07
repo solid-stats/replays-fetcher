@@ -44,7 +44,7 @@
 **Wave 1**
 
 - [x] 07-01-PLAN.md — Create generic abstract `AppError<Code>` base in `src/errors/` (CORE-01 foundation)
-- [ ] 07-02-PLAN.md — Add pino + `createLogger` factory in `src/logging/` with redaction + injectable destination (CORE-02 substrate)
+- [x] 07-02-PLAN.md — Add pino + `createLogger` factory in `src/logging/` with redaction + injectable destination (CORE-02 substrate)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -145,7 +145,7 @@
 | 4. Staging and Promotion Handoff | v1.0 | 4/4 | Complete | 2026-05-09 |
 | 5. Scheduled Operations and Validation | v1.0 | 4/4 | Complete | 2026-05-09 |
 | 6. Close v1 audit gaps: connectivity checks and discovered timestamp staging evidence | v1.0 | 6/6 | Complete | 2026-05-10 |
-| 7. v2 Foundations | v2.0 | 1/3 | In Progress|  |
+| 7. v2 Foundations | v2.0 | 2/3 | In Progress|  |
 | 8. Source Failure Diagnostics and Retry | v2.0 | 0/TBD | Not started | - |
 | 9. Checkpoint and Resume | v2.0 | 0/TBD | Not started | - |
 | 10. Dynamic Source Range and Rate Limiting | v2.0 | 0/TBD | Not started | - |
