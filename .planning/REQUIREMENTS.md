@@ -1,0 +1,108 @@
+# Requirements: replays-fetcher — v2.0 Full-Corpus Ingest Resilience
+
+**Defined:** 2026-06-07
+**Core Value:** Reliably discover and stage the full replay corpus without corrupting `server-2` business state or creating duplicate parse work — so a failed source request or pod restart never wastes hours or leaves operators guessing what completed.
+
+Grounded in the 2026-05-11 full run over `sg.zone/replays` (786 pages, ~23.5k replays) that failed twice on `source_unavailable` (p=129, p=259) and restarted from page 1. Domain evidence: `.planning/research/v2-full-run-findings.md`. Implementation research: `.planning/research/v2-implementation-research.md`.
+
+## Locked Scope Decisions
+
+Confirmed with the operator during requirements scoping (2026-06-07):
+
+- **Checkpoint/resume visibility:** the resume cursor lives in a fetcher-owned S3 checkpoint object; run/resume status is made visible to `server-2` through the **existing staging contract only** — a `run_id` stamped into the already-written `promotion_evidence` jsonb plus `server-2`'s existing staging-count/list surfaces. **No `server-2` schema change, no new staging columns, no new business table.** The S3 raw + `ingest_staging_records` boundary is unchanged.
+- **Full-corpus runtime target:** ~1–2 hours (aggressive). Drives a higher default bounded concurrency and a lower pacing floor.
+- **Adaptive throttling:** in scope for v2 — reduce effective concurrency/pacing on repeated 429/403 signals.
+- **Checkpoint retention:** a single rolling `latest.json` per source (bounded by construction), satisfying the resource-lifecycle rule without an external retention policy.
+- **CI rollout guard** (the findings' 6th candidate): out of scope for v2 (see Out of Scope).
+
+## Milestone Requirements
+
+Requirements for this milestone. Categories map to roadmap phases (phase numbers continue from Phase 7; assigned in `ROADMAP.md`).
+
+### v2 Foundations (CORE)
+
+Cross-cutting prerequisites the convention baseline (`solidstats-backend-ts-conventions`) requires and the themed phases build on.
+
+- [ ] **CORE-01**: A shared typed error base exists (`AppError`-style: stable `code`, `isOperational`, structured `details`, preserved `cause`); `SourceFetchError`/`ReplayByteFetchError` and the new v2 error types (retry-exhausted, checkpoint-conflict, contract-violation) extend it. Existing `code` string unions that drive the diagnostics taxonomy are preserved.
+- [ ] **CORE-02**: Structured `pino` logging via an injected `createLogger` factory (child loggers keyed by `runId`/`page`) replaces ad-hoc `JSON.stringify`/`writeJson`, with secret redaction reusing the existing redaction posture. This is the substrate for compact progress events.
+
+### Source Failure Diagnostics & Retry (DIAG)
+
+Goal: source failures tell the operator what failed and whether retrying can help.
+
+- [ ] **DIAG-01**: Source-failure diagnostics preserve HTTP status (when a response existed), the low-level error name/`cause.code` and message, the page number, the request/detail URL, the `phase` (`list` | `detail` | `bytes`), and an attempts count — replacing the generic collapse to `source_unavailable` / "Source request failed".
+- [ ] **DIAG-02**: Failures are classified transient vs permanent. Transient: network (`ECONNRESET`, `ENOTFOUND`, `EAI_AGAIN`, `ETIMEDOUT`, `UND_ERR_*`), TLS (bounded), HTTP `429`/`5xx`, and Cloudflare challenge bodies. Permanent: non-Cloudflare `4xx`/`404`/`410`, malformed body, missing external id/filename. `AggregateError` causes (dual-stack) are unwrapped before classification.
+- [ ] **DIAG-03**: Bounded retry with exponential backoff + full jitter and `Retry-After` honoring is applied to list-page and detail/byte reads. Attempts are bounded and operator-configurable; permanent failures are never retried; backoff composes under the existing pacing delay and threads the existing per-request `AbortSignal`.
+- [ ] **DIAG-04**: Diagnostics never include secrets, raw replay bytes, or large HTML/JSON bodies — only a short Cloudflare-marker boolean, status, cause code/message, page, url, phase, and attempts.
+
+### Checkpoint & Resume (RESUME)
+
+Goal: a restarted full run resumes from the first incomplete page instead of page 1.
+
+- [ ] **RESUME-01**: A full-run checkpoint persists `runId`, source url, timestamps, `status`, `discoveredLastPage`, `lastCompletedPage`, per-page status/counts, aggregate counts, and the last source failure — durably in a fetcher-owned S3 object (rolling `checkpoints/<source>/latest.json`). Free of secrets/bytes/HTML.
+- [ ] **RESUME-02**: Checkpoint writes use S3 conditional writes (`IfMatch`/`IfNoneMatch`) so a concurrent or restarted pod cannot clobber a newer checkpoint; on `412 PreconditionFailed` the writer re-reads and keeps the higher `lastCompletedPage`.
+- [ ] **RESUME-03**: A restarted run resumes from `lastCompletedPage + 1` without re-reading completed pages (via `--resume` or auto-resume when a non-complete checkpoint exists). A missing or corrupt checkpoint safely degrades to a clean start at page 1 (logged) — the checkpoint is an optimization, never the sole correctness guarantee; idempotent raw/staging writes remain the durable-write safety net.
+- [ ] **RESUME-04**: Run/resume status is visible to `server-2` through the existing staging contract: a `run_id` (alongside the existing discovered timestamp) is stamped into the already-written `promotion_evidence` jsonb of `ingest_staging_records`, so `server-2`'s existing `getFullRunLifecycleCounts`/`ingest-staging` surfaces can correlate staged rows to a run. No new `server-2` tables, no new/changed staging columns.
+- [ ] **RESUME-05**: The final summary states whether the run is `complete`, `partial`, `failed`, or `resumable`, and includes the recommended next command/operator action (e.g. the `--resume` invocation). A partial-but-resumable run still exits non-zero (exit code 2) so the scheduler retries it.
+
+### Dynamic Source Range & Rate Limiting (RANGE)
+
+Goal: full-run scope is discovered and paced instead of hardcoded, and meets the ~1–2h target politely.
+
+- [ ] **RANGE-01**: The full-run range is discovered at runtime — keep fetching until a list page yields zero replay rows (stop-on-empty), with an optional parsed last-page used only as an ETA upper bound. Reliance on hardcoded `REPLAY_SOURCE_MAX_PAGES` for normal full runs is removed; it remains only as an optional cap/safety valve for partial runs and tests.
+- [ ] **RANGE-02**: Source reads use bounded, operator-configurable concurrency — the per-page detail/byte fan-out is parallelized (e.g. `p-limit`) while list pages stay sequential to preserve checkpoint page ordering. The default is tuned to the ~1–2h full-corpus target while staying polite to the Cloudflare-fronted source.
+- [ ] **RANGE-03**: Adaptive throttling reduces effective concurrency and/or extends pacing after repeated `429`/`403` signals, then is bounded so a source hiccup cannot fan out simultaneous retry storms.
+- [ ] **RANGE-04**: Operator-configurable pacing is retained but applied as a floor between list pages / minimum spacing within the limiter — not a blanket per-request 2s delay. Concurrency and delay are bounded, Zod-validated config (`min`/`max` ranges).
+- [ ] **RANGE-05**: The run records and reports pages-per-minute, candidates-per-minute, and estimated remaining time (labelled an estimate until the empty-page stop), and the discovered source range appears in the summary.
+- [ ] **RANGE-06**: Transient-vs-permanent classification (DIAG-02) runs before the stop-on-empty check, so a transient failure is never mistaken for end-of-corpus (no silent truncation). Per-page results are gathered (`Promise.allSettled`) before the page is marked complete and checkpointed; never checkpoint mid-page.
+
+### Progress Events & Compact Evidence (PROG)
+
+Goal: operators can follow a run while it is running and inspect details only when needed.
+
+- [ ] **PROG-01**: The run emits compact per-page/batch progress events as `pino` NDJSON (child logger keyed by `runId`): `run_start`, `page_complete` (with page counts + rates), `retry` (warn), `page_failed`/`source_unavailable` (error), and `run_complete`/`run_partial` — one line per page, greppable.
+- [ ] **PROG-02**: The final stdout summary is reduced to run id, timestamps, source url, discovered range, aggregate counts, failure categories, and `status`. The heavy per-candidate `candidates`/`rawStorage`/`staging` arrays are removed from the stdout projection.
+- [ ] **PROG-03**: Detailed per-candidate evidence is written only to an opt-in durable artifact — an S3 object (`runs/<runId>/evidence.json`) when explicitly enabled, with a local file as a dev-only convenience — never to stdout by default.
+- [ ] **PROG-04**: Progress events, the summary, and the evidence artifact preserve current secret-safety and boundary-safety: pino `redact` for sensitive fields, no raw bytes/HTML, a synchronous/awaited flush before exit so final lines are not dropped, and no S3/PostgreSQL writes beyond the existing raw + staging + checkpoint + opt-in-artifact surfaces.
+
+### Source Contract Guards (GUARD)
+
+Goal: regressions in source parsing do not silently poison a full run.
+
+- [ ] **GUARD-01**: Deterministic fixtures cover list page, detail page, raw JSON data endpoint, missing external id, missing filename, duplicate filename, changed metadata, and timestamp derivation.
+- [ ] **GUARD-02**: A unit-level golden fixture proves raw replay bytes are fetched from the JSON data endpoint (valid JSON, non-HTML) and that fetching the HTML detail URL as bytes is wrong — so a regression swapping the two fails a unit test, not only the live check.
+- [ ] **GUARD-03**: A new no-write `contract-check` CLI command validates the live source contract against a bounded sample (page 1 + first detail + its JSON endpoint), asserting the parse contract while writing **neither S3 nor PostgreSQL**. It reuses DIAG classification to distinguish "contract broken" (actionable, exit non-zero) from "source transiently unreachable" (retryable signal). Negative cases on live data surface as warnings, not hard failures.
+- [ ] **GUARD-04**: Tests prove `contract-check` instantiates no S3 raw-storage or staging-repository factories and calls no `storeRawReplay`/`stageRawReplay` paths — mirroring the v1 dry-run no-mutation guards.
+
+## Future Requirements
+
+Deferred. Tracked but not in this roadmap.
+
+### CI / Policy
+
+- **CIGUARD-01**: A CI step that fails the build if this repo's `.github/workflows` reintroduce `kubectl`, staging-SSH apply, or Kubernetes Secret mutation (rollout is owned by `infrastructure`; the app owns verify + image publish only). App-repo CI policy, not application code; no cross-app contract impact. Deferred out of v2 by operator decision.
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| Parsing OCAP replay contents | Owned by `replay-parser-2`. The `contract-check` JSON assertion checks "is JSON, not HTML", not replay semantics. |
+| Publishing RabbitMQ parse jobs | Owned by `server-2`. |
+| Creating/mutating `server-2` business tables (replays, parse_jobs, parse_results, stats, identity, moderation) | Owned by `server-2`. |
+| New or changed `ingest_staging_records` columns / a new `ingest_runs` table | Would expand the cross-app staging contract and require `server-2` sign-off; v2 keeps the staging schema unchanged and carries run identity in the existing `promotion_evidence` jsonb. |
+| Public stats comparison / diff harness | Owned by `server-2` (its v2 milestone). |
+| `web` consuming fetcher status directly | UI-visible ingest status belongs behind `server-2` APIs. |
+| CI rollout-wiring guard (`CIGUARD-01`) | Deferred to Future by operator decision; CI policy, not a resilience feature. |
+
+## Traceability
+
+Each category maps to a brief phase (`plans/replays-fetcher/briefs/v2-backend-parity-and-full-run.md`) and an implementation-research area. Roadmap phase numbers are assigned in `ROADMAP.md` (continuing from Phase 7).
+
+| Category | Brief phase | Research area | Notes |
+|----------|-------------|---------------|-------|
+| CORE | (cross-cutting) | Convention-fit baseline (gaps #1, #2) | Foundation for DIAG (error base) and PROG (pino). |
+| DIAG | Phase 1 — Source Failure Diagnostics and Retry Policy | Area 1 | Classifier reused by RANGE-06 and GUARD-03. |
+| RESUME | Phase 2 — Checkpoint and Resume | Area 2 | S3 checkpoint; `run_id` via existing `promotion_evidence` (no server-2 change). |
+| RANGE | Phase 3 — Dynamic Source Range and Rate Limiting | Area 3 | Adaptive throttling included; ~1–2h target. |
+| PROG | Phase 4 — Progress Events and Compact Evidence | Area 4 | Requires CORE-02 (pino). |
+| GUARD | Phase 5 — Source Contract Guards | Area 5 | Reuses DIAG classification. |
