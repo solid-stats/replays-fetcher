@@ -17,6 +17,7 @@ const httpTooManyRequestsStatus = 429;
 export class SourceFetchError extends AppError<
   "rate_limited" | "source_unavailable"
 > {
+  // eslint-disable-next-line @typescript-eslint/no-useless-constructor -- exposes a public constructor over AppError's protected one and narrows options to omit isOperational.
   constructor(
     code: SourceFetchError["code"],
     message: string,

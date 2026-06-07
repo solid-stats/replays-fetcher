@@ -17,6 +17,7 @@ export interface ReplayByteClient {
 }
 
 export class ReplayByteFetchError extends AppError<"fetch_failed"> {
+  // eslint-disable-next-line @typescript-eslint/no-useless-constructor -- exposes a public constructor over AppError's protected one and narrows options to omit isOperational.
   constructor(
     code: ReplayByteFetchError["code"],
     message: string,

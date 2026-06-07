@@ -160,9 +160,10 @@ test("SourceFetchError should extend AppError while keeping its narrow code unio
   expect(error).toBeInstanceOf(Error);
   expect(error.name).toBe("SourceFetchError");
 
-  const code: "rate_limited" | "source_unavailable" = error.code;
+  const { code } = error;
+  const narrowed: "rate_limited" | "source_unavailable" = code;
 
-  expect(code).toBe("rate_limited");
+  expect(narrowed).toBe("rate_limited");
 });
 
 test("SourceFetchError should preserve an optional cause when provided", () => {

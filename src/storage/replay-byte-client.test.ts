@@ -204,9 +204,10 @@ test("ReplayByteFetchError should extend AppError while keeping its narrow code"
   expect(error).toBeInstanceOf(Error);
   expect(error.name).toBe("ReplayByteFetchError");
 
-  const code: "fetch_failed" = error.code;
+  const { code } = error;
+  const narrowed: "fetch_failed" = code;
 
-  expect(code).toBe("fetch_failed");
+  expect(narrowed).toBe("fetch_failed");
 });
 
 test("ReplayByteFetchError should preserve an optional cause when provided", () => {

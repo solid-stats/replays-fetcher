@@ -4,8 +4,6 @@ import { randomUUID } from "node:crypto";
 
 import { Command } from "commander";
 
-import type { Logger } from "pino";
-
 import { connectivityOk } from "./check/connectivity.js";
 import { checkPostgresConnectivityFromDatabaseUrl } from "./check/postgres-connectivity.js";
 import {
@@ -52,6 +50,7 @@ import {
 
 import type { DiscoveryReport, SourceClient } from "./discovery/types.js";
 import type { IngestStagingResult } from "./staging/types.js";
+import type { Logger } from "pino";
 
 type SourceConfigResult =
   | {
