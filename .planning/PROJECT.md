@@ -10,6 +10,19 @@ The service is intentionally narrow. It fetches replay bytes and records source 
 
 Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
 
+## Current Milestone: v2.0 Full-Corpus Ingest Resilience
+
+**Goal:** Make full-corpus replay ingest reliable enough that a failed source request or pod restart does not waste hours or leave operators guessing what completed. The output is durable full-run input for `server-2` parity and infrastructure diff readiness.
+
+**Target features:**
+- Source-failure diagnostics that preserve HTTP status, low-level error name/message, page number, and detail URL, plus bounded retry/backoff that distinguishes transient failures from permanently malformed source data.
+- Checkpoint and resume so a restarted run continues from the first incomplete page or candidate instead of restarting at page 1.
+- Dynamic source-range discovery (drop hardcoded `REPLAY_SOURCE_MAX_PAGES`) with bounded concurrency, operator-configurable pacing, and pages/candidates-per-minute plus ETA.
+- Compact progress events during the run, with the final summary reduced to counts and failure categories and detailed per-candidate evidence kept in an opt-in artifact.
+- Source-contract guard tests and an operator contract check that proves raw bytes are fetched from the JSON data endpoint without writing S3 or PostgreSQL state.
+
+**Key context:** Grounded in the 2026-05-11 full run over `sg.zone/replays` (786 pages, ~23.5k replays) that failed twice on `source_unavailable` (p=129, p=259) and restarted from page 1, wasting hours. The dependency on `server-2` full-run-readiness and export contracts is satisfied (shipped in `server-2` v2.0). Boundaries are unchanged: S3 raw objects plus staging rows only.
+
 ## Requirements
 
 ### Validated
@@ -20,7 +33,13 @@ Reliably discover and stage new replay files without corrupting `server-2` busin
 
 ### Active
 
-No active next-milestone requirements are defined yet. Start the next milestone with `$gsd-new-milestone` so fresh requirements are scoped deliberately instead of carrying v1 scope forward.
+v2.0 Full-Corpus Ingest Resilience (detailed REQ-IDs in REQUIREMENTS.md):
+
+- [ ] Source-failure diagnostics and bounded retry/backoff with transient-vs-permanent classification.
+- [ ] Full-run checkpoint and resume from the first incomplete page or candidate.
+- [ ] Dynamic source-range discovery, bounded concurrency, configurable pacing, and ETA (no hardcoded `REPLAY_SOURCE_MAX_PAGES`).
+- [ ] Compact progress events with summarized final output and an opt-in detailed evidence artifact.
+- [ ] Source-contract guard tests and a no-write operator contract check.
 
 ### Out of Scope
 
@@ -65,7 +84,7 @@ Verification for the shipped milestone passed `pnpm run verify`: format, ESLint,
 
 ## Next Milestone Goals
 
-No next milestone has been selected yet. Candidate directions should be defined through `$gsd-new-milestone`, with special attention to cross-project compatibility if scope touches staging schema, object identity, parser handoff, operator-visible statuses, `server-2`, or `web`.
+v2.0 Full-Corpus Ingest Resilience is the active milestone (see Current Milestone above). Post-v2 candidate directions should still be defined through `$gsd-new-milestone`, with special attention to cross-project compatibility if scope touches staging schema, object identity, parser handoff, operator-visible statuses, `server-2`, or `web`.
 
 ## Constraints
 
@@ -120,4 +139,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state.
 
 ---
-*Last updated: 2026-05-10 after v1.0 milestone completion*
+*Last updated: 2026-06-07 after v2.0 milestone start*

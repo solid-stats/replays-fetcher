@@ -1,33 +1,33 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: initial ingest service
-status: Awaiting next milestone
-last_updated: "2026-05-10T02:34:30.239Z"
-last_activity: 2026-05-10 — Milestone v1.0 completed and archived
+milestone: v2.0
+milestone_name: Full-Corpus Ingest Resilience
+status: planning
+last_updated: "2026-06-07T07:54:47.001Z"
+last_activity: 2026-06-07
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 23
-  completed_plans: 23
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-10)
+See: .planning/PROJECT.md (updated 2026-06-07)
 
 **Core value:** Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
-**Current focus:** Planning next milestone
+**Current focus:** v2.0 Full-Corpus Ingest Resilience (defining requirements)
 
 ## Current Position
 
-Phase: Milestone v1.0 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-05-10 — Milestone v1.0 completed and archived
+Status: Defining requirements
+Last activity: 2026-06-07 — Milestone v2.0 started
 
 ## Accumulated Context
 
@@ -118,12 +118,12 @@ None yet.
 
 ### Blockers/Concerns
 
-- GSD subagents are not installed in this runtime, so new-project research/roadmap generation was performed inline.
+- None.
 
 ## Next Step
 
-Start the next milestone with `$gsd-new-milestone`.
+Define v2.0 requirements, then create the roadmap (phases continue from Phase 7).
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Continue the v2.0 milestone setup (requirements -> roadmap).
