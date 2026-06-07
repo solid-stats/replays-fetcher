@@ -43,7 +43,7 @@ Current state: Phase 6, Close v1 audit gaps, is complete pending final milestone
 
 Development is performed only by AI agents plus GSD workflow. Direct non-GSD development is out of process for this product.
 
-`.planning/config.json` keeps workflow-critical GSD settings aligned with `/home/afgan0r/Projects/SolidGames/replay-parser-2/.planning/config.json`. `agent_skills` are intentionally stack-aware for this TypeScript/Node ingest service and should use this repo's local skills rather than the parser's Rust skill set.
+`.planning/config.json` keeps workflow-critical GSD settings aligned with `replay-parser-2/.planning/config.json`. `agent_skills` are intentionally stack-aware for this TypeScript/Node ingest service and should use this repo's local skills rather than the parser's Rust skill set.
 
 Agents should push back before executing requests that conflict with architecture, quality, maintainability, or proportional scope. If a request expands into broad cross-project or multi-phase work, ask for confirmation with safer alternatives or a GSD plan.
 

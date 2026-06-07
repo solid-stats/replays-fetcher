@@ -67,9 +67,9 @@
 | ID | Description | Research Support |
 |----|-------------|------------------|
 | RUN-04 | `check` must validate config and real source/S3/staging connectivity. [VERIFIED: .planning/v1.0-MILESTONE-AUDIT.md] | Use existing source client, AWS SDK `HeadBucketCommand`, and `pg` read-only queries with structured exit code `2`. [CITED: https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadBucket.html] [CITED: https://node-postgres.com/apis/pool] |
-| INT-04 | Staging payload compatibility must account for source identity, object key layout, and discovered timestamp evidence. [VERIFIED: .planning/v1.0-MILESTONE-AUDIT.md] | Preserve `candidate.metadata.discoveredAt` through raw evidence into `promotionEvidence.discoveredAt`; keep `replay_timestamp` null unless trusted replay time exists. [VERIFIED: src/discovery/types.ts] [VERIFIED: /home/afgan0r/Projects/SolidGames/server-2/src/infra/db/migrations/0001_v1_domain_schema.sql] |
+| INT-04 | Staging payload compatibility must account for source identity, object key layout, and discovered timestamp evidence. [VERIFIED: .planning/v1.0-MILESTONE-AUDIT.md] | Preserve `candidate.metadata.discoveredAt` through raw evidence into `promotionEvidence.discoveredAt`; keep `replay_timestamp` null unless trusted replay time exists. [VERIFIED: src/discovery/types.ts] [VERIFIED: server-2/src/infra/db/migrations/0001_v1_domain_schema.sql] |
 | STAGE-01 | Staging records must include discovered/fetched timestamp evidence. [VERIFIED: .planning/REQUIREMENTS.md] | Add optional `discoveredAt` to raw storage evidence and staging promotion evidence; never synthesize it from `fetchedAt`. [VERIFIED: .planning/phases/06-close-v1-audit-gaps-connectivity-checks-and-discovered-times/06-CONTEXT.md] |
-| STAGE-03 | Staging must carry enough evidence for `server-2` dedupe by checksum plus source identity. [VERIFIED: .planning/REQUIREMENTS.md] | `server-2` promotion repository copies staging `promotion_evidence` into canonical replay evidence, so discovered evidence belongs in JSON evidence rather than an overloaded timestamp column. [VERIFIED: /home/afgan0r/Projects/SolidGames/server-2/src/modules/ingest/repository.ts] |
+| STAGE-03 | Staging must carry enough evidence for `server-2` dedupe by checksum plus source identity. [VERIFIED: .planning/REQUIREMENTS.md] | `server-2` promotion repository copies staging `promotion_evidence` into canonical replay evidence, so discovered evidence belongs in JSON evidence rather than an overloaded timestamp column. [VERIFIED: server-2/src/modules/ingest/repository.ts] |
 | OPS-02 | Operational output must include useful evidence without secrets or boundary leaks. [VERIFIED: .planning/REQUIREMENTS.md] | Treat final JSON summaries and `check` JSON as the v1 structured log surface; add leakage tests for S3, DB, SSH, raw bytes, parser artifacts, and business records. [VERIFIED: docs/integration-contract.md] |
 | TEST-02 | S3-compatible behavior must have integration coverage. [VERIFIED: .planning/v1.0-MILESTONE-AUDIT.md] | Add MinIO Testcontainers coverage around the existing AWS SDK S3 adapter, not a new storage client. [CITED: https://node.testcontainers.org/modules/minio/] |
 | TEST-03 | PostgreSQL staging behavior must have integration coverage. [VERIFIED: .planning/v1.0-MILESTONE-AUDIT.md] | Add PostgreSQL Testcontainers coverage that applies the `server-2` staging schema and exercises the existing repository/checker behavior. [CITED: https://node.testcontainers.org/modules/postgresql/] |
@@ -380,7 +380,7 @@ const baseEvidence = {
 ### Pitfall 4: Discovered Timestamp Becomes Replay Timestamp
 
 **What goes wrong:** Source-discovered time is written into `replay_timestamp`, making `server-2` treat source evidence as trusted replay time. [VERIFIED: .planning/phases/06-close-v1-audit-gaps-connectivity-checks-and-discovered-times/06-CONTEXT.md]  
-**Why it happens:** The staging schema has a nullable `replay_timestamp` column, which is tempting to reuse. [VERIFIED: /home/afgan0r/Projects/SolidGames/server-2/src/infra/db/migrations/0001_v1_domain_schema.sql]  
+**Why it happens:** The staging schema has a nullable `replay_timestamp` column, which is tempting to reuse. [VERIFIED: server-2/src/infra/db/migrations/0001_v1_domain_schema.sql]  
 **How to avoid:** Keep `payload.replayTimestamp` undefined and write optional `promotionEvidence.discoveredAt`. [VERIFIED: src/staging/postgres-staging-repository.ts]  
 **Warning signs:** Tests expect `payload.replayTimestamp` to equal `candidate.metadata.discoveredAt`. [VERIFIED: .planning/phases/06-close-v1-audit-gaps-connectivity-checks-and-discovered-times/06-CONTEXT.md]
 
@@ -497,7 +497,7 @@ const promotionEvidence = {
 | Vitest `workspace` terminology | Vitest `projects` configuration | Deprecated since Vitest 3.2. [CITED: https://main.vitest.dev/guide/projects] | If planner splits unit/integration configs, use `projects`, not `workspace`. [CITED: https://main.vitest.dev/guide/projects] |
 | Fake-only S3/PostgreSQL coverage | Fake tests plus Testcontainers integration tests | Phase 06 decision D-15. [VERIFIED: .planning/phases/06-close-v1-audit-gaps-connectivity-checks-and-discovered-times/06-CONTEXT.md] | Keep existing fast fake tests and add Docker-backed confidence for mutating paths. [VERIFIED: .planning/phases/06-close-v1-audit-gaps-connectivity-checks-and-discovered-times/06-CONTEXT.md] |
 | Config-only `check` | Real source, S3, and PostgreSQL connectivity probes | Phase 06 decision D-01. [VERIFIED: .planning/phases/06-close-v1-audit-gaps-connectivity-checks-and-discovered-times/06-CONTEXT.md] | RUN-04 closes only when `not-implemented` is gone and expected failures exit `2`. [VERIFIED: .planning/v1.0-MILESTONE-AUDIT.md] |
-| Source-discovered timestamp dropped | Optional `promotionEvidence.discoveredAt` | Phase 06 decisions D-07 through D-10. [VERIFIED: .planning/phases/06-close-v1-audit-gaps-connectivity-checks-and-discovered-times/06-CONTEXT.md] | `server-2` receives discovery evidence without confusing it for trusted replay time. [VERIFIED: /home/afgan0r/Projects/SolidGames/server-2/src/modules/ingest/repository.ts] |
+| Source-discovered timestamp dropped | Optional `promotionEvidence.discoveredAt` | Phase 06 decisions D-07 through D-10. [VERIFIED: .planning/phases/06-close-v1-audit-gaps-connectivity-checks-and-discovered-times/06-CONTEXT.md] | `server-2` receives discovery evidence without confusing it for trusted replay time. [VERIFIED: server-2/src/modules/ingest/repository.ts] |
 
 **Deprecated/outdated:**
 - `sourceConnectivity: "not-implemented"`, `s3Connectivity: "not-implemented"`, and `stagingConnectivity: "not-implemented"` in successful check output are audit blockers. [VERIFIED: .planning/v1.0-MILESTONE-AUDIT.md]
@@ -516,8 +516,8 @@ const promotionEvidence = {
 
 ## Open Questions (RESOLVED)
 
-1. **Resolved: Phase 06 uses `postgres:17-alpine` and pinned `minio/minio:RELEASE.2025-09-07T16-13-09Z` in Testcontainers.** [VERIFIED: /home/afgan0r/Projects/SolidGames/server-2/docker-compose.yml]
-   - What we know: Adjacent `server-2` compose uses `postgres:17-alpine` and `minio/minio:latest`. [VERIFIED: /home/afgan0r/Projects/SolidGames/server-2/docker-compose.yml]
+1. **Resolved: Phase 06 uses `postgres:17-alpine` and pinned `minio/minio:RELEASE.2025-09-07T16-13-09Z` in Testcontainers.** [VERIFIED: server-2/docker-compose.yml]
+   - What we know: Adjacent `server-2` compose uses `postgres:17-alpine` and `minio/minio:latest`. [VERIFIED: server-2/docker-compose.yml]
    - Decision: Mirror `server-2` for PostgreSQL with `postgres:17-alpine`; do not mirror MinIO `latest` because deterministic audit validation is more important than matching a moving compose tag for this repo's isolated adapter tests. [RESOLVED]
    - Planner default: instantiate MinIO with `new MinioContainer("minio/minio:RELEASE.2025-09-07T16-13-09Z")`. [RESOLVED]
 
@@ -619,8 +619,8 @@ const promotionEvidence = {
 - `.planning/phases/06-close-v1-audit-gaps-connectivity-checks-and-discovered-times/06-CONTEXT.md` - locked decisions D-01 through D-21 and phase boundaries. [VERIFIED: file read]
 - `.planning/v1.0-MILESTONE-AUDIT.md` - audit gaps for RUN-04, INT-04, STAGE-01, STAGE-03, OPS-02, TEST-02, TEST-03, and Nyquist coverage. [VERIFIED: file read]
 - `src/cli.ts`, `src/config.ts`, `src/discovery/*`, `src/storage/*`, `src/staging/*`, `src/run/*` - current implementation seams and gaps. [VERIFIED: codebase grep]
-- `/home/afgan0r/Projects/SolidGames/server-2/src/infra/db/migrations/0001_v1_domain_schema.sql` and `0002_ingest_processing_status.sql` - staging schema and statuses. [VERIFIED: file read]
-- `/home/afgan0r/Projects/SolidGames/server-2/src/modules/ingest/repository.ts` and `types.ts` - promotion repository behavior and contract. [VERIFIED: file read]
+- `server-2/src/infra/db/migrations/0001_v1_domain_schema.sql` and `0002_ingest_processing_status.sql` - staging schema and statuses. [VERIFIED: file read]
+- `server-2/src/modules/ingest/repository.ts` and `types.ts` - promotion repository behavior and contract. [VERIFIED: file read]
 - AWS S3 HeadBucket API docs - bucket existence/permission and `s3:ListBucket` permission. [CITED: https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadBucket.html]
 - AWS S3 ListObjectsV2 API docs - read-only listing behavior and `MaxKeys`. [CITED: https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListObjectsV2.html]
 - node-postgres Pool API/pooling docs - `pool.query`, client release, and `pool.end`. [CITED: https://node-postgres.com/apis/pool] [CITED: https://node-postgres.com/features/pooling]

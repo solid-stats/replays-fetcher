@@ -30,7 +30,7 @@ Read these planning files before planning or implementing:
 - `replays-fetcher` must not parse replay contents. Parsing belongs to `replay-parser-2`.
 - `replays-fetcher` must not create or mutate `server-2` business tables such as `replays`, `parse_jobs`, `parse_results`, stats, identity, roles, requests, or moderation tables.
 - The accepted v1 boundary is S3 raw object write plus staging/outbox records only. `server-2` polls/promotes staging rows, owns deduplication decisions, creates parse jobs, publishes RabbitMQ parse requests, receives parser results, and persists parsed data.
-- `.planning/config.json` must keep product-wide GSD workflow gates aligned with `/home/afgan0r/Projects/SolidGames/replay-parser-2/.planning/config.json`, while `agent_skills` stay stack-aware and use this repo's TypeScript/Node skills.
+- `.planning/config.json` must keep product-wide GSD workflow gates aligned with `replay-parser-2/.planning/config.json`, while `agent_skills` stay stack-aware and use this repo's TypeScript/Node skills.
 - Replay identity uses checksum plus external source identity where available. Conflicting duplicates must be routed to manual review by `server-2`, not automatically merged by the fetcher.
 - Historical `~/sg_stats` data is not imported into production by this service in v1. It remains parser golden/test baseline unless a later migration project explicitly changes that.
 - v1 replay submission sources are admin/ingest only. Player-submitted replay upload is out of scope unless planned as a later cross-project change.

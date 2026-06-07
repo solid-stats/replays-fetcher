@@ -82,10 +82,10 @@ This phase must stay within the fetcher boundary. It may touch CLI check behavio
 
 ### Adjacent App Compatibility
 
-- `/home/afgan0r/Projects/SolidGames/server-2/src/infra/db/migrations/0001_v1_domain_schema.sql` — `ingest_staging_records` schema.
-- `/home/afgan0r/Projects/SolidGames/server-2/src/infra/db/migrations/0002_ingest_processing_status.sql` — staging `processing` status migration.
-- `/home/afgan0r/Projects/SolidGames/server-2/src/modules/ingest/types.ts` — server-side staging record/status contracts.
-- `/home/afgan0r/Projects/SolidGames/server-2/src/modules/ingest/repository.ts` — server-side promotion repository and polling expectations.
+- `server-2/src/infra/db/migrations/0001_v1_domain_schema.sql` — `ingest_staging_records` schema.
+- `server-2/src/infra/db/migrations/0002_ingest_processing_status.sql` — staging `processing` status migration.
+- `server-2/src/modules/ingest/types.ts` — server-side staging record/status contracts.
+- `server-2/src/modules/ingest/repository.ts` — server-side promotion repository and polling expectations.
 
 </canonical_refs>
 

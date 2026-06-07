@@ -41,7 +41,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - Fetcher writes S3 raw objects and staging/outbox records only.
 - `server-2` owns canonical replay records, parse jobs, retry policy, RabbitMQ parse request publication, duplicate conflict handling, and admin visibility.
 - `replay-parser-2` owns parsing and parser artifact/failure production.
-- `replays-fetcher` `.planning/config.json` must keep workflow-critical settings aligned with `/home/afgan0r/Projects/SolidGames/replay-parser-2/.planning/config.json`, while `agent_skills` stay stack-aware for the fetcher's TypeScript/Node stack.
+- `replays-fetcher` `.planning/config.json` must keep workflow-critical settings aligned with `replay-parser-2/.planning/config.json`, while `agent_skills` stay stack-aware for the fetcher's TypeScript/Node stack.
 - Raw replay identity uses checksum plus source identity where available.
 - Ambiguous duplicate conflicts go to manual review.
 - Production historical import from `~/sg_stats` is out of scope for v1.
