@@ -19,6 +19,12 @@ description: >
 
 # SolidStats Backend Conventions — TypeScript / Fastify
 
+**This skill builds on [`solidstats-process-ts-standards`](../solidstats-process-ts-standards/SKILL.md) — read it first.**
+That skill owns the TypeScript baseline shared across all SolidStats TS repos: tsconfig
+strictness flags, code style (`type` over `interface`, no `any`, no `as`), the ESLint 10
+setup, Node 25 / pnpm 11, Prettier defaults, and Vitest 4 / V8 coverage gates. This skill
+adds only the **Fastify/backend HOW** on top of that baseline.
+
 These are the **prescriptive** conventions for the SolidStats backend: what good backend code
 *should* look like, not a description of whatever exists today. Where current code diverges, the
 code is brought into line over time — the convention wins. This skill is the rule source that

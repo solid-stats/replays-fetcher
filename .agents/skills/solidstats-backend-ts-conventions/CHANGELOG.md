@@ -1,5 +1,18 @@
 # Changelog — solidstats-backend-ts-conventions
 
+## 2026-06-07 — Add `day.js` + `nanoid` to utilities
+- `correctness-and-quality.md`: added **`day.js`** (date handling over `Date` math / Moment.js, UTC at
+  the boundary) and **`nanoid`** (application-level ids — idempotency/correlation/job ids — over
+  `Math.random`/slugs; DB keys still own primary keys) to **Utility & type libraries**. Both 🔵, and
+  folded into the evidence gate.
+
+## 2026-06-07 — Utility & type library recommendation
+- `correctness-and-quality.md`: added a **Utility & type libraries** section (after DRY) — actively
+  prefer `es-toolkit` over hand-rolled runtime helpers / `lodash`, and `type-fest` for type derivation
+  over hand-rolled mapped/conditional types. Domain types still derive from the one source of truth
+  (TypeBox `Static`, Kysely rows). 🔵 with an evidence gate scoped to generic reinventable helpers
+  only (bespoke domain logic excluded). Enforced automatically via the code-review skill's delegation.
+
 ## 2026-06-06 — Analysis fixes (see .planning/SKILLS-ANALYSIS.md)
 - Corrected row→domain validation: TypeBox has no `.parse()` — use `Value.Parse(Schema, x)` from
   `@sinclair/typebox/value` (was Zod's API).

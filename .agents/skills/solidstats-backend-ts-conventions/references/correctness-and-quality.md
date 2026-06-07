@@ -128,6 +128,36 @@ so the rule is mostly "don't defeat the checker":
   Similar-looking code across different entities is acceptable — extract only when the logic itself
   is truly duplicated. [🟡]
 
+## Utility & type libraries
+
+Prefer vetted, tree-shakeable libraries over hand-rolled helpers — they are tested, typed, and keep
+the DRY rule honest. Both are standard dependencies in the TS repos; reach for them actively.
+
+- **Runtime utilities — `es-toolkit`.** Use `es-toolkit` (`groupBy`, `keyBy`, `chunk`, `uniqBy`,
+  `partition`, `debounce`, `throttle`, `cloneDeep`, `isEqual`, …) before hand-writing a generic
+  collection/object/function helper or adding `lodash`. It is smaller, faster, and ships its own
+  types; `es-toolkit/compat` covers the lodash API where a drop-in is needed. Don't reimplement a
+  function it already provides. [🔵]
+- **Type-level utilities — `type-fest`.** Derive types with `type-fest` (`Except`, `SetOptional`,
+  `SetRequired`, `PartialDeep`, `ReadonlyDeep`, `Merge`, `Tagged`, `Jsonify`, …) instead of
+  hand-rolling conditional/mapped types or redeclaring a shape that already exists. [🔵]
+- **Dates — `day.js`.** Use `dayjs` for date parsing/formatting/manipulation instead of hand-rolling
+  `Date` math or adding Moment.js (legacy, mutable, not tree-shakeable). ~2 KB core with opt-in plugins
+  (`utc`, `timezone`, …) — store/compare in UTC at the boundary, format only at the edge. [🔵]
+- **Unique IDs — `nanoid`.** Generate non-DB identifiers (idempotency keys, correlation/trace ids,
+  job ids, temp file names) with `nanoid` rather than `Math.random` or hand-rolled slugs — tiny,
+  URL-safe, collision-resistant. Primary keys still come from the database/migration source of truth;
+  `nanoid` is for application-level ids only. [🔵]
+- Domain types still derive from the **one source of truth** (TypeBox `Static<…>`, Kysely row types);
+  `type-fest` reshapes those — it does not replace them. Don't introduce a parallel hand-written type
+  a `type-fest` utility could express from the existing one.
+
+Evidence gate: a hand-written generic utility (deep clone, group-by, deep-equal, debounce, chunk)
+duplicating an `es-toolkit` export, or a hand-rolled mapped/conditional type a `type-fest` utility
+expresses directly; hand-rolled `Date` math or Moment.js where `dayjs` fits; a hand-rolled id/slug
+where `nanoid` belongs. Bespoke domain logic is **not** a finding — this targets generic, reinventable
+helpers only.
+
 ## Schema quality
 
 - Request-body strings/arrays without `maxLength`/`maxItems`, or bounded-domain numbers without
