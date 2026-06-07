@@ -38,7 +38,10 @@
   1. A shared `AppError` base class exists in `src/errors/` with stable `code`, `isOperational`, structured `details`, and preserved `cause`; existing `SourceFetchError` and `ReplayByteFetchError` extend it, and new v2 error types (`retry-exhausted`, `checkpoint-conflict`, `contract-violation`) extend it without breaking existing `code` string unions.
   2. A `createLogger` factory in `src/logging/` returns a pino logger (with secret redaction matching the existing redaction posture); the CLI dependency map in `src/cli.ts` injects it as a child logger keyed by `runId`, replacing ad-hoc `JSON.stringify`/`writeJson` calls.
   3. All existing tests pass and `pnpm run verify` is green after the refactor — no behavioral change, only structural improvement.
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 07-01-PLAN.md — Create generic abstract `AppError<Code>` base in `src/errors/` (CORE-01 foundation)
+- [ ] 07-02-PLAN.md — Add pino + `createLogger` factory in `src/logging/` with redaction + injectable destination (CORE-02 substrate)
+- [ ] 07-03-PLAN.md — Re-parent `SourceFetchError`/`ReplayByteFetchError` to `AppError`, wire `createLogger` into CLI DI map with `child({ runId })`, `pnpm run verify` parity gate (CORE-01 + CORE-02 wiring)
 
 **CORE-phase decision:** CORE is a standalone Phase 7 (not folded into DIAG or PROG). Reasoning: CORE-01 (error base) must exist before DIAG can build a typed classifier, and CORE-02 (pino) must exist before PROG can emit structured events. Folding CORE-01 into DIAG would require DIAG to also own the logger stub, polluting its scope; folding CORE-02 into PROG would leave DIAG and RESUME with no logger during their phases — the research notes retry events (warn) and checkpoint reads (info/error) both need pino before PROG is built. At fine granularity a 2-requirement phase is appropriate when the requirements are genuinely cross-cutting prerequisites with different downstream consumers. The phase goal is verifiable (green CI after the refactor) and delivers a real capability to subsequent phases.
 
@@ -120,7 +123,7 @@
 | 4. Staging and Promotion Handoff | v1.0 | 4/4 | Complete | 2026-05-09 |
 | 5. Scheduled Operations and Validation | v1.0 | 4/4 | Complete | 2026-05-09 |
 | 6. Close v1 audit gaps: connectivity checks and discovered timestamp staging evidence | v1.0 | 6/6 | Complete | 2026-05-10 |
-| 7. v2 Foundations | v2.0 | 0/TBD | Not started | - |
+| 7. v2 Foundations | v2.0 | 0/3 | Planned | - |
 | 8. Source Failure Diagnostics and Retry | v2.0 | 0/TBD | Not started | - |
 | 9. Checkpoint and Resume | v2.0 | 0/TBD | Not started | - |
 | 10. Dynamic Source Range and Rate Limiting | v2.0 | 0/TBD | Not started | - |
