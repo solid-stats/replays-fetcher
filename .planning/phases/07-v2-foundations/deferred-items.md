@@ -31,6 +31,32 @@ Out-of-scope discoveries logged during execution, and their resolution.
   - Note: `eslint.config.js` itself was re-wrapped by Prettier after the ignores
     edit (multi-line array) to keep `format` green.
 
-**Outcome:** `pnpm run verify` exits 0 — format, lint, typecheck, 157 unit tests,
-2 Testcontainers integration tests, 100% coverage (634/634 stmts, 324/324
-branches), and build all green.
+**Outcome:** `pnpm run verify` exits 0 — format, lint, typecheck, unit tests,
+2 Testcontainers integration tests, 100% coverage, and build all green.
+
+## Code review (07-REVIEW.md) — deferred findings
+
+Deep code review found 1 BLOCKER + 5 WARNING + 3 INFO. Fixed in-phase: CR-01
+(logger → stderr so stdout stays a clean JSON contract), WR-01 (honest redaction
+comment + single-level wildcard boundary test), WR-02 (rethrow typed byte-client
+error so the host-not-configured diagnostic is reachable), WR-05 (document the
+synchronous-sink contract on `destination`). Deferred:
+
+- **WR-03 — byte-client collapses `rate_limited` into `fetch_failed`. → DEFER to Phase 8 (DIAG).**
+  `replay-byte-client.ts` does not distinguish HTTP 429 / SSH rate-limit from
+  generic failure the way `source-client.ts` does. This is pre-existing behavior
+  and is precisely the subject of Phase 8 "Source Failure Diagnostics and Retry"
+  (DIAG-02 classifier). Fixing it in Phase 7 would pre-empt and likely conflict
+  with the DIAG design. **Phase 8 should pick this up** (shared classifier +
+  widen `ReplayByteFetchError` code union, reusing the new `AppError` base).
+
+- **WR-04 — fragile `import.meta.url` entrypoint guard in `cli.ts`. → DEFER (pre-existing).**
+  String-comparison entrypoint detection can silently no-op under symlinked bin
+  / paths with spaces. Pre-existing (predates Phase 7) and unrelated to the
+  error/logging refactor. Safe hardening for a later quick task: compare via
+  `realpathSync(fileURLToPath(import.meta.url))` vs `realpathSync(process.argv[1])`.
+
+- **IN-01/IN-02/IN-03 (info)** — `details` contract is convention-only; SSH
+  scaffold is duplicated between the two clients (the root of WR-02/WR-03 drift —
+  natural to extract a shared SSH transport primitive in Phase 8); test
+  `Number("500")` magic-number obfuscation. Left as documented in 07-REVIEW.md.
