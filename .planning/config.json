@@ -82,40 +82,43 @@
   "model_overrides": null,
   "agent_skills": {
     "gsd-phase-researcher": [
-      ".agents/skills/nodejs-backend-patterns"
+      ".agents/skills/solidstats-backend-ts-conventions"
     ],
     "gsd-planner": [
-      ".agents/skills/nodejs-backend-patterns"
+      ".agents/skills/solidstats-backend-ts-conventions"
     ],
     "gsd-plan-checker": [
-      ".agents/skills/nodejs-backend-patterns"
+      ".agents/skills/solidstats-backend-ts-conventions"
     ],
     "gsd-executor": [
-      ".agents/skills/nodejs-backend-patterns"
+      ".agents/skills/solidstats-backend-ts-conventions",
+      ".agents/skills/solidstats-backend-ts-tests"
     ],
     "gsd-verifier": [
-      ".agents/skills/nodejs-backend-patterns"
+      ".agents/skills/solidstats-backend-ts-conventions",
+      ".agents/skills/solidstats-backend-ts-tests"
     ],
     "gsd-nyquist-auditor": [
-      ".agents/skills/nodejs-backend-patterns"
+      ".agents/skills/solidstats-backend-ts-conventions",
+      ".agents/skills/solidstats-backend-ts-tests"
     ],
     "gsd-code-reviewer": [
-      ".agents/skills/nodejs-backend-patterns"
+      ".agents/skills/solidstats-backend-ts-code-review"
     ],
     "gsd-code-fixer": [
-      ".agents/skills/nodejs-backend-patterns"
+      ".agents/skills/solidstats-backend-ts-conventions"
     ],
     "gsd-debugger": [
-      ".agents/skills/nodejs-backend-patterns"
+      ".agents/skills/solidstats-backend-ts-conventions"
     ],
     "gsd-integration-checker": [
-      ".agents/skills/nodejs-backend-patterns"
+      ".agents/skills/solidstats-backend-ts-conventions"
     ],
     "gsd-security-auditor": [
-      ".agents/skills/nodejs-backend-patterns"
+      ".agents/skills/solidstats-backend-ts-conventions"
     ],
     "gsd-codebase-mapper": [
-      ".agents/skills/nodejs-backend-patterns"
+      ".agents/skills/solidstats-backend-ts-conventions"
     ]
   },
   "planning": {
