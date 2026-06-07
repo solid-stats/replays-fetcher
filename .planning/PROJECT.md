@@ -82,6 +82,8 @@ The codebase is a strict TypeScript scheduled ingest CLI with implemented `check
 
 Verification for the shipped milestone passed `pnpm run verify`: format, ESLint, typecheck, 131 unit tests, 2 Docker-backed integration tests, 100% V8 coverage, and build. The local machine still emits the expected Node engine warning because it runs Node.js v22 while the project target is Node.js 25.
 
+**v2.0 progress:** Phase 7 (v2 Foundations) complete — a generic `AppError<Code>` base in `src/errors/` (CORE-01, both existing error classes re-parented with narrow `code` unions preserved) and an injected `createLogger` pino factory in `src/logging/` with secret redaction and a `runId` child logger defaulting to stderr so the stdout JSON summary contract stays intact (CORE-02). `pnpm run verify` green (159 unit + 2 integration tests, 100% coverage). These cross-cutting prerequisites unblock the DIAG/RETRY/RESUME/RANGE/PROG/GUARD phases.
+
 ## Next Milestone Goals
 
 v2.0 Full-Corpus Ingest Resilience is the active milestone (see Current Milestone above). Post-v2 candidate directions should still be defined through `$gsd-new-milestone`, with special attention to cross-project compatibility if scope touches staging schema, object identity, parser handoff, operator-visible statuses, `server-2`, or `web`.
@@ -139,4 +141,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state.
 
 ---
-*Last updated: 2026-06-07 after v2.0 milestone start*
+*Last updated: 2026-06-08 after Phase 7 (v2 Foundations) completion*
