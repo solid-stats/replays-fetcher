@@ -6,12 +6,16 @@ export interface CreateLoggerOptions {
 }
 
 /**
- * Secret-path posture mirroring `src/config.ts` `redactConfig` 1:1
+ * Secret-path redaction for the known logged shapes
  * (s3.accessKeyId, s3.secretAccessKey, sourceSshCommand, staging.databaseUrl).
- * The `config.*` paths cover objects logged under a `config` key; the `*`
- * wildcard paths harden against the same secrets appearing under another root
- * key. Censor matches the existing `redactConfig` intent: never emit the raw
- * secret value into log output.
+ * The `config.*` paths cover objects logged under a `config` key; each `*.<key>`
+ * wildcard matches the same secret key nested under EXACTLY ONE intermediate
+ * key. pino `*` matches a single level only — it does NOT match arbitrary depth
+ * (`x.y.databaseUrl` is NOT redacted) nor bare top-level keys (`{ databaseUrl }`
+ * is NOT redacted). These paths therefore cover the shapes this service actually
+ * logs; the operative protection is the discipline of logging only identifiers
+ * (runId, page, filename, code) and never secrets or raw bytes. Censor matches
+ * the existing `redactConfig` intent: never emit the raw secret value.
  */
 const REDACT_PATHS = [
   "config.s3.accessKeyId",

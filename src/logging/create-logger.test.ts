@@ -89,6 +89,27 @@ test("createLogger redacts wildcard secret path under another root key", () => {
   expect(captured).toContain("[redacted]");
 });
 
+test("createLogger wildcard does NOT redact secrets nested two levels deep", () => {
+  // Boundary lock (WR-01): pino `*` matches exactly one intermediate key, so a
+  // secret nested two levels deep is NOT redacted. This documents the known
+  // limit; the operative protection is the discipline of logging identifiers
+  // only. If this assertion ever flips, the redaction depth changed and the
+  // doc comment in create-logger.ts must be updated to match.
+  const sink = createCaptureSink();
+  const logger = createLogger({ destination: sink.stream });
+
+  logger.warn(
+    {
+      outer: { inner: { databaseUrl: "postgres://leaked-two-levels-deep" } },
+    },
+    "deep probe",
+  );
+
+  const captured = sink.chunks.join("");
+  expect(captured).toContain("postgres://leaked-two-levels-deep");
+  expect(captured).not.toContain("[redacted]");
+});
+
 test("createLogger emits valid NDJSON per line", () => {
   const sink = createCaptureSink();
   const logger = createLogger({ destination: sink.stream });
