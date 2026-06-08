@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- run-once cycle scenarios are kept together for orchestration readability. */
 import { expect, test, vi } from "vitest";
 
 import { runOnce } from "./run-once.js";
@@ -124,6 +125,36 @@ test("runOnce should execute one discovery, raw storage, and staging cycle", asy
       ok: true,
       runId: "run-1",
     },
+  });
+});
+
+test("runOnce should thread attempts and onRetry into discovery", async () => {
+  const onRetry = vi.fn();
+  const discover = vi.fn(async ({ sourceUrl }: { sourceUrl: URL }) =>
+    discoveryReport({ candidates: [], sourceUrl: sourceUrl.toString() }),
+  );
+
+  await runOnce({
+    attempts: 4,
+    byteClient: { fetchBytes: vi.fn() },
+    discoverReplays: discover,
+    now: createClock([startedAt, finishedAt]),
+    onRetry,
+    runId: "run-retry",
+    sourceClient: { fetchText: vi.fn() },
+    sourceUrl: new URL("https://example.test/replays"),
+    stageRawReplay: vi.fn(),
+    stagingRepository: { stage: vi.fn() },
+    storage: { storeRawReplay: vi.fn() },
+    storeRawReplay: vi.fn(),
+  });
+
+  expect(discover).toHaveBeenCalledWith({
+    attempts: 4,
+    maxPages: 1,
+    onRetry,
+    sourceClient: expect.any(Object) as unknown,
+    sourceUrl: new URL("https://example.test/replays"),
   });
 });
 

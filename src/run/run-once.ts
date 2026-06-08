@@ -7,6 +7,7 @@ import type {
   ReplayCandidate,
   SourceClient,
 } from "../discovery/types.js";
+import type { RetryAttemptEvent } from "../source/retry.js";
 import type { StagingRepository } from "../staging/stage-raw-replay.js";
 import type { IngestStagingResult } from "../staging/types.js";
 import type { ReplayByteClient } from "../storage/replay-byte-client.js";
@@ -14,15 +15,19 @@ import type { S3RawReplayStorage } from "../storage/s3-raw-storage.js";
 import type { StoreRawReplayResult } from "../storage/store-raw-replay.js";
 
 interface RunOnceInput {
+  readonly attempts?: number;
   readonly byteClient: ReplayByteClient;
   readonly discoverReplays: (input: {
+    readonly attempts?: number;
     readonly maxPages?: number;
+    readonly onRetry?: (event: RetryAttemptEvent) => void;
     readonly requestDelayMs?: number;
     readonly sourceClient: SourceClient;
     readonly sourceUrl: URL;
   }) => Promise<DiscoveryReport>;
   readonly maxPages?: number;
   readonly now: () => Date;
+  readonly onRetry?: (event: RetryAttemptEvent) => void;
   readonly runId: string;
   readonly sourceClient: SourceClient;
   readonly sourceUrl: URL;
@@ -65,11 +70,9 @@ export async function runOnce(input: RunOnceInput): Promise<RunOnceResult> {
     const pageUrl = toPageUrl(input.sourceUrl, page);
     // Each page is discovered, stored, and staged before moving on so parser work can run in parallel.
     // eslint-disable-next-line no-await-in-loop
-    const pageReport = await input.discoverReplays({
-      maxPages: 1,
-      sourceClient: input.sourceClient,
-      sourceUrl: pageUrl,
-    });
+    const pageReport = await input.discoverReplays(
+      buildDiscoverInput(input, pageUrl),
+    );
     appendDiscoveryReport(discoveryReport, pageReport);
 
     if (!pageReport.ok) {
@@ -109,6 +112,39 @@ export async function runOnce(input: RunOnceInput): Promise<RunOnceResult> {
     exitCode: runExitCode(summary),
     summary,
   };
+}
+
+function buildDiscoverInput(
+  input: RunOnceInput,
+  pageUrl: URL,
+): {
+  readonly attempts?: number;
+  readonly maxPages?: number;
+  readonly onRetry?: (event: RetryAttemptEvent) => void;
+  readonly sourceClient: SourceClient;
+  readonly sourceUrl: URL;
+} {
+  let discoverInput: {
+    attempts?: number;
+    maxPages?: number;
+    onRetry?: (event: RetryAttemptEvent) => void;
+    sourceClient: SourceClient;
+    sourceUrl: URL;
+  } = {
+    maxPages: 1,
+    sourceClient: input.sourceClient,
+    sourceUrl: pageUrl,
+  };
+
+  if (input.attempts !== undefined) {
+    discoverInput = { ...discoverInput, attempts: input.attempts };
+  }
+
+  if (input.onRetry !== undefined) {
+    discoverInput = { ...discoverInput, onRetry: input.onRetry };
+  }
+
+  return discoverInput;
 }
 
 function emptyDiscoveryReport(sourceUrl: string): MutableDiscoveryReport {

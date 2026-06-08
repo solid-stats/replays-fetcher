@@ -49,6 +49,7 @@ import {
 } from "./storage/store-raw-replay.js";
 
 import type { DiscoveryReport, SourceClient } from "./discovery/types.js";
+import type { RetryAttemptEvent } from "./source/retry.js";
 import type { IngestStagingResult } from "./staging/types.js";
 import type { Logger } from "pino";
 
@@ -278,29 +279,39 @@ function registerDiscoverCommand(
         return;
       }
 
-      const configResult = loadDryRunSourceConfig(dependencies);
-      if (!configResult.ok) {
-        writeJson({
-          ok: false,
-          error: "discover dry-run configuration is invalid",
-          issues: configResult.issues,
-        });
-        process.exitCode = 2;
-        return;
-      }
-
-      const sourceClient = dependencies.createSourceClient(configResult.config);
-      const report = await dependencies.discoverReplaysDryRun({
-        sourceClient,
-        sourceUrl: new URL(configResult.config.sourceUrl),
-      });
-
-      writeJson(report);
-
-      if (!report.ok) {
-        process.exitCode = 2;
-      }
+      await runDryRunDiscovery(dependencies);
     });
+}
+
+async function runDryRunDiscovery(
+  dependencies: Required<BuildCliDependencies>,
+): Promise<void> {
+  const configResult = loadDryRunSourceConfig(dependencies);
+  if (!configResult.ok) {
+    writeJson({
+      ok: false,
+      error: "discover dry-run configuration is invalid",
+      issues: configResult.issues,
+    });
+    process.exitCode = 2;
+    return;
+  }
+
+  const sourceClient = dependencies.createSourceClient(configResult.config);
+  const runId = dependencies.createRunId(dependencies.now());
+  const log = dependencies.createLogger().child({ runId });
+  const report = await dependencies.discoverReplaysDryRun({
+    attempts: configResult.config.sourceRetryAttempts,
+    onRetry: buildRetryWarnEmitter(log),
+    sourceClient,
+    sourceUrl: new URL(configResult.config.sourceUrl),
+  });
+
+  writeJson(report);
+
+  if (!report.ok) {
+    process.exitCode = 2;
+  }
 }
 
 function registerRunOnceCommand(
@@ -342,9 +353,11 @@ function registerRunOnceCommand(
         true,
       );
       const result = await dependencies.runOnce({
+        attempts: configResult.config.sourceRetryAttempts,
         byteClient: resources.byteClient,
         discoverReplays: dependencies.discoverReplaysDryRun,
         now: dependencies.now,
+        onRetry: buildRetryWarnEmitter(log),
         runId,
         maxPages: configResult.config.sourceMaxPages,
         sourceClient: resources.sourceClient,
@@ -364,6 +377,22 @@ function registerRunOnceCommand(
 
 function createRunId(now: Date): string {
   return `run-${now.toISOString()}-${randomUUID()}`;
+}
+
+/**
+ * Builds the `onRetry` warn emitter from a `runId` child logger. Each retry
+ * round logs one structured pino `warn` (phase/page/attempt/delayMs/causeCode)
+ * to stderr — never stdout — so the machine-readable JSON summary contract on
+ * stdout stays byte-for-byte intact (CR-01). `causeMessage`-style server data is
+ * emitted as a structured value, never interpolated into the static message
+ * (T-08-03).
+ */
+function buildRetryWarnEmitter(
+  log: Logger,
+): (event: RetryAttemptEvent) => void {
+  return (event: RetryAttemptEvent): void => {
+    log.warn(event, "source read retry");
+  };
 }
 
 function requireStagingRepository(
@@ -397,10 +426,11 @@ async function runStoreRawDiscovery(
     configResult.config,
     shouldStage,
   );
-  const discoveryReport = await dependencies.discoverReplaysDryRun({
-    sourceClient: resources.sourceClient,
-    sourceUrl: new URL(configResult.config.sourceUrl),
-  });
+  const discoveryReport = await discoverForStoreRaw(
+    dependencies,
+    configResult.config,
+    resources.sourceClient,
+  );
   const storageResults: StoreRawReplayResult[] = [];
   const stagingResults: IngestStagingResult[] = [];
 
@@ -460,6 +490,22 @@ async function runStoreRawDiscovery(
   if (!ok) {
     process.exitCode = 2;
   }
+}
+
+async function discoverForStoreRaw(
+  dependencies: Required<BuildCliDependencies>,
+  config: AppConfig,
+  sourceClient: SourceClient,
+): Promise<DiscoveryReport> {
+  const runId = dependencies.createRunId(dependencies.now());
+  const log = dependencies.createLogger().child({ runId });
+
+  return dependencies.discoverReplaysDryRun({
+    attempts: config.sourceRetryAttempts,
+    onRetry: buildRetryWarnEmitter(log),
+    sourceClient,
+    sourceUrl: new URL(config.sourceUrl),
+  });
 }
 
 function createStoreRawResources(

@@ -1,10 +1,12 @@
 /* eslint-disable max-lines -- CLI command scenarios are kept together for command-surface readability. */
 import { readdir, readFile } from "node:fs/promises";
+import { Writable } from "node:stream";
 
 import { afterEach, expect, test, vi } from "vitest";
 
 import { buildCli } from "./cli.js";
 import * as configModule from "./config.js";
+import { createLogger } from "./logging/create-logger.js";
 
 import type { ConnectivityCheck } from "./check/connectivity.js";
 import type { AppConfig, SourceConfig } from "./config.js";
@@ -630,6 +632,77 @@ test("buildCli should report rejected source fetches as structured dry-run failu
   expect(process.exitCode).toBe(2);
 });
 
+function createCapturingLogger(lines: string[]): {
+  readonly createLogger: typeof createLogger;
+} {
+  const destination = new Writable({
+    write(chunk: Buffer, _encoding, callback) {
+      lines.push(chunk.toString("utf8"));
+      callback();
+    },
+  });
+
+  return {
+    createLogger: (options) =>
+      createLogger({ ...options, destination, level: "warn" }),
+  };
+}
+
+test("buildCli dry-run should emit one stderr warn per retry round without disturbing stdout", async () => {
+  vi.stubEnv("REPLAY_SOURCE_URL", validEnvironment.REPLAY_SOURCE_URL);
+  const writes: string[] = [];
+  const logLines: string[] = [];
+  vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+    writes.push(String(chunk));
+    return true;
+  });
+
+  await buildCli({
+    ...createCapturingLogger(logLines),
+    now: () => new Date("2026-05-09T12:00:00.000Z"),
+    async discoverReplaysDryRun(input) {
+      input.onRetry?.({
+        attempt: 1,
+        causeCode: "ECONNRESET",
+        delayMs: 25,
+        page: 1,
+        phase: "list",
+      });
+
+      return {
+        candidates: [],
+        counts: { candidates: 0, diagnostics: 0, discovered: 0 },
+        diagnostics: [],
+        generatedAt: "2026-05-09T12:00:00.000Z",
+        mode: "dry-run",
+        ok: true,
+        sourceUrl: input.sourceUrl.toString(),
+      };
+    },
+  }).parseAsync(["node", "replays-fetcher", "discover", "--dry-run"]);
+
+  // stdout JSON summary is untouched by the stderr warn.
+  expect(parseCliOutput(writes)).toMatchObject({ mode: "dry-run", ok: true });
+
+  const warnLines = logLines
+    .join("")
+    .split("\n")
+    .filter((line) => line.length > 0)
+    .map((line) => JSON.parse(line) as Record<string, unknown>);
+  expect(warnLines).toHaveLength(1);
+  expect(warnLines[0]).toMatchObject({
+    attempt: 1,
+    causeCode: "ECONNRESET",
+    delayMs: 25,
+    msg: "source read retry",
+    page: 1,
+    phase: "list",
+    runId: expect.stringMatching(/^run-/u) as string,
+  });
+  // The redaction discipline + identifiers-only payload leak no secrets.
+  expect(logLines.join("")).not.toContain("secret-key");
+});
+
 test("buildCli should report dry-run config errors as structured JSON", async () => {
   const writes: string[] = [];
   vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
@@ -1043,10 +1116,12 @@ test("buildCli run-once should execute one scheduled cycle and write a structure
   }).parseAsync(["node", "replays-fetcher", "run-once"]);
 
   expect(injectedRunOnce).toHaveBeenCalledWith({
+    attempts: 3,
     byteClient,
     discoverReplays: expect.any(Function) as typeof createDiscoveryReport,
     maxPages: 1,
     now: expect.any(Function) as () => Date,
+    onRetry: expect.any(Function) as (event: unknown) => void,
     runId: expect.stringMatching(/^run-2026-05-09T12:00:00\.000Z-/u) as string,
     sourceClient,
     sourceUrl: new URL(validEnvironment.REPLAY_SOURCE_URL),
