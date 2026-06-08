@@ -84,6 +84,8 @@ Verification for the shipped milestone passed `pnpm run verify`: format, ESLint,
 
 **v2.0 progress:** Phase 7 (v2 Foundations) complete — a generic `AppError<Code>` base in `src/errors/` (CORE-01, both existing error classes re-parented with narrow `code` unions preserved) and an injected `createLogger` pino factory in `src/logging/` with secret redaction and a `runId` child logger defaulting to stderr so the stdout JSON summary contract stays intact (CORE-02). `pnpm run verify` green (159 unit + 2 integration tests, 100% coverage). These cross-cutting prerequisites unblock the DIAG/RETRY/RESUME/RANGE/PROG/GUARD phases.
 
+Phase 8 (Source Failure Diagnostics & Retry) complete — a shared failure classifier (`src/source/classify-failure.ts`: transient incl. network/TLS/429/5xx/408/425/Cloudflare-status-200 traps + AggregateError unwrap; permanent otherwise) and a bounded full-jitter retry wrapper (`src/source/{backoff,retry}.ts`: base 500ms / cap 30s, capped Retry-After, abortable backoff sleep, per-round timeout, caller AbortSignal threaded incl. SSH) wired into both source adapters; rich identifiers-only failure diagnostics (status, cause code/message, page, url, phase, attempts, cfChallenge — no bodies/secrets) flow to the run summary, with per-attempt pino warns on stderr. `sourceRetryAttempts` is operator-configurable (default 3). Closed Phase 7 WR-03 (byte-client `rate_limited`). `pnpm run verify` green (241 unit + 2 integration, 100% coverage).
+
 ## Next Milestone Goals
 
 v2.0 Full-Corpus Ingest Resilience is the active milestone (see Current Milestone above). Post-v2 candidate directions should still be defined through `$gsd-new-milestone`, with special attention to cross-project compatibility if scope touches staging schema, object identity, parser handoff, operator-visible statuses, `server-2`, or `web`.
@@ -141,4 +143,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state.
 
 ---
-*Last updated: 2026-06-08 after Phase 7 (v2 Foundations) completion*
+*Last updated: 2026-06-08 after Phase 8 (Source Failure Diagnostics & Retry) completion*
