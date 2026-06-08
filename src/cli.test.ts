@@ -478,6 +478,7 @@ test("buildCli should write dry-run discovery output", async () => {
   vi.stubGlobal(
     "fetch",
     vi.fn(async () => ({
+      headers: new Headers(),
       ok: true,
       text: async () =>
         JSON.stringify({
@@ -518,6 +519,7 @@ test("buildCli dry-run should only read from the configured source", async () =>
     vi.stubEnv(key, value);
   }
   const sourceFetch = vi.fn(async () => ({
+    headers: new Headers(),
     ok: true,
     text: async () =>
       JSON.stringify({

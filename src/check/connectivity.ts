@@ -3,6 +3,7 @@ export type ConnectivityCheckStatus = "passed" | "failed";
 export type ConnectivityFailureCategory =
   | "rate_limited"
   | "s3_unavailable"
+  | "source_transient"
   | "source_unavailable"
   | "staging_unavailable";
 

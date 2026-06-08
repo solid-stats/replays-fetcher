@@ -66,10 +66,13 @@ export interface DiscoveryReport {
 
 export interface SourceFetchOptions {
   readonly attempts?: number;
+  readonly now?: () => number;
   readonly onRetry?: (event: RetryAttemptEvent) => void;
   readonly page?: number;
   readonly phase?: SourceReadPhase;
+  readonly random?: () => number;
   readonly signal?: AbortSignal;
+  readonly sleep?: (milliseconds: number) => Promise<void>;
 }
 
 export interface SourceClient {
