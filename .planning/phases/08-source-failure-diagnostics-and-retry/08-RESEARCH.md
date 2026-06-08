@@ -494,17 +494,15 @@ const onRetry = (e: RetryAttemptEvent): void => {
 | A5 | Unknown-сбой по умолчанию permanent | Taxonomy | Низкий — безопасный дефолт; альтернатива (transient) рискует циклами |
 | A6 | `ENOTFOUND` классифицируется transient (per REQUIREMENTS), хотя часто перманентен | Taxonomy | Низкий — REQUIREMENTS/CONTEXT явно перечисляют его как transient; bounded attempts ограничивает вред |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **AbortSignal: per-round timeout vs единый per-request бюджет?**
    - What we know: текущий код создаёт таймаут на `fetch`-вызов; REQUIREMENTS говорят «threads the existing per-request AbortSignal».
-   - What's unclear: «per-request» = «per fetch attempt» или «на весь набор раундов».
-   - Recommendation: Вариант 1 (per-round, минимальное изменение); если пользователь хочет единый бюджет — зафиксировать в плане до реализации.
+   - **RESOLVED (autonomous):** Вариант 1 — **per-round timeout**. `sourceTimeoutMs` остаётся таймаутом ОДНОЙ попытки; каждый retry-раунд получает свежий `AbortController`/таймаут, а внешний (caller) `AbortSignal` пробрасывается во все раунды и немедленно прерывает всю цепочку при отмене. Минимальное изменение существующей семантики, согласовано с full-jitter backoff между раундами.
 
 2. **Сохранять ли `fetch_failed` в union `ReplayByteFetchError`?**
    - What we know: WR-03 требует расширения до transient/rate_limited.
-   - What's unclear: число потребителей старого кода `fetch_failed`.
-   - Recommendation: планировщик грепает `"fetch_failed"`; если потребителей нет/мало — объединить до симметрии с source.
+   - **RESOLVED (autonomous):** **Сохранить `fetch_failed` и расширить АДДИТИВНО** до `"fetch_failed" | "rate_limited"` (симметрия с `SourceFetchError`'s transient/permanent). Греп подтвердил реальных потребителей `"fetch_failed"`: `src/storage/store-raw-replay.ts` (failureCategory), `src/run/summary.ts`, `src/run/types.ts` (+ тесты). Удаление сломало бы их, поэтому union только расширяется; permanent-отказы байт-пути остаются `fetch_failed`, transient/rate-limit получают новый код. Это закрывает Phase 7 WR-03 без регрессии потребителей.
 
 ## Environment Availability
 
