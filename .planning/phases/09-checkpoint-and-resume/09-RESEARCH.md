@@ -246,7 +246,7 @@ const startPage = checkpoint === undefined ? 1 : checkpoint.lastCompletedPage + 
 let promotionEvidence = { ...existingFields, run_id: options.runId };
 // SQL не меняется: promotion_evidence уже пишется как JSON.stringify(payload.promotionEvidence) → $8::jsonb
 ```
-> Имя ключа `run_id` (snake_case внутри jsonb) согласуется с существующим `server-2` чтением promotion_evidence. Внешний TS-объект остаётся camelCase, но это **jsonb-контент**, не TS-API — подтвердить snake_case с server-2 (см. Open Questions Q1).
+> Имя ключа `run_id` (snake_case внутри jsonb) — RESOLVED (см. Open Questions Q1): прямой осмотр server-2 показал отсутствие читателя по run-id, fetcher задаёт конвенцию `run_id`. TS-переменная остаётся camelCase `runId`; snake_case ключ объекта получает scoped `// eslint-disable-next-line camelcase` (внешний контракт, не TS-идентификатор).
 
 ### Pattern 6: Run status taxonomy + exit code
 **What:** Derived `status` из page outcomes + source failure classification:
@@ -386,7 +386,7 @@ export class CheckpointConflictError extends AppError<"checkpoint-conflict"> {
 **RESUME-04 — единственная cross-app поверхность.** Анализ:
 - **Граница не меняется:** `run_id` пишется в **существующий** `promotion_evidence::jsonb` столбец `ingest_staging_records`. SQL `insertStaging` (`postgres-staging-repository.ts:78`) уже сериализует весь `promotionEvidence` объект как `$8::jsonb` — добавление ключа НЕ требует изменения SQL, колонок, или таблиц. [VERIFIED: postgres-staging-repository.ts:95,106]
 - **jsonb schemaless:** server-2 читает promotion_evidence через `getFullRunLifecycleCounts`/`ingest-staging` surfaces (REQUIREMENTS RESUME-04). Добавление ключа аддитивно — существующие читатели не ломаются.
-- **Риск:** имя ключа должно совпадать с тем, что server-2 ожидает читать (`run_id` snake_case vs `runId`). Согласовать (Open Questions Q1). Это LOW риск, но касается контракта — пометить как `checkpoint:human-verify` в плане перед финализацией ключа.
+- **Риск (RESOLVED):** ключ зафиксирован как `run_id` (snake_case) — осмотр server-2 показал отсутствие существующего читателя (см. Open Questions Q1), поэтому fetcher задаёт конвенцию. Cross-app проверка выполнена оркестратором напрямую; отдельный `checkpoint:human-verify` gate не нужен.
 - **web:** RESUME-05 добавляет run `status` в stdout summary (operator-facing CLI), НЕ в UI-видимое staging-поле. Никакого web-импакта (status — это поле саммари fetcher'а, не staging-колонка). Подтверждено locked scope: «UI-visible status fields must account for web» — здесь status не UI-visible.
 
 **Граница AGENTS.md соблюдена:** чекпойнт — fetcher-owned S3; никаких записей в server-2 business-таблицы; только staging/outbox через существующий контракт.
@@ -470,11 +470,11 @@ export class CheckpointConflictError extends AppError<"checkpoint-conflict"> {
 
 | # | Claim | Section | Risk if Wrong |
 |---|-------|---------|---------------|
-| A1 | server-2 ожидает ключ `run_id` (snake_case) внутри promotion_evidence jsonb (а не `runId`) | Pattern 5 / Cross-App | LOW: согласование имени; неверное имя → server-2 не коррелирует run, но staging-запись валидна. Gate `checkpoint:human-verify`. |
+| A1 | ~~server-2 ожидает `run_id`~~ — RESOLVED: server-2 не читает run-id из promotion_evidence (опрошен напрямую); fetcher задаёт ключ `run_id`. | Pattern 5 / Cross-App | Снято: cross-app проверено, риск устранён. |
 | A2 | 786-страничный `pages` map в одном S3-объекте остаётся приемлемого размера (десятки KB) | Pattern 2 | LOW: при гораздо большем корпусе пересмотреть на counts-only без полной page-карты. |
 | A3 | Phase 8 `withRetry` не обязателен для 412-re-read; собственный bounded цикл предпочтителен | Standard Stack alternatives | LOW: стилистический выбор; оба работают. |
 
-**If this table is empty:** N/A — три LOW-риск допущения выше; A1 требует подтверждения с server-2.
+**If this table is empty:** N/A — A1 снято (cross-app проверено); A2/A3 — LOW-риск стилистические допущения.
 
 ## Open Questions (RESOLVED)
 
@@ -517,7 +517,7 @@ export class CheckpointConflictError extends AppError<"checkpoint-conflict"> {
 - MinIO conditional-write blog + AWS S3 conditional-writes docs — MinIO supports both `If-Match`/`If-None-Match`, returns 412 PreconditionFailed [VERIFIED via WebSearch cross-check with official AWS docs]
 
 ### Tertiary (LOW confidence)
-- A1 (run_id key name expected by server-2) — assumption pending server-2 confirmation
+- A1 (run_id key name) — RESOLVED via direct server-2 inspection (no existing reader; fetcher sets `run_id`)
 
 ## Metadata
 
@@ -525,7 +525,7 @@ export class CheckpointConflictError extends AppError<"checkpoint-conflict"> {
 - Standard stack: HIGH — все пакеты установлены; conditional-write поддержка подтверждена в dist-types.
 - Architecture: HIGH — композиция существующих in-repo паттернов; единственная новая механика (CAS) делегирована S3/MinIO.
 - Pitfalls: HIGH — выведены из dist-types semantics + существующего кода + MinIO docs.
-- Cross-app (RESUME-04): MEDIUM — граница не меняется (verified), но имя jsonb-ключа требует подтверждения (A1).
+- Cross-app (RESUME-04): HIGH — граница не меняется (verified) и имя jsonb-ключа разрешено прямым осмотром server-2 (A1 снято); ключ = `run_id`.
 
 **Research date:** 2026-06-08
 **Valid until:** 2026-07-08 (stable; SDK conditional-write API стабилен, in-repo паттерны зафиксированы)
