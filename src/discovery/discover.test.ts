@@ -823,9 +823,12 @@ test("discoverReplaysDryRun should forward onRetry events emitted by the source 
   ]);
 });
 
-test("discoverReplaysDryRun should enrich source-failure diagnostics from error details", async () => {
+test("discoverReplaysDryRun should enrich source-failure diagnostics with the adapter-produced page", async () => {
+  // The adapter writes `page` into details from the in-scope read options
+  // (production path). This test mirrors that real shape — it does NOT
+  // hand-fabricate a page the production adapters never emit.
   const sourceClient: SourceClient = {
-    async fetchText() {
+    async fetchText(_url, options) {
       throw new SourceFetchError("source_transient", "Source request failed", {
         details: {
           attempts: 4,
@@ -833,7 +836,7 @@ test("discoverReplaysDryRun should enrich source-failure diagnostics from error 
           causeMessage: "socket hang up",
           cfChallenge: true,
           httpStatus: 503,
-          page: 1,
+          page: options?.page,
           phase: "list",
           url: "https://example.test/replays/500",
         },
@@ -865,7 +868,45 @@ test("discoverReplaysDryRun should enrich source-failure diagnostics from error 
   });
 });
 
-test("discoverReplaysDryRun should omit undefined source-failure evidence fields", async () => {
+test("discoverReplaysDryRun should carry the page of the failing later page into the diagnostic", async () => {
+  // Multi-page run that fails on page 2: the diagnostic must surface page 2,
+  // proving discover re-attaches the in-scope failing page (defense-in-depth)
+  // even when the thrown error's details omit page entirely.
+  const failingPage = 2;
+  const firstPageList = JSON.stringify({ candidates: [] });
+  const sourceClient: SourceClient = {
+    async fetchText(url) {
+      if (url.searchParams.get("p") === String(failingPage)) {
+        // No `page` in details — exercises the discover failedPage fallback.
+        throw new SourceFetchError(
+          "source_unavailable",
+          "Source request failed",
+        );
+      }
+
+      return firstPageList;
+    },
+  };
+
+  const report = await discoverReplaysDryRun({
+    generatedAt: "2026-05-09T00:00:00.000Z",
+    maxPages: failingPage,
+    requestDelayMs: 0,
+    sourceClient,
+    sourceUrl: new URL("https://example.test/replays"),
+  });
+
+  expect(report.ok).toBe(false);
+  expect(report.diagnostics[0]).toStrictEqual({
+    code: "source_unavailable",
+    message: "Source request failed",
+    page: failingPage,
+    severity: "error",
+    sourceUrl: "https://example.test/replays",
+  });
+});
+
+test("discoverReplaysDryRun should omit undefined source-failure evidence fields but keep the failing page", async () => {
   const sourceClient: SourceClient = {
     async fetchText() {
       throw new SourceFetchError("source_unavailable", "Source request failed");
@@ -879,9 +920,12 @@ test("discoverReplaysDryRun should omit undefined source-failure evidence fields
     sourceUrl: new URL("https://example.test/replays"),
   });
 
+  // Even a permanent failure with empty details surfaces the failing page
+  // (DIAG-01): discover re-attaches the in-scope page (default first page).
   expect(report.diagnostics[0]).toStrictEqual({
     code: "source_unavailable",
     message: "Source request failed",
+    page: 1,
     severity: "error",
     sourceUrl: "https://example.test/replays",
   });
@@ -912,9 +956,12 @@ test("discoverReplaysDryRun should ignore malformed source-failure evidence type
     sourceUrl: new URL("https://example.test/replays"),
   });
 
+  // Malformed details types are ignored, but the in-scope failing page still
+  // surfaces from the discover fallback (the malformed `page: {}` is dropped).
   expect(report.diagnostics[0]).toStrictEqual({
     code: "source_transient",
     message: "Source request failed",
+    page: 1,
     severity: "error",
     sourceUrl: "https://example.test/replays",
   });

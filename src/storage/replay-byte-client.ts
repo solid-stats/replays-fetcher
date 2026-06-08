@@ -190,14 +190,18 @@ interface BuildErrorInput {
   readonly classification: FailureClassification;
   readonly fallbackMessage: string;
   readonly originalError?: unknown;
+  readonly page?: number;
   readonly url: URL;
 }
 
 /**
  * Builds the thrown `ReplayByteFetchError` with an identifiers-only `details`
- * allowlist (phase, httpStatus, causeCode, causeMessage, url, attempts,
- * cfChallenge). The failing response body, raw replay bytes, headers, and
- * secrets are NEVER copied here (threat T-08-01 / DIAG-04).
+ * allowlist (phase, httpStatus, causeCode, causeMessage, url, attempts, page,
+ * cfChallenge). `page` is attached only when the byte read carries one so the
+ * terminal failure diagnostic and run summary surface it for BOTH
+ * transient-exhausted AND permanent (non-retried) failures (DIAG-01). The
+ * failing response body, raw replay bytes, headers, and secrets are NEVER
+ * copied here (threat T-08-01 / DIAG-04).
  */
 function buildByteFetchError(input: BuildErrorInput): ReplayByteFetchError {
   const { attempts, classification, fallbackMessage, url } = input;
@@ -207,6 +211,10 @@ function buildByteFetchError(input: BuildErrorInput): ReplayByteFetchError {
     phase: bytesPhase,
     url: url.toString(),
   };
+
+  if (input.page !== undefined) {
+    details = { ...details, page: input.page };
+  }
 
   if (classification.httpStatus !== undefined) {
     details = { ...details, httpStatus: classification.httpStatus };
@@ -321,9 +329,20 @@ interface DirectByteErrorInput {
   readonly url: URL;
 }
 
+function buildPageInput(options: ByteFetchOptions | undefined): {
+  readonly page?: number;
+} {
+  if (options?.page === undefined) {
+    return {};
+  }
+
+  return { page: options.page };
+}
+
 function toDirectByteError(input: DirectByteErrorInput): ReplayByteFetchError {
   const { error, options, url } = input;
   const attempts = totalTries(options);
+  const pageInput = buildPageInput(options);
 
   if (error instanceof ReplayByteFetchError) {
     return buildByteFetchError({
@@ -331,6 +350,7 @@ function toDirectByteError(input: DirectByteErrorInput): ReplayByteFetchError {
       classification: reclassifyDirect(error),
       fallbackMessage: error.message,
       url,
+      ...pageInput,
     });
   }
 
@@ -340,6 +360,7 @@ function toDirectByteError(input: DirectByteErrorInput): ReplayByteFetchError {
     fallbackMessage: "Replay byte request failed",
     originalError: error,
     url,
+    ...pageInput,
   });
 }
 
@@ -403,6 +424,7 @@ function toSshByteError(input: SshByteErrorInput): ReplayByteFetchError {
     fallbackMessage: "SSH replay byte request failed",
     originalError: error,
     url,
+    ...buildPageInput(options),
   });
 }
 

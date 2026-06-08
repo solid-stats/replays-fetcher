@@ -94,9 +94,14 @@ export async function discoverReplaysDryRun(
   const candidates: ReplayCandidate[] = [];
   const diagnostics: DiscoveryDiagnostic[] = [];
   const sourceClient = createPacedSourceClient(options);
+  // Tracks the page being read when a source failure throws, so the terminal
+  // diagnostic can re-attach `page` even if the thrown error's details somehow
+  // omit it (defense-in-depth for DIAG-01; the adapters are the primary source).
+  let failedPage = 1;
 
   try {
     for (let page = 1; page <= maxPages; page += 1) {
+      failedPage = page;
       const pageUrl = toPageUrl(options.sourceUrl, page);
       const listReadOptions = buildReadOptions(options, page, "list");
       // Source requests are intentionally sequential to preserve source order.
@@ -121,7 +126,9 @@ export async function discoverReplaysDryRun(
       throw error;
     }
 
-    diagnostics.push(buildSourceFailureDiagnostic(error, options.sourceUrl));
+    diagnostics.push(
+      buildSourceFailureDiagnostic(error, options.sourceUrl, failedPage),
+    );
 
     return buildReport({ candidates, diagnostics, ok: false, options });
   }
@@ -157,10 +164,12 @@ function buildReadOptions(
 function buildSourceFailureDiagnostic(
   error: SourceFetchError,
   sourceUrl: URL,
+  failedPage: number,
 ): DiscoveryDiagnostic {
   const base: DiscoveryDiagnostic = {
     code: error.code,
     message: error.message,
+    page: failedPage,
     severity: "error",
     sourceUrl: detailUrlOrSource(error, sourceUrl),
   };

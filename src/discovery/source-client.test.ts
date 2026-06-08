@@ -175,6 +175,44 @@ test("createSourceClient should classify rejected direct fetches as unavailable"
   });
 });
 
+test("createSourceClient should carry page into a PERMANENT 404 failure's details without retrying", async () => {
+  const config = loadConfig(validEnvironment);
+  const notFoundStatus = 404;
+  const fetchSpy = vi.fn(async () => ({
+    headers: new Headers(),
+    ok: false,
+    status: notFoundStatus,
+    text: async () => "",
+  }));
+  vi.stubGlobal("fetch", fetchSpy);
+  const onRetry = vi.fn();
+  const sourceClient = createSourceClient(config);
+
+  await expect(
+    sourceClient.fetchText(new URL("https://example.test/replays/404"), {
+      attempts: 2,
+      onRetry,
+      page: 5,
+      phase: "detail",
+    }),
+  ).rejects.toMatchObject({
+    code: "source_unavailable",
+    details: {
+      attempts: 3,
+      cfChallenge: false,
+      httpStatus: notFoundStatus,
+      page: 5,
+      phase: "detail",
+      url: "https://example.test/replays/404",
+    },
+    name: "SourceFetchError",
+  });
+  // Permanent failures are never retried, so no warn fires — `page` must still
+  // reach the thrown error's details (DIAG-01 permanent path).
+  expect(fetchSpy).toHaveBeenCalledTimes(1);
+  expect(onRetry).not.toHaveBeenCalled();
+});
+
 test("createSourceClient should retry transient direct cause codes then enrich details", async () => {
   const config = loadConfig(validEnvironment);
   const transient = Object.assign(new TypeError("fetch failed"), {
@@ -205,6 +243,7 @@ test("createSourceClient should retry transient direct cause codes then enrich d
       attempts: 3,
       causeCode: "ECONNRESET",
       cfChallenge: false,
+      page: 3,
       phase: "detail",
       url: "https://example.test/replays/9",
     },

@@ -105,15 +105,19 @@ interface BuildErrorInput {
   readonly classification: FailureClassification;
   readonly fallbackMessage: string;
   readonly originalError?: unknown;
+  readonly page?: number;
   readonly phase: SourceReadPhase;
   readonly url: URL;
 }
 
 /**
  * Builds the thrown `SourceFetchError` with an identifiers-only `details`
- * allowlist (phase, httpStatus, causeCode, causeMessage, url, attempts,
- * cfChallenge). The failing response body, raw bytes, headers, and secrets are
- * NEVER copied here (threat T-08-01 / DIAG-04).
+ * allowlist (phase, httpStatus, causeCode, causeMessage, url, attempts, page,
+ * cfChallenge). `page` is attached only when the read carries one so the
+ * terminal `DiscoveryDiagnostic` and run summary surface it for BOTH
+ * transient-exhausted AND permanent (non-retried) failures (DIAG-01). The
+ * failing response body, raw bytes, headers, and secrets are NEVER copied here
+ * (threat T-08-01 / DIAG-04).
  */
 function buildSourceFetchError(input: BuildErrorInput): SourceFetchError {
   const { attempts, classification, fallbackMessage, phase, url } = input;
@@ -123,6 +127,10 @@ function buildSourceFetchError(input: BuildErrorInput): SourceFetchError {
     phase,
     url: url.toString(),
   };
+
+  if (input.page !== undefined) {
+    details = { ...details, page: input.page };
+  }
 
   if (classification.httpStatus !== undefined) {
     details = { ...details, httpStatus: classification.httpStatus };
@@ -401,9 +409,20 @@ interface DirectFetchErrorInput {
   readonly url: URL;
 }
 
+function buildPageInput(options: SourceFetchOptions | undefined): {
+  readonly page?: number;
+} {
+  if (options?.page === undefined) {
+    return {};
+  }
+
+  return { page: options.page };
+}
+
 function toDirectFetchError(input: DirectFetchErrorInput): SourceFetchError {
   const { error, options, phase, url } = input;
   const attempts = totalTries(options);
+  const pageInput = buildPageInput(options);
 
   if (isCloudflareChallengeError(error)) {
     return buildSourceFetchError({
@@ -412,6 +431,7 @@ function toDirectFetchError(input: DirectFetchErrorInput): SourceFetchError {
       fallbackMessage: "Source returned a Cloudflare challenge",
       phase,
       url,
+      ...pageInput,
     });
   }
 
@@ -422,6 +442,7 @@ function toDirectFetchError(input: DirectFetchErrorInput): SourceFetchError {
       fallbackMessage: error.message,
       phase,
       url,
+      ...pageInput,
     });
   }
 
@@ -432,6 +453,7 @@ function toDirectFetchError(input: DirectFetchErrorInput): SourceFetchError {
     originalError: error,
     phase,
     url,
+    ...pageInput,
   });
 }
 
@@ -502,6 +524,7 @@ function toSshFetchError(input: SshFetchErrorInput): SourceFetchError {
     originalError: error,
     phase,
     url,
+    ...buildPageInput(options),
   });
 }
 

@@ -102,9 +102,11 @@ test("createReplayByteClient should enrich transient byte failures with identifi
     loadSourceConfig(validSourceEnvironment),
   );
 
+  const bytePage = 4;
   const error = await client
     .fetchBytes(replayUrl, {
       attempts: retryAttempts,
+      page: bytePage,
       random: noJitter,
       sleep: immediateSleep,
     })
@@ -116,6 +118,7 @@ test("createReplayByteClient should enrich transient byte failures with identifi
     attempts: retryAttempts + 1,
     causeCode: "ETIMEDOUT",
     cfChallenge: false,
+    page: bytePage,
     phase: "bytes",
     url: replayUrl.toString(),
   });
