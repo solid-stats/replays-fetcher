@@ -168,10 +168,7 @@ function buildSourceFailureDiagnostic(
   return withSourceFailureEvidence(base, error.details);
 }
 
-function detailUrlOrSource(
-  error: SourceFetchError,
-  sourceUrl: URL,
-): string {
+function detailUrlOrSource(error: SourceFetchError, sourceUrl: URL): string {
   const url = error.details?.["url"];
 
   if (typeof url === "string") {
