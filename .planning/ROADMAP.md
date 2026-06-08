@@ -159,7 +159,7 @@
 | 5. Scheduled Operations and Validation | v1.0 | 4/4 | Complete | 2026-05-09 |
 | 6. Close v1 audit gaps: connectivity checks and discovered timestamp staging evidence | v1.0 | 6/6 | Complete | 2026-05-10 |
 | 7. v2 Foundations | v2.0 | 3/3 | Complete    | 2026-06-07 |
-| 8. Source Failure Diagnostics and Retry | v2.0 | 4/4 | Complete   | 2026-06-08 |
+| 8. Source Failure Diagnostics and Retry | v2.0 | 4/4 | Complete    | 2026-06-08 |
 | 9. Checkpoint and Resume | v2.0 | 0/TBD | Not started | - |
 | 10. Dynamic Source Range and Rate Limiting | v2.0 | 0/TBD | Not started | - |
 | 11. Progress Events and Compact Evidence | v2.0 | 0/TBD | Not started | - |
