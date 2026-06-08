@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Full-Corpus Ingest Resilience
 status: executing
-last_updated: "2026-06-08T17:41:37.164Z"
-last_activity: 2026-06-08 -- Phase 9 planning complete
+last_updated: "2026-06-08T17:57:15.155Z"
+last_activity: 2026-06-08 -- Phase 9 execution started
 progress:
   total_phases: 6
   completed_phases: 2
-  total_plans: 7
-  completed_plans: 7
+  total_plans: 12
+  completed_plans: 8
   percent: 33
 ---
 
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-07)
 
 **Core value:** Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
-**Current focus:** Phase 8 — Source Failure Diagnostics and Retry
+**Current focus:** Phase 9 — Checkpoint and Resume
 
 ## Current Position
 
-Phase: 9
-Plan: Not started
+Phase: 9 (Checkpoint and Resume) — EXECUTING
+Plan: 3 of 5
 Status: Ready to execute
-Last activity: 2026-06-08 -- Phase 9 planning complete
+Last activity: 2026-06-08 -- Phase 9 execution started
 
 Progress: `[ ][ ][ ][ ][ ][ ]` 0/6 phases complete
 
@@ -92,6 +92,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: 08-02: fetchText read-options seam defaults attempts to 0 (single try) so legacy callers are unchanged until Plan 04 drives retries
 - [Phase 08-03]: ReplayByteFetchError union widened additively (kept fetch_failed, added rate_limited) closing Phase 7 WR-03; byte reads routed through shared classifyFailure + withRetry
 - [Phase ?]: Surfaced final source-read attempts + classification via a derived RunSummary.sourceFailure field
+- [Phase ?]: Phase 9: lastSourceFailure typed via shared RunSourceFailure (import type); Zod mirrors structurally
+- [Phase ?]: Phase 9: parseCheckpoint degrades to undefined (never throws) on corrupt JSON or Zod mismatch (RESUME-03)
+- [Phase ?]: Phase 9: CheckpointConflictError is first concrete AppError subclass; identifiers-only details, no httpStatus
 
 ### Roadmap Evolution
 
@@ -159,3 +162,4 @@ Plan Phase 7 (v2 Foundations) with `/gsd:plan-phase 7`.
 | Phase 08 P02 | 50min | 2 tasks | 5 files |
 | Phase 08 P03 | ~25min | 1 tasks | 2 files |
 | Phase 08 P04 | 17min | 3 tasks | 9 files |
+| Phase 09 P01 | 35min | 2 tasks | 4 files |

@@ -100,7 +100,7 @@
 
 **Wave 1** *(parallel — disjoint files)*
 
-- [ ] 09-01-PLAN.md — Checkpoint state shape + Zod safe-parse degrade + resume-cursor/merge + checkpoint-conflict error (RESUME-01/03)
+- [x] 09-01-PLAN.md — Checkpoint state shape + Zod safe-parse degrade + resume-cursor/merge + checkpoint-conflict error (RESUME-01/03)
 - [ ] 09-02-PLAN.md — Stamp `runId` into existing `promotion_evidence` jsonb + checkpoint S3 prefix config (RESUME-04)
 - [ ] 09-03-PLAN.md — Run status taxonomy (complete/partial/failed/resumable) + `resumeInvocation` + exit-2 mapping (RESUME-05)
 
@@ -174,7 +174,7 @@
 | 6. Close v1 audit gaps: connectivity checks and discovered timestamp staging evidence | v1.0 | 6/6 | Complete | 2026-05-10 |
 | 7. v2 Foundations | v2.0 | 3/3 | Complete    | 2026-06-07 |
 | 8. Source Failure Diagnostics and Retry | v2.0 | 4/4 | Complete    | 2026-06-08 |
-| 9. Checkpoint and Resume | v2.0 | 0/5 | Planned | - |
+| 9. Checkpoint and Resume | v2.0 | 1/5 | In Progress|  |
 | 10. Dynamic Source Range and Rate Limiting | v2.0 | 0/TBD | Not started | - |
 | 11. Progress Events and Compact Evidence | v2.0 | 0/TBD | Not started | - |
 | 12. Source Contract Guards | v2.0 | 0/TBD | Not started | - |
