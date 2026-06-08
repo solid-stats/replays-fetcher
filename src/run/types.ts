@@ -1,7 +1,9 @@
 import type {
+  DiagnosticCode,
   DiscoveryDiagnostic,
   ReplayCandidate,
 } from "../discovery/types.js";
+import type { SourceReadPhase } from "../source/retry.js";
 import type { IngestStagingResult } from "../staging/types.js";
 import type { StoreRawReplayResult } from "../storage/store-raw-replay.js";
 
@@ -14,6 +16,18 @@ export type RunFailureCategory =
   | "staging_failed"
   | "storage_conflict"
   | "storage_failed";
+
+export type SourceFailureClassification =
+  | "permanent"
+  | "rate_limited"
+  | "transient";
+
+export interface RunSourceFailure {
+  readonly attempts?: number;
+  readonly classification: SourceFailureClassification;
+  readonly code: DiagnosticCode;
+  readonly phase?: SourceReadPhase;
+}
 
 export interface RunSummaryCounts {
   readonly conflict: number;
@@ -37,6 +51,7 @@ export interface RunSummary {
   readonly ok: boolean;
   readonly rawStorage: readonly StoreRawReplayResult[];
   readonly runId: string;
+  readonly sourceFailure?: RunSourceFailure;
   readonly sourceUrl?: string;
   readonly staging: readonly IngestStagingResult[];
   readonly startedAt: string;

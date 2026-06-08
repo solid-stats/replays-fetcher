@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- run summary scenarios are kept together for summary-contract readability. */
 import { expect, test } from "vitest";
 
 import {
@@ -181,6 +182,135 @@ test("buildRunSummary should classify source, raw storage, and staging failures"
     ok: false,
   });
   expect(runExitCode(summary)).toBe(2);
+});
+
+test("buildRunSummary should surface final attempts and classification for a failed source read", () => {
+  const summary = buildRunSummary({
+    discoveryReport: discoveryReport({
+      candidates: [],
+      diagnostics: [
+        {
+          attempts: 4,
+          causeCode: "ECONNRESET",
+          causeMessage: "socket hang up",
+          code: "source_transient",
+          httpStatus: 503,
+          message: "Source request failed",
+          page: 1,
+          phase: "list",
+          severity: "error",
+          sourceUrl: "https://example.test/replays",
+        },
+      ],
+      ok: false,
+    }),
+    finishedAt,
+    rawStorage: [],
+    runId,
+    staging: [],
+    startedAt,
+  });
+
+  expect(summary.sourceFailure).toStrictEqual({
+    attempts: 4,
+    classification: "transient",
+    code: "source_transient",
+    phase: "list",
+  });
+  // The derived field carries identifiers only — no causeMessage/body/secret
+  // is copied into sourceFailure (DIAG-04). causeMessage stays on the
+  // allowlisted diagnostic, not the summary-level surfacing field.
+  expect(JSON.stringify(summary.sourceFailure)).not.toContain("socket hang up");
+  expect(JSON.stringify(summary)).not.toContain("secret");
+});
+
+test("buildRunSummary should map rate_limited and permanent source codes", () => {
+  const rateLimited = buildRunSummary({
+    discoveryReport: discoveryReport({
+      candidates: [],
+      diagnostics: [
+        {
+          code: "rate_limited",
+          message: "Source returned 429",
+          severity: "error",
+        },
+      ],
+      ok: false,
+    }),
+    finishedAt,
+    rawStorage: [],
+    runId,
+    staging: [],
+    startedAt,
+  });
+
+  expect(rateLimited.sourceFailure).toStrictEqual({
+    classification: "rate_limited",
+    code: "rate_limited",
+  });
+
+  const permanent = buildRunSummary({
+    discoveryReport: discoveryReport({
+      candidates: [],
+      diagnostics: [
+        {
+          code: "source_unavailable",
+          message: "Source request failed",
+          severity: "error",
+        },
+      ],
+      ok: false,
+    }),
+    finishedAt,
+    rawStorage: [],
+    runId,
+    staging: [],
+    startedAt,
+  });
+
+  expect(permanent.sourceFailure).toStrictEqual({
+    classification: "permanent",
+    code: "source_unavailable",
+  });
+});
+
+test("buildRunSummary should omit sourceFailure when no source diagnostic matches", () => {
+  const okSummary = buildRunSummary({
+    discoveryReport: discoveryReport(),
+    finishedAt,
+    rawStorage: [raw("stored")],
+    runId,
+    staging: [],
+    startedAt,
+  });
+
+  expect(okSummary.sourceFailure).toBeUndefined();
+
+  // ok:false but the only diagnostics are non-source warnings → no sourceFailure.
+  const warningOnly = buildRunSummary({
+    discoveryReport: discoveryReport({
+      diagnostics: [
+        {
+          code: "malformed_row",
+          message: "Source row did not include a replay link",
+          severity: "warning",
+        },
+        {
+          code: "duplicate_filename",
+          message: "Filename appeared more than once in source discovery",
+          severity: "error",
+        },
+      ],
+      ok: false,
+    }),
+    finishedAt,
+    rawStorage: [],
+    runId,
+    staging: [],
+    startedAt,
+  });
+
+  expect(warningOnly.sourceFailure).toBeUndefined();
 });
 
 test("buildRunSummary should classify S3 storage failures separately from fetch failures", () => {

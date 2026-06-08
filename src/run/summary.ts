@@ -2,10 +2,16 @@ import type {
   RunConfigFailureSummary,
   RunExitCode,
   RunFailureCategory,
+  RunSourceFailure,
   RunSummary,
   RunSummaryCounts,
+  SourceFailureClassification,
 } from "./types.js";
-import type { DiscoveryReport } from "../discovery/types.js";
+import type {
+  DiagnosticCode,
+  DiscoveryDiagnostic,
+  DiscoveryReport,
+} from "../discovery/types.js";
 import type { IngestStagingResult } from "../staging/types.js";
 import type { StoreRawReplayResult } from "../storage/store-raw-replay.js";
 
@@ -44,7 +50,7 @@ export function buildRunSummary(input: BuildRunSummaryInput): RunSummary {
     input.staging,
   );
 
-  return {
+  const summary: RunSummary = {
     candidates: input.discoveryReport.candidates,
     counts: countRun(input.discoveryReport, input.rawStorage, input.staging),
     diagnostics: input.discoveryReport.diagnostics,
@@ -58,6 +64,86 @@ export function buildRunSummary(input: BuildRunSummaryInput): RunSummary {
     staging: input.staging,
     startedAt: input.startedAt,
   };
+
+  const sourceFailure = deriveSourceFailure(input.discoveryReport);
+
+  if (sourceFailure === undefined) {
+    return summary;
+  }
+
+  return { ...summary, sourceFailure };
+}
+
+function sourceFailureClassification(
+  code: DiagnosticCode,
+): SourceFailureClassification | undefined {
+  if (code === "rate_limited") {
+    return "rate_limited";
+  }
+
+  if (code === "source_transient") {
+    return "transient";
+  }
+
+  if (code === "source_unavailable") {
+    return "permanent";
+  }
+
+  return undefined;
+}
+
+/**
+ * Surfaces the failed source read's final attempts + classification from the
+ * enriched diagnostics (DIAG-01) so an operator reads them at the top of the
+ * summary instead of scanning the diagnostics array. Identifiers only — no body
+ * or secret is copied (DIAG-04). Returns undefined when the run had no
+ * source-level failure.
+ */
+function deriveSourceFailure(
+  discoveryReport: DiscoveryReport,
+): RunSourceFailure | undefined {
+  if (discoveryReport.ok) {
+    return undefined;
+  }
+
+  const diagnostic = discoveryReport.diagnostics.find(
+    (entry) =>
+      entry.severity === "error" &&
+      sourceFailureClassification(entry.code) !== undefined,
+  );
+
+  if (diagnostic === undefined) {
+    return undefined;
+  }
+
+  const classification = sourceFailureClassification(diagnostic.code);
+
+  /* v8 ignore next 3 -- find() already guaranteed a defined classification; defensive guard for the impossible undefined. */
+  if (classification === undefined) {
+    return undefined;
+  }
+
+  return buildSourceFailure(diagnostic, classification);
+}
+
+function buildSourceFailure(
+  diagnostic: DiscoveryDiagnostic,
+  classification: SourceFailureClassification,
+): RunSourceFailure {
+  let failure: RunSourceFailure = {
+    classification,
+    code: diagnostic.code,
+  };
+
+  if (diagnostic.attempts !== undefined) {
+    failure = { ...failure, attempts: diagnostic.attempts };
+  }
+
+  if (diagnostic.phase !== undefined) {
+    failure = { ...failure, phase: diagnostic.phase };
+  }
+
+  return failure;
 }
 
 export function buildConfigInvalidRunSummary(
