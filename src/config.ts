@@ -25,6 +25,7 @@ const booleanFromEnvironment = z
   });
 
 const defaultSourceTimeoutMs = 30_000;
+export const defaultSourceRetryAttempts = 3;
 
 const sourceConfigSchema = z
   .object({
@@ -38,6 +39,11 @@ const sourceConfigSchema = z
       .int()
       .positive()
       .default(defaultSourceTimeoutMs),
+    sourceRetryAttempts: z.coerce
+      .number()
+      .int()
+      .nonnegative()
+      .default(defaultSourceRetryAttempts),
   })
   .superRefine((config, context) => {
     if (
@@ -158,6 +164,7 @@ export function redactConfig(config: AppConfig): RedactedAppConfig {
 
 function readSourceConfigInput(source: ConfigSource): {
   readonly sourceMaxPages: string | boolean | undefined;
+  readonly sourceRetryAttempts: string | boolean | undefined;
   readonly sourceSshCommand: string | undefined;
   readonly sourceSshHost: string | undefined;
   readonly sourceTimeoutMs: string | boolean | undefined;
@@ -173,6 +180,7 @@ function readSourceConfigInput(source: ConfigSource): {
     sourceSshHost: stringOrUndefined(source["REPLAY_SOURCE_SSH_HOST"]),
     sourceSshCommand: stringOrUndefined(source["REPLAY_SOURCE_SSH_COMMAND"]),
     sourceTimeoutMs: source["REPLAY_SOURCE_TIMEOUT_MS"],
+    sourceRetryAttempts: source["REPLAY_SOURCE_RETRY_ATTEMPTS"],
   };
 }
 

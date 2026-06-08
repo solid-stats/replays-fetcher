@@ -2,6 +2,7 @@ import { expect, test } from "vitest";
 
 import {
   ConfigError,
+  defaultSourceRetryAttempts,
   loadConfig,
   loadSourceConfig,
   redactConfig,
@@ -19,6 +20,8 @@ const validEnvironment = {
 const defaultSourceTimeoutMs = Number("30000");
 const overrideSourceTimeoutMs = Number("1500");
 const fullRunMaxPages = Number("786");
+const overrideSourceRetryAttempts = Number("5");
+const disabledSourceRetryAttempts = Number("0");
 
 test("loadConfig should load required source, S3, and staging settings when valid environment is provided", () => {
   const config = loadConfig(validEnvironment);
@@ -28,6 +31,7 @@ test("loadConfig should load required source, S3, and staging settings when vali
   expect(config.sourceSshCommand).toBe("curl -fsSL --max-time 30");
   expect(config.sourceMaxPages).toBe(1);
   expect(config.sourceTimeoutMs).toBe(defaultSourceTimeoutMs);
+  expect(config.sourceRetryAttempts).toBe(defaultSourceRetryAttempts);
   expect(config.s3.bucket).toBe("solid-stats-replays");
   expect(config.s3.forcePathStyle).toBe(true);
   expect(config.staging.databaseUrl).toBe(
@@ -68,6 +72,44 @@ test("loadSourceConfig should parse source max pages override", () => {
   });
 
   expect(config.sourceMaxPages).toBe(fullRunMaxPages);
+});
+
+test("loadSourceConfig should default source retry attempts when override is omitted", () => {
+  const config = loadSourceConfig({
+    REPLAY_SOURCE_URL: "https://example.test/replays",
+  });
+
+  expect(config.sourceRetryAttempts).toBe(defaultSourceRetryAttempts);
+});
+
+test("loadSourceConfig should parse source retry attempts override", () => {
+  const config = loadSourceConfig({
+    REPLAY_SOURCE_RETRY_ATTEMPTS: "5",
+    REPLAY_SOURCE_URL: "https://example.test/replays",
+  });
+
+  expect(config.sourceRetryAttempts).toBe(overrideSourceRetryAttempts);
+});
+
+test("loadSourceConfig should allow disabling retry with zero attempts", () => {
+  const config = loadSourceConfig({
+    REPLAY_SOURCE_RETRY_ATTEMPTS: "0",
+    REPLAY_SOURCE_URL: "https://example.test/replays",
+  });
+
+  expect(config.sourceRetryAttempts).toBe(disabledSourceRetryAttempts);
+});
+
+test("loadConfig should reject a negative source retry attempts value", () => {
+  expect(() =>
+    loadConfig({ ...validEnvironment, REPLAY_SOURCE_RETRY_ATTEMPTS: "-1" }),
+  ).toThrow("sourceRetryAttempts");
+});
+
+test("loadConfig should reject a non-integer source retry attempts value", () => {
+  expect(() =>
+    loadConfig({ ...validEnvironment, REPLAY_SOURCE_RETRY_ATTEMPTS: "abc" }),
+  ).toThrow("sourceRetryAttempts");
 });
 
 test("loadSourceConfig should treat empty source transport as default direct transport", () => {
@@ -157,6 +199,14 @@ test("redactConfig should redact full S3 credentials when configuration is logge
   expect(redacted.s3.secretAccessKey).toBe("se****ey");
   expect(JSON.stringify(redacted)).not.toContain("postgres://user:password@");
   expect(JSON.stringify(redacted)).not.toContain("sshpass");
+});
+
+test("redactConfig should keep the non-secret source retry attempts visible", () => {
+  const redacted = redactConfig(
+    loadConfig({ ...validEnvironment, REPLAY_SOURCE_RETRY_ATTEMPTS: "5" }),
+  );
+
+  expect(redacted.sourceRetryAttempts).toBe(overrideSourceRetryAttempts);
 });
 
 test("redactConfig should fully mask short S3 credentials when configuration is logged", () => {
