@@ -10,6 +10,7 @@ import type { RawReplayStorageEvidence } from "../storage/types.js";
 const defaultSourceSystem = "sg-zone";
 
 interface ToIngestStagingPayloadOptions {
+  readonly runId?: string;
   readonly sourceSystem?: string;
 }
 
@@ -26,7 +27,11 @@ export function toIngestStagingPayload(
   }
 
   return {
-    payload: toPayload(evidence, options.sourceSystem ?? defaultSourceSystem),
+    payload: toPayload(
+      evidence,
+      options.sourceSystem ?? defaultSourceSystem,
+      options.runId,
+    ),
     stageable: true,
   };
 }
@@ -40,6 +45,7 @@ function isStageable(
 function toPayload(
   evidence: StageableRawReplayEvidence,
   sourceSystem: string,
+  runId: string | undefined,
 ): IngestStagingPayload {
   let promotionEvidence: IngestStagingPayload["promotionEvidence"] = {
     bucket: evidence.bucket,
@@ -56,6 +62,14 @@ function toPayload(
     promotionEvidence = {
       ...promotionEvidence,
       discoveredAt: evidence.discoveredAt,
+    };
+  }
+
+  if (runId !== undefined) {
+    promotionEvidence = {
+      ...promotionEvidence,
+      // eslint-disable-next-line camelcase -- run_id is the cross-service promotion_evidence jsonb contract key (RESUME-04), not a local identifier
+      run_id: runId,
     };
   }
 

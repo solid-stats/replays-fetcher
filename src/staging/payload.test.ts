@@ -54,6 +54,30 @@ test("toIngestStagingPayload should map stored raw evidence to a pending server-
   });
 });
 
+test("toIngestStagingPayload should stamp run_id into promotion evidence when a run id is provided", () => {
+  const result = toIngestStagingPayload(storedEvidence, {
+    runId: "run-2026-05-09T12:00:00.000Z-abc123",
+  });
+
+  expect(result).toMatchObject({
+    payload: {
+      promotionEvidence: {
+        discoveredAt: "2026-05-09T00:32:44.000Z",
+        // eslint-disable-next-line camelcase -- run_id is the cross-service promotion_evidence jsonb contract key (RESUME-04)
+        run_id: "run-2026-05-09T12:00:00.000Z-abc123",
+        sourceUrl: "https://sg.zone/replays/1778269931",
+      },
+    },
+    stageable: true,
+  });
+});
+
+test("toIngestStagingPayload should omit run_id when no run id is provided", () => {
+  const result = toIngestStagingPayload(storedEvidence);
+
+  expect(JSON.stringify(result)).not.toContain("run_id");
+});
+
 test("toIngestStagingPayload should omit absent discovered timestamp evidence", () => {
   const evidenceWithoutDiscoveredAt: RawReplayStorageEvidence = {
     bucket: storedEvidence.bucket,

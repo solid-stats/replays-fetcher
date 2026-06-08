@@ -21,6 +21,7 @@ export interface IngestStagingPayload {
     readonly fetchedAt: string;
     readonly objectKey: string;
     readonly rawStorageStatus: "skipped" | "stored";
+    readonly run_id?: string;
     readonly sourceExternalId?: string;
     readonly sourceFilename: string;
     readonly sourceUrl: string;
