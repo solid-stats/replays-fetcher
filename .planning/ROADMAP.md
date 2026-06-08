@@ -22,7 +22,7 @@
 ### v2.0 Full-Corpus Ingest Resilience (Phases 7-12)
 
 - [x] **Phase 7: v2 Foundations** - Typed error base and structured pino logger factory; cross-cutting prerequisites for all v2 phases. (completed 2026-06-07)
-- [ ] **Phase 8: Source Failure Diagnostics and Retry** - Rich failure evidence with transient/permanent classification and bounded exponential-backoff retry.
+- [x] **Phase 8: Source Failure Diagnostics and Retry** - Rich failure evidence with transient/permanent classification and bounded exponential-backoff retry. (completed 2026-06-08)
 - [ ] **Phase 9: Checkpoint and Resume** - S3 checkpoint per source with conditional-write guards; resume from last completed page; run/resume status in existing staging evidence.
 - [ ] **Phase 10: Dynamic Source Range and Rate Limiting** - Stop-on-empty page discovery, bounded concurrent detail/byte fan-out, adaptive throttling on 429/403, configurable pacing, and per-page ETA.
 - [ ] **Phase 11: Progress Events and Compact Evidence** - Per-page pino NDJSON progress events, slim final summary, and opt-in S3 evidence artifact.
@@ -79,7 +79,7 @@
 
 **Wave 3** *(blocked on Wave 2)*
 
-- [ ] 08-04-PLAN.md — Orchestration: thread retry config + `onRetry` pino-warn under pacing in `discover.ts`/`cli.ts`, enriched source-failure diagnostics, run-summary attempts/classification (DIAG-01/03/04)
+- [x] 08-04-PLAN.md — Orchestration: thread retry config + `onRetry` pino-warn under pacing in `discover.ts`/`cli.ts`, enriched source-failure diagnostics, run-summary attempts/classification (DIAG-01/03/04)
 
 ---
 
@@ -159,7 +159,7 @@
 | 5. Scheduled Operations and Validation | v1.0 | 4/4 | Complete | 2026-05-09 |
 | 6. Close v1 audit gaps: connectivity checks and discovered timestamp staging evidence | v1.0 | 6/6 | Complete | 2026-05-10 |
 | 7. v2 Foundations | v2.0 | 3/3 | Complete    | 2026-06-07 |
-| 8. Source Failure Diagnostics and Retry | v2.0 | 3/4 | In Progress|  |
+| 8. Source Failure Diagnostics and Retry | v2.0 | 4/4 | Complete   | 2026-06-08 |
 | 9. Checkpoint and Resume | v2.0 | 0/TBD | Not started | - |
 | 10. Dynamic Source Range and Rate Limiting | v2.0 | 0/TBD | Not started | - |
 | 11. Progress Events and Compact Evidence | v2.0 | 0/TBD | Not started | - |
