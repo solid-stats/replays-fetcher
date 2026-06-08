@@ -66,7 +66,20 @@
   3. Bounded retry with exponential backoff (full jitter, `base ≈ 500ms`, `cap ≈ 30s`) and `Retry-After` honoring is applied to list-page and detail/byte reads; permanent failures are never retried; retry attempts are operator-configurable; backoff composes under (not replaces) the existing pacing delay; the per-request `AbortSignal` threads through retry rounds.
   4. Diagnostics contain no secrets, raw replay bytes, or large HTML/JSON bodies — only a short Cloudflare-marker boolean, status, cause code/message, page, url, phase, and attempts count; this is verified by a unit test asserting no body content appears in the diagnostic payload.
 
-**Plans**: TBD
+**Plans**: 4 plans
+
+**Wave 1**
+
+- [ ] 08-01-PLAN.md — Shared failure classifier + full-jitter backoff/Retry-After + bounded retry wrapper (injected sleep/random) + `sourceRetryAttempts` config (DIAG-02/03/04)
+
+**Wave 2** *(blocked on Wave 1; plans 02 and 03 run in parallel — disjoint files)*
+
+- [ ] 08-02-PLAN.md — Wire shared classifier + retry into list/detail `source-client.ts`, widen diagnostic types, Cloudflare status-200 detection, enriched identifiers-only details (DIAG-01/02/03/04)
+- [ ] 08-03-PLAN.md — Wire shared classifier + retry into bytes `replay-byte-client.ts`, widen `ReplayByteFetchError` union additively (closes Phase 7 WR-03), enriched details (DIAG-01/02/03/04)
+
+**Wave 3** *(blocked on Wave 2)*
+
+- [ ] 08-04-PLAN.md — Orchestration: thread retry config + `onRetry` pino-warn under pacing in `discover.ts`/`cli.ts`, enriched source-failure diagnostics, run-summary attempts/classification (DIAG-01/03/04)
 
 ---
 
@@ -146,7 +159,7 @@
 | 5. Scheduled Operations and Validation | v1.0 | 4/4 | Complete | 2026-05-09 |
 | 6. Close v1 audit gaps: connectivity checks and discovered timestamp staging evidence | v1.0 | 6/6 | Complete | 2026-05-10 |
 | 7. v2 Foundations | v2.0 | 3/3 | Complete    | 2026-06-07 |
-| 8. Source Failure Diagnostics and Retry | v2.0 | 0/TBD | Not started | - |
+| 8. Source Failure Diagnostics and Retry | v2.0 | 0/4 | Planned | - |
 | 9. Checkpoint and Resume | v2.0 | 0/TBD | Not started | - |
 | 10. Dynamic Source Range and Rate Limiting | v2.0 | 0/TBD | Not started | - |
 | 11. Progress Events and Compact Evidence | v2.0 | 0/TBD | Not started | - |
@@ -154,7 +167,7 @@
 
 ## Next Milestone
 
-**v2.0 Full-Corpus Ingest Resilience** is the active milestone. Start with `/gsd:plan-phase 7` to plan Phase 7 (v2 Foundations: typed error base and pino logger factory).
+**v2.0 Full-Corpus Ingest Resilience** is the active milestone. Phase 8 (Source Failure Diagnostics and Retry) is planned (4 plans, 3 waves). Execute with `/gsd-execute-phase 8`.
 
 ---
 *v1.0 roadmap archived 2026-05-10. v2.0 phases added 2026-06-07.*
