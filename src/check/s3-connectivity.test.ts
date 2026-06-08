@@ -47,6 +47,7 @@ test("createS3ConnectivitySenderFromConfig should create a sender", () => {
   const sender = createS3ConnectivitySenderFromConfig({
     accessKeyId: "access-key",
     bucket: "solid-stats-replays",
+    checkpointPrefix: "checkpoints",
     endpoint: "https://s3.example.test",
     forcePathStyle: true,
     region: "us-east-1",

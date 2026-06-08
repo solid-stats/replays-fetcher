@@ -180,6 +180,35 @@ test("loadConfig should reject path-style override when value is not boolean-lik
   ).toThrow("Expected boolean-like value");
 });
 
+test("loadConfig should default the checkpoint prefix to checkpoints", () => {
+  const config = loadConfig(validEnvironment);
+
+  expect(config.s3.checkpointPrefix).toBe("checkpoints");
+});
+
+test("loadConfig should honor an S3_CHECKPOINT_PREFIX override", () => {
+  const config = loadConfig({
+    ...validEnvironment,
+    S3_CHECKPOINT_PREFIX: "cp",
+  });
+
+  expect(config.s3.checkpointPrefix).toBe("cp");
+});
+
+test("loadConfig should reject an empty checkpoint prefix", () => {
+  expect(() =>
+    loadConfig({ ...validEnvironment, S3_CHECKPOINT_PREFIX: "" }),
+  ).toThrow(ConfigError);
+});
+
+test("redactConfig should keep the non-secret checkpoint prefix visible", () => {
+  const redacted = redactConfig(
+    loadConfig({ ...validEnvironment, S3_CHECKPOINT_PREFIX: "cp" }),
+  );
+
+  expect(redacted.s3.checkpointPrefix).toBe("cp");
+});
+
 test("redactConfig should redact full S3 credentials when configuration is logged", () => {
   const redacted = redactConfig(
     loadConfig({

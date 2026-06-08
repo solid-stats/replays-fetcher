@@ -279,6 +279,7 @@ test("createS3RawReplayStorageFromConfig should create a configured storage adap
   const storage = createS3RawReplayStorageFromConfig({
     accessKeyId: "access-key",
     bucket,
+    checkpointPrefix: "checkpoints",
     endpoint: "https://s3.example.test",
     forcePathStyle: true,
     region: "us-east-1",

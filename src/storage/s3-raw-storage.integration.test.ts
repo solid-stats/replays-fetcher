@@ -65,6 +65,7 @@ test("S3 raw storage should store, skip, and pass read-only connectivity against
   const storage = createS3RawReplayStorageFromConfig({
     accessKeyId: "solid",
     bucket,
+    checkpointPrefix: "checkpoints",
     endpoint,
     forcePathStyle: true,
     region: "us-east-1",
