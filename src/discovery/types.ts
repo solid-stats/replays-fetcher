@@ -1,3 +1,5 @@
+import type { RetryAttemptEvent, SourceReadPhase } from "../source/retry.js";
+
 export type DiscoveryMode = "dry-run";
 
 export type DiagnosticSeverity = "info" | "warning" | "error";
@@ -8,6 +10,7 @@ export type DiagnosticCode =
   | "duplicate_filename"
   | "changed_metadata"
   | "source_unavailable"
+  | "source_transient"
   | "rate_limited";
 
 export type SourceTransport = "direct" | "ssh";
@@ -31,11 +34,17 @@ export interface ReplayCandidate {
 }
 
 export interface DiscoveryDiagnostic {
+  readonly attempts?: number;
   readonly candidateIndex?: number;
+  readonly causeCode?: string;
+  readonly causeMessage?: string;
+  readonly cfChallenge?: boolean;
   readonly code: DiagnosticCode;
   readonly externalId?: string;
+  readonly httpStatus?: number;
   readonly message: string;
   readonly page?: number;
+  readonly phase?: SourceReadPhase;
   readonly severity: DiagnosticSeverity;
   readonly sourceUrl?: string;
 }
@@ -55,6 +64,14 @@ export interface DiscoveryReport {
   readonly sourceUrl: string;
 }
 
+export interface SourceFetchOptions {
+  readonly attempts?: number;
+  readonly onRetry?: (event: RetryAttemptEvent) => void;
+  readonly page?: number;
+  readonly phase?: SourceReadPhase;
+  readonly signal?: AbortSignal;
+}
+
 export interface SourceClient {
-  fetchText(url: URL): Promise<string>;
+  fetchText(url: URL, options?: SourceFetchOptions): Promise<string>;
 }
