@@ -8,14 +8,24 @@ import type {
   ReplayCandidate,
   SourceClient,
 } from "./types.js";
+import type { RetryAttemptEvent } from "../source/retry.js";
 
 interface DiscoverReplaysDryRunOptions {
+  readonly attempts?: number;
   readonly generatedAt?: string;
   readonly maxPages?: number;
+  readonly onRetry?: (event: RetryAttemptEvent) => void;
   readonly requestDelayMs?: number;
   readonly sleep?: (milliseconds: number) => Promise<void>;
   readonly sourceClient: SourceClient;
   readonly sourceUrl: URL;
+}
+
+interface ReadOptions {
+  readonly attempts?: number;
+  readonly onRetry?: (event: RetryAttemptEvent) => void;
+  readonly page: number;
+  readonly phase: "detail" | "list";
 }
 
 interface SourceCandidateFixture {
@@ -88,13 +98,15 @@ export async function discoverReplaysDryRun(
   try {
     for (let page = 1; page <= maxPages; page += 1) {
       const pageUrl = toPageUrl(options.sourceUrl, page);
+      const listReadOptions = buildReadOptions(options, page, "list");
       // Source requests are intentionally sequential to preserve source order.
       // eslint-disable-next-line no-await-in-loop
-      const sourceText = await sourceClient.fetchText(pageUrl);
+      const sourceText = await sourceClient.fetchText(pageUrl, listReadOptions);
       const fixture = parseSourceFixture(sourceText);
       // Page detail fetches are part of the same source-order sequence.
       // eslint-disable-next-line no-await-in-loop
       const pageCandidates = await discoverPageCandidates({
+        detailReadOptions: buildReadOptions(options, page, "detail"),
         fixture,
         page,
         pageUrl,
@@ -109,17 +121,129 @@ export async function discoverReplaysDryRun(
       throw error;
     }
 
-    diagnostics.push({
-      code: error.code,
-      message: error.message,
-      severity: "error",
-      sourceUrl: options.sourceUrl.toString(),
-    });
+    diagnostics.push(buildSourceFailureDiagnostic(error, options.sourceUrl));
 
     return buildReport({ candidates, diagnostics, ok: false, options });
   }
 
   return buildReport({ candidates, diagnostics, ok: true, options });
+}
+
+function buildReadOptions(
+  options: DiscoverReplaysDryRunOptions,
+  page: number,
+  phase: "detail" | "list",
+): ReadOptions {
+  let readOptions: ReadOptions = { page, phase };
+
+  if (options.attempts !== undefined) {
+    readOptions = { ...readOptions, attempts: options.attempts };
+  }
+
+  if (options.onRetry !== undefined) {
+    readOptions = { ...readOptions, onRetry: options.onRetry };
+  }
+
+  return readOptions;
+}
+
+/**
+ * Maps the thrown `SourceFetchError` into an enriched, identifiers-only
+ * `DiscoveryDiagnostic` (DIAG-01/04). The enriched evidence (phase, httpStatus,
+ * causeCode, causeMessage, page, attempts, cfChallenge) is read from the
+ * error's `details` allowlist; each optional field is attached only when defined
+ * so exact-optional typing holds. No response body / bytes / secret is copied.
+ */
+function buildSourceFailureDiagnostic(
+  error: SourceFetchError,
+  sourceUrl: URL,
+): DiscoveryDiagnostic {
+  const base: DiscoveryDiagnostic = {
+    code: error.code,
+    message: error.message,
+    severity: "error",
+    sourceUrl: detailUrlOrSource(error, sourceUrl),
+  };
+
+  return withSourceFailureEvidence(base, error.details);
+}
+
+function detailUrlOrSource(
+  error: SourceFetchError,
+  sourceUrl: URL,
+): string {
+  const url = error.details?.["url"];
+
+  if (typeof url === "string") {
+    return url;
+  }
+
+  return sourceUrl.toString();
+}
+
+function withSourceFailureEvidence(
+  diagnostic: DiscoveryDiagnostic,
+  details: Readonly<Record<string, unknown>> | undefined,
+): DiscoveryDiagnostic {
+  if (details === undefined) {
+    return diagnostic;
+  }
+
+  let next = attachNumber(diagnostic, "attempts", details["attempts"]);
+  next = attachNumber(next, "httpStatus", details["httpStatus"]);
+  next = attachNumber(next, "page", details["page"]);
+  next = attachString(next, "causeCode", details["causeCode"]);
+  next = attachString(next, "causeMessage", details["causeMessage"]);
+  next = attachPhase(next, details["phase"]);
+  next = attachCfChallenge(next, details["cfChallenge"]);
+
+  return next;
+}
+
+function attachNumber(
+  diagnostic: DiscoveryDiagnostic,
+  key: "attempts" | "httpStatus" | "page",
+  value: unknown,
+): DiscoveryDiagnostic {
+  if (typeof value !== "number") {
+    return diagnostic;
+  }
+
+  return { ...diagnostic, [key]: value };
+}
+
+function attachString(
+  diagnostic: DiscoveryDiagnostic,
+  key: "causeCode" | "causeMessage",
+  value: unknown,
+): DiscoveryDiagnostic {
+  if (typeof value !== "string") {
+    return diagnostic;
+  }
+
+  return { ...diagnostic, [key]: value };
+}
+
+function attachPhase(
+  diagnostic: DiscoveryDiagnostic,
+  value: unknown,
+): DiscoveryDiagnostic {
+  if (value !== "bytes" && value !== "detail" && value !== "list") {
+    return diagnostic;
+  }
+
+  return { ...diagnostic, phase: value };
+}
+
+function attachCfChallenge(
+  diagnostic: DiscoveryDiagnostic,
+  value: unknown,
+): DiscoveryDiagnostic {
+  if (value !== true) {
+    return diagnostic;
+  }
+
+  return { ...diagnostic, cfChallenge: true };
 }
 
 function createPacedSourceClient(
@@ -130,14 +254,17 @@ function createPacedSourceClient(
   let requestCount = 0;
 
   return {
-    async fetchText(url: URL): Promise<string> {
+    async fetchText(url: URL, readOptions?): Promise<string> {
+      // Pacing is the OUTER inter-request delay; backoff lives inside the
+      // adapter's withRetry. requestCount increments once per fetchText call,
+      // NOT once per retry round (Pitfall 5: no double-count).
       if (requestCount > 0 && requestDelayMs > 0) {
         await sleep(requestDelayMs);
       }
 
       requestCount += 1;
 
-      return options.sourceClient.fetchText(url);
+      return options.sourceClient.fetchText(url, readOptions);
     },
   };
 }
@@ -168,6 +295,7 @@ function buildReport(input: BuildReportOptions): DiscoveryReport {
 }
 
 async function discoverPageCandidates(input: {
+  readonly detailReadOptions: ReadOptions;
   readonly fixture: SourceFixture | undefined;
   readonly page: number;
   readonly pageUrl: URL;
@@ -194,11 +322,12 @@ async function discoverPageCandidates(input: {
     } else {
       // Source requests are intentionally sequential to avoid aggressive polling.
       // eslint-disable-next-line no-await-in-loop
-      const candidate = await discoverRowCandidate(
-        input.sourceClient,
+      const candidate = await discoverRowCandidate({
+        detailReadOptions: input.detailReadOptions,
         row,
-        row.source.url,
-      );
+        sourceClient: input.sourceClient,
+        sourceUrl: row.source.url,
+      });
 
       if (candidate === undefined) {
         diagnostics.push(
@@ -251,13 +380,17 @@ function collectFixtureCandidates(
   };
 }
 
-async function discoverRowCandidate(
-  sourceClient: SourceClient,
-  row: ReturnType<typeof extractReplayRows>[number],
-  sourceUrl: string,
-): Promise<ReplayCandidate | undefined> {
-  const detailUrl = new URL(sourceUrl);
-  const detailHtml = await sourceClient.fetchText(detailUrl);
+async function discoverRowCandidate(input: {
+  readonly detailReadOptions: ReadOptions;
+  readonly row: ReturnType<typeof extractReplayRows>[number];
+  readonly sourceClient: SourceClient;
+  readonly sourceUrl: string;
+}): Promise<ReplayCandidate | undefined> {
+  const detailUrl = new URL(input.sourceUrl);
+  const detailHtml = await input.sourceClient.fetchText(
+    detailUrl,
+    input.detailReadOptions,
+  );
   const filename = extractFilenameFromDetailHtml(detailHtml);
 
   if (filename === undefined) {
@@ -267,8 +400,8 @@ async function discoverRowCandidate(
   return toReplayCandidateFromHtmlRow({
     filename,
     rawUrl: toRawReplayUrl(filename, detailUrl),
-    row,
-    sourceUrl,
+    row: input.row,
+    sourceUrl: input.sourceUrl,
   });
 }
 

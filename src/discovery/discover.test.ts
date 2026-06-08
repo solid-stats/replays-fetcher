@@ -4,7 +4,8 @@ import { expect, test } from "vitest";
 import { discoverReplaysDryRun } from "./discover.js";
 import { SourceFetchError } from "./source-client.js";
 
-import type { SourceClient } from "./types.js";
+import type { SourceClient, SourceFetchOptions } from "./types.js";
+import type { RetryAttemptEvent } from "../source/retry.js";
 
 test("discoverReplaysDryRun should map a source fixture into a dry-run report", async () => {
   const sourceClient: SourceClient = {
@@ -676,4 +677,267 @@ test("discoverReplaysDryRun should return an empty report for non-fixture non-ta
 
   expect(report.generatedAt).toBe("2026-05-09T00:00:00.000Z");
   expect(report.candidates).toHaveLength(0);
+});
+
+const noopOnRetry = (): void => {
+  /* no-op collector for the threading assertion */
+};
+
+test("discoverReplaysDryRun should thread attempts/page/phase/onRetry into list reads", async () => {
+  const seenOptions: (SourceFetchOptions | undefined)[] = [];
+  const sourceClient: SourceClient = {
+    async fetchText(_url, options) {
+      seenOptions.push(options);
+
+      return JSON.stringify({
+        candidates: [
+          {
+            filename: "threaded.json",
+            url: "https://example.test/replays/300",
+          },
+        ],
+      });
+    },
+  };
+
+  await discoverReplaysDryRun({
+    attempts: 4,
+    onRetry: noopOnRetry,
+    requestDelayMs: 0,
+    sourceClient,
+    sourceUrl: new URL("https://example.test/replays"),
+  });
+
+  expect(seenOptions[0]).toStrictEqual({
+    attempts: 4,
+    onRetry: noopOnRetry,
+    page: 1,
+    phase: "list",
+  });
+});
+
+test("discoverReplaysDryRun should thread phase=detail into HTML detail reads", async () => {
+  const detailOptions: (SourceFetchOptions | undefined)[] = [];
+  const responses = new Map([
+    [
+      "https://example.test/replays",
+      `
+        <table class="common-table">
+          <tbody>
+            <tr><td><a href="/replays/400">row</a></td><td>Altis</td><td>1</td></tr>
+          </tbody>
+        </table>
+      `,
+    ],
+    [
+      "https://example.test/replays/400",
+      `<html><body data-ocap="detail.json"></body></html>`,
+    ],
+  ]);
+  const sourceClient: SourceClient = {
+    async fetchText(url, options) {
+      if (url.toString() === "https://example.test/replays/400") {
+        detailOptions.push(options);
+      }
+
+      return responses.get(url.toString()) ?? "";
+    },
+  };
+
+  await discoverReplaysDryRun({
+    attempts: 2,
+    requestDelayMs: 0,
+    sourceClient,
+    sourceUrl: new URL("https://example.test/replays"),
+  });
+
+  expect(detailOptions[0]).toStrictEqual({
+    attempts: 2,
+    page: 1,
+    phase: "detail",
+  });
+});
+
+test("discoverReplaysDryRun should forward onRetry events emitted by the source client", async () => {
+  const retries: RetryAttemptEvent[] = [];
+  const sourceClient: SourceClient = {
+    async fetchText(_url, options) {
+      options?.onRetry?.({
+        attempt: 1,
+        causeCode: "ECONNRESET",
+        delayMs: 10,
+        page: options.page ?? 1,
+        phase: "list",
+      });
+
+      return JSON.stringify({ candidates: [] });
+    },
+  };
+
+  const report = await discoverReplaysDryRun({
+    attempts: 3,
+    onRetry: (event) => retries.push(event),
+    requestDelayMs: 0,
+    sourceClient,
+    sourceUrl: new URL("https://example.test/replays"),
+  });
+
+  expect(report.ok).toBe(true);
+  expect(retries).toStrictEqual([
+    {
+      attempt: 1,
+      causeCode: "ECONNRESET",
+      delayMs: 10,
+      page: 1,
+      phase: "list",
+    },
+  ]);
+});
+
+test("discoverReplaysDryRun should enrich source-failure diagnostics from error details", async () => {
+  const sourceClient: SourceClient = {
+    async fetchText() {
+      throw new SourceFetchError("source_transient", "Source request failed", {
+        details: {
+          attempts: 4,
+          causeCode: "ECONNRESET",
+          causeMessage: "socket hang up",
+          cfChallenge: true,
+          httpStatus: 503,
+          page: 1,
+          phase: "list",
+          url: "https://example.test/replays/500",
+        },
+      });
+    },
+  };
+
+  const report = await discoverReplaysDryRun({
+    attempts: 3,
+    generatedAt: "2026-05-09T00:00:00.000Z",
+    requestDelayMs: 0,
+    sourceClient,
+    sourceUrl: new URL("https://example.test/replays"),
+  });
+
+  expect(report.ok).toBe(false);
+  expect(report.diagnostics[0]).toStrictEqual({
+    attempts: 4,
+    causeCode: "ECONNRESET",
+    causeMessage: "socket hang up",
+    cfChallenge: true,
+    code: "source_transient",
+    httpStatus: 503,
+    message: "Source request failed",
+    page: 1,
+    phase: "list",
+    severity: "error",
+    sourceUrl: "https://example.test/replays/500",
+  });
+});
+
+test("discoverReplaysDryRun should omit undefined source-failure evidence fields", async () => {
+  const sourceClient: SourceClient = {
+    async fetchText() {
+      throw new SourceFetchError("source_unavailable", "Source request failed");
+    },
+  };
+
+  const report = await discoverReplaysDryRun({
+    generatedAt: "2026-05-09T00:00:00.000Z",
+    requestDelayMs: 0,
+    sourceClient,
+    sourceUrl: new URL("https://example.test/replays"),
+  });
+
+  expect(report.diagnostics[0]).toStrictEqual({
+    code: "source_unavailable",
+    message: "Source request failed",
+    severity: "error",
+    sourceUrl: "https://example.test/replays",
+  });
+});
+
+test("discoverReplaysDryRun should ignore malformed source-failure evidence types", async () => {
+  const sourceClient: SourceClient = {
+    async fetchText() {
+      throw new SourceFetchError("source_transient", "Source request failed", {
+        details: {
+          attempts: "not-a-number",
+          causeCode: 42,
+          causeMessage: false,
+          cfChallenge: "yes",
+          httpStatus: undefined,
+          page: {},
+          phase: "unknown-phase",
+          url: 99,
+        },
+      });
+    },
+  };
+
+  const report = await discoverReplaysDryRun({
+    generatedAt: "2026-05-09T00:00:00.000Z",
+    requestDelayMs: 0,
+    sourceClient,
+    sourceUrl: new URL("https://example.test/replays"),
+  });
+
+  expect(report.diagnostics[0]).toStrictEqual({
+    code: "source_transient",
+    message: "Source request failed",
+    severity: "error",
+    sourceUrl: "https://example.test/replays",
+  });
+});
+
+test("discoverReplaysDryRun should keep one outer pacing delay per request after retry threading", async () => {
+  const sleeps: number[] = [];
+  const responses = new Map([
+    [
+      "https://example.test/replays",
+      `
+        <table class="common-table">
+          <tbody>
+            <tr><td><a href="/replays/100">first</a></td><td>Altis</td><td>1</td></tr>
+            <tr><td><a href="/replays/101">second</a></td><td>Altis</td><td>1</td></tr>
+          </tbody>
+        </table>
+      `,
+    ],
+    [
+      "https://example.test/replays/100",
+      `<html><body data-ocap="first.json"></body></html>`,
+    ],
+    [
+      "https://example.test/replays/101",
+      `<html><body data-ocap="second.json"></body></html>`,
+    ],
+  ]);
+  const sourceClient: SourceClient = {
+    async fetchText(url) {
+      return responses.get(url.toString()) ?? "";
+    },
+  };
+
+  const report = await discoverReplaysDryRun({
+    attempts: 5,
+    onRetry: () => {
+      /* retry threading must not perturb pacing */
+    },
+    sleep: (milliseconds) => {
+      sleeps.push(milliseconds);
+
+      return Promise.resolve();
+    },
+    sourceClient,
+    sourceUrl: new URL("https://example.test/replays"),
+  });
+
+  expect(
+    report.candidates.map((candidate) => candidate.identity.filename),
+  ).toStrictEqual(["first.json", "second.json"]);
+  // Three requests (1 list + 2 detail) → two inter-request pacing gaps.
+  // requestCount increments once per request, NOT per retry round (Pitfall 5).
+  expect(sleeps).toStrictEqual(["2000", "2000"].map(Number));
 });
