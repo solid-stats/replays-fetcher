@@ -4,13 +4,15 @@ import { afterEach, expect, test } from "vitest";
 
 import { checkPostgresConnectivity } from "../check/postgres-connectivity.js";
 
+import { toIngestStagingPayload } from "./payload.js";
 import { createPostgresStagingRepository } from "./postgres-staging-repository.js";
 
-import type { IngestStagingPayload } from "./types.js";
+import type { RawReplayStorageEvidence } from "../storage/types.js";
 
 interface StagingEvidenceRow {
   readonly promotion_evidence: {
     readonly discoveredAt?: string;
+    readonly run_id?: string;
   };
   readonly replay_timestamp: Date | null;
 }
@@ -18,27 +20,29 @@ interface StagingEvidenceRow {
 const checksum =
   "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const objectKey = `raw/sha256/${checksum}.ocap`;
-const payload: IngestStagingPayload = {
+const runId = "run-2026-05-09T12:00:00.000Z-integration";
+const storedEvidence: RawReplayStorageEvidence = {
+  bucket: "solid-stats-replays",
+  byteSize: Number("1234"),
   checksum,
-  conflictDetails: {},
+  discoveredAt: "2026-05-09T00:32:44.000Z",
+  fetchedAt: "2026-05-09T12:00:00.000Z",
   objectKey,
-  promotionEvidence: {
-    bucket: "solid-stats-replays",
-    byteSize: Number("1234"),
-    checksum,
-    discoveredAt: "2026-05-09T00:32:44.000Z",
-    fetchedAt: "2026-05-09T12:00:00.000Z",
-    objectKey,
-    rawStorageStatus: "stored",
-    sourceExternalId: "1778269931",
-    sourceFilename: "2026_05_09__00_32_44__1_ocap",
-    sourceUrl: "https://sg.zone/replays/1778269931",
+  source: {
+    externalId: "1778269931",
+    page: 1,
+    url: "https://sg.zone/replays/1778269931",
   },
-  sizeBytes: Number("1234"),
-  sourceReplayId: "1778269931",
-  sourceSystem: "sg-zone",
-  status: "pending",
+  sourceFilename: "2026_05_09__00_32_44__1_ocap",
+  status: "stored",
 };
+const stagingResult = toIngestStagingPayload(storedEvidence, { runId });
+
+if (!stagingResult.stageable) {
+  throw new Error("expected stored evidence to be stageable");
+}
+
+const { payload } = stagingResult;
 
 let stopPool = noopCleanup;
 let stopContainer = noopCleanup;
@@ -83,10 +87,13 @@ test("PostgreSQL staging repository should insert idempotent discovered timestam
   expect(connectivity).toStrictEqual({ status: "passed" });
   expect(first).toMatchObject({ status: "staged" });
   expect(rows.rows).toHaveLength(1);
-  expect(rows.rows[0]?.replay_timestamp).toBeNull();
+  expect(rows.rows[0]?.replay_timestamp).toStrictEqual(
+    new Date("2026-05-09T00:32:44.000Z"),
+  );
   expect(rows.rows[0]?.promotion_evidence.discoveredAt).toBe(
     "2026-05-09T00:32:44.000Z",
   );
+  expect(rows.rows[0]?.promotion_evidence.run_id).toBe(runId);
   expect(second).toMatchObject({ status: "already_staged" });
 });
 
