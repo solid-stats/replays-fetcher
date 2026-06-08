@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Full-Corpus Ingest Resilience
 status: executing
-last_updated: "2026-06-08T17:58:26.397Z"
+last_updated: "2026-06-08T17:58:55.087Z"
 last_activity: 2026-06-09 -- Completed 09-01-PLAN.md (checkpoint model, cursor/merge, conflict error)
 progress:
   total_phases: 6
@@ -95,6 +95,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: Phase 9: lastSourceFailure typed via shared RunSourceFailure (import type); Zod mirrors structurally
 - [Phase ?]: Phase 9: parseCheckpoint degrades to undefined (never throws) on corrupt JSON or Zod mismatch (RESUME-03)
 - [Phase ?]: Phase 9: CheckpointConflictError is first concrete AppError subclass; identifiers-only details, no httpStatus
+- [Phase ?]: Phase 9: mergeCheckpoints is pure — max(lastCompletedPage/discoveredLastPage) + union of pages; counts/status/updatedAt/lastSourceFailure from the higher-progress side (ties to remote); 412 re-read+retry lands in Plan 04
+- [Phase ?]: Phase 9: Checkpoint type derived from checkpointSchema via z.infer (single source of truth); details flattened via toDetailsRecord to keep an interface without an as cast
 
 ### Roadmap Evolution
 
