@@ -1,5 +1,6 @@
 import { expect, test, vi } from "vitest";
 
+import { retryAfterCapMs } from "./backoff.js";
 import { type RetryAttemptEvent, withRetry } from "./retry.js";
 
 import type { FailureClassification } from "./classify-failure.js";
@@ -212,6 +213,144 @@ test("withRetry should fall back to backoff when no Retry-After extractor is pro
   ).rejects.toBeInstanceOf(Error);
 
   expect(sleep).toHaveBeenCalledWith(0);
+});
+
+test("withRetry should abort the chain during the backoff sleep (BL-01)", async () => {
+  const controller = new AbortController();
+  const read = vi.fn(async () => {
+    throw new Error("transient");
+  });
+  // A sleep that never settles on its own — only the abort can end the pause.
+  const sleep = vi.fn(
+    async () =>
+      new Promise<void>(() => {
+        controller.abort();
+      }),
+  );
+
+  const pending = withRetry({
+    attempts,
+    classify: () => transient,
+    phase: "list",
+    random: () => 0,
+    read,
+    signal: controller.signal,
+    sleep,
+    url: baseRetryUrl,
+  });
+
+  await expect(pending).rejects.toThrow();
+  // One initial read, then the abort during the first sleep stops the chain:
+  // the second read is never attempted.
+  expect(read).toHaveBeenCalledTimes(1);
+  expect(sleep).toHaveBeenCalledTimes(1);
+});
+
+test("withRetry should throw immediately when the signal is already aborted (BL-01)", async () => {
+  const controller = new AbortController();
+  controller.abort();
+  const read = vi.fn(async () => "ok");
+
+  await expect(
+    withRetry({
+      attempts,
+      classify: () => transient,
+      phase: "list",
+      random: () => 0,
+      read,
+      signal: controller.signal,
+      sleep: vi.fn(noopSleep),
+      url: baseRetryUrl,
+    }),
+  ).rejects.toThrow();
+
+  expect(read).not.toHaveBeenCalled();
+});
+
+test("withRetry should cap a huge Retry-After at retryAfterCapMs (CR-01)", async () => {
+  const hugeRetryAfterMs = Number("999999999000");
+  const read = vi.fn(async () => {
+    throw new Error("rate limited");
+  });
+  const sleep = vi.fn(noopSleep);
+
+  await expect(
+    withRetry({
+      attempts: 1,
+      classify: () => rateLimited,
+      phase: "list",
+      random: () => 0,
+      read,
+      retryAfterMs: () => hugeRetryAfterMs,
+      signal: neverSignal(),
+      sleep,
+      url: baseRetryUrl,
+    }),
+  ).rejects.toBeInstanceOf(Error);
+
+  expect(sleep).toHaveBeenCalledWith(retryAfterCapMs);
+});
+
+test("withRetry should thread call-time now into the Retry-After extractor (WR-03)", async () => {
+  const fixedNow = Number("1700000000000");
+  // A small delay derived from `now` so threading is observable without the
+  // CR-01 cap clamping the asserted value.
+  const derivedDelayMs = Number("1234");
+  const seenNow: number[] = [];
+  const read = vi.fn(async () => {
+    throw new Error("rate limited");
+  });
+  const sleep = vi.fn(noopSleep);
+
+  await expect(
+    withRetry({
+      attempts: 1,
+      classify: () => rateLimited,
+      now: () => fixedNow,
+      phase: "list",
+      random: () => 0,
+      read,
+      retryAfterMs: (_error, now) => {
+        seenNow.push(now());
+
+        return derivedDelayMs;
+      },
+      signal: neverSignal(),
+      sleep,
+      url: baseRetryUrl,
+    }),
+  ).rejects.toBeInstanceOf(Error);
+
+  expect(seenNow).toStrictEqual([fixedNow]);
+  expect(sleep).toHaveBeenCalledWith(derivedDelayMs);
+});
+
+test("withRetry should default now to Date.now when none is injected (WR-03)", async () => {
+  const read = vi.fn(async () => {
+    throw new Error("rate limited");
+  });
+  const sleep = vi.fn(noopSleep);
+  let observedNow: number | undefined;
+
+  await expect(
+    withRetry({
+      attempts: 1,
+      classify: () => rateLimited,
+      phase: "list",
+      random: () => 0,
+      read,
+      retryAfterMs: (_error, now) => {
+        observedNow = now();
+
+        return 0;
+      },
+      signal: neverSignal(),
+      sleep,
+      url: baseRetryUrl,
+    }),
+  ).rejects.toBeInstanceOf(Error);
+
+  expect(typeof observedNow).toBe("number");
 });
 
 test("withRetry should omit page and causeCode from the event when absent", async () => {

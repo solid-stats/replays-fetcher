@@ -12,6 +12,8 @@ const httpGone = Number("410");
 const httpBadRequest = Number("400");
 const httpUnauthorized = Number("401");
 const httpForbidden = Number("403");
+const httpRequestTimeout = Number("408");
+const httpTooEarly = Number("425");
 const httpOk = Number("200");
 const hugeBodyLength = Number("5000");
 const causeMessageMaxLength = Number("200");
@@ -33,6 +35,15 @@ test("classifyFailure should classify HTTP 5xx statuses as transient", () => {
     httpServiceUnavailable,
     httpGatewayTimeout,
   ]) {
+    expect(classifyFailure({ httpStatus: status })).toMatchObject({
+      httpStatus: status,
+      kind: "transient",
+    });
+  }
+});
+
+test("classifyFailure should classify retryable 4xx (408, 425) as transient (WR-02)", () => {
+  for (const status of [httpRequestTimeout, httpTooEarly]) {
     expect(classifyFailure({ httpStatus: status })).toMatchObject({
       httpStatus: status,
       kind: "transient",

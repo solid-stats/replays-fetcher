@@ -14,6 +14,16 @@ const capDelayMs = 30_000;
 const secondsToMs = 1000;
 const deltaSecondsPattern = /^\d+$/u;
 
+/**
+ * Upper bound for the effective `rate_limited` retry delay (CR-08-01). A
+ * `Retry-After` header comes from the untrusted source/proxy, so a hostile or
+ * broken value (huge delta-seconds or a far-future HTTP-date) must not pin the
+ * worker for an arbitrary interval. The cap lives alongside the backoff cap so
+ * the bounded-retry policy stays in one place; it reuses the same ceiling as
+ * `capDelayMs`.
+ */
+export const retryAfterCapMs = capDelayMs;
+
 export interface JitterBounds {
   readonly base?: number;
   readonly cap?: number;

@@ -39,6 +39,21 @@ const httpServerErrorFloor = 500;
 const httpServerErrorCeiling = 600;
 const causeMessageMaxLength = 200;
 
+const httpRequestTimeoutStatus = 408;
+const httpTooEarlyStatus = 425;
+
+/**
+ * 4xx statuses that are transient in practice and must stay retryable, even
+ * though the generic 4xx branch otherwise maps client errors to `permanent`
+ * (WR-08-02). `408 Request Timeout` is the network-timeout equivalent and
+ * `425 Too Early` is replay-protection backpressure; classifying either as
+ * permanent would silently drop a reachable replay (corpus gap).
+ */
+const retryableClientErrorStatuses = new Set<number>([
+  httpRequestTimeoutStatus,
+  httpTooEarlyStatus,
+]);
+
 const transientNetworkCodes = new Set<string>([
   "ECONNRESET",
   "ECONNREFUSED",
@@ -135,6 +150,10 @@ function isClientError(status: number): boolean {
 function classifyByStatus(status: number): FailureKind | undefined {
   if (status === httpTooManyRequestsStatus) {
     return "rate_limited";
+  }
+
+  if (retryableClientErrorStatuses.has(status)) {
+    return "transient";
   }
 
   if (isServerError(status)) {

@@ -91,10 +91,6 @@ const bytesPhase: SourceReadPhase = "bytes";
 const noRetryAttempts = 0;
 const initialTry = 1;
 
-function defaultNow(): number {
-  return Date.now();
-}
-
 /**
  * Total byte-read tries the wrapper is configured to make: the initial read
  * plus the bounded retry rounds. Reported in `details.attempts` (DIAG-01).
@@ -359,14 +355,14 @@ function createDirectReplayByteClient(config: SourceConfig): ReplayByteClient {
         }
       };
 
-      const now = options?.now ?? defaultNow;
-
       return runWithRetry(
         {
           classify: classifyDirect,
           read,
-          retryAfterMs: (error: unknown): number | undefined =>
-            directRetryAfter(error, now),
+          // `now` is supplied by `withRetry` at the moment the delay is
+          // resolved (WR-08-03), making the time dependency explicit instead of
+          // closing over a factory-fixed value.
+          retryAfterMs: directRetryAfter,
           url,
         },
         options,
