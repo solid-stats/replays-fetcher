@@ -612,7 +612,7 @@ function toReplayCandidate(
     source.externalId = candidate.externalId;
   }
 
-  if (candidate.page !== undefined) {
+  if (typeof candidate.page === "number") {
     source.page = candidate.page;
   }
 
@@ -630,7 +630,7 @@ function toReplayCandidate(
     metadata.missionText = candidate.missionText;
   }
 
-  if (candidate.serverId !== undefined) {
+  if (typeof candidate.serverId === "number") {
     metadata.serverId = candidate.serverId;
   }
 

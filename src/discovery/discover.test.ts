@@ -353,6 +353,35 @@ test("discoverReplaysDryRun should report malformed fixture candidates as warnin
   ]);
 });
 
+test("discoverReplaysDryRun should drop non-typed fixture page and serverId fields", async () => {
+  // Untrusted source JSON: `page`/`serverId` arrive with the wrong runtime
+  // type (string instead of number). The candidate must not leak them
+  // (WR-08-04) even though the fixture type statically declares numbers.
+  const malformedElement: Record<string, unknown> = {
+    filename: "wrong-types.json",
+    page: "oops",
+    serverId: "nope",
+    url: "https://example.test/replays/200",
+  };
+  const sourceClient: SourceClient = {
+    async fetchText() {
+      return JSON.stringify({ candidates: [malformedElement] });
+    },
+  };
+
+  const report = await discoverReplaysDryRun({
+    sourceClient,
+    sourceUrl: new URL("https://example.test/replays"),
+  });
+
+  expect(report.ok).toBe(true);
+  expect(report.candidates).toHaveLength(1);
+  const [candidate] = report.candidates;
+  expect(candidate?.identity.filename).toBe("wrong-types.json");
+  expect(candidate?.source.page).toBeUndefined();
+  expect(candidate?.metadata).toBeUndefined();
+});
+
 test("discoverReplaysDryRun should report duplicate filenames and changed metadata", async () => {
   const sourceClient: SourceClient = {
     async fetchText() {
