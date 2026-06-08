@@ -66,6 +66,14 @@ function defaultNow(): number {
  * not stop the chain promptly. This rejects as soon as `signal` aborts and
  * always detaches the listener in `finally` so a settled sleep leaves no leak.
  */
+function toAbortError(reason: unknown): Error {
+  if (reason instanceof Error) {
+    return reason;
+  }
+
+  return new Error("Aborted", { cause: reason });
+}
+
 async function abortableSleep(
   delayMs: number,
   signal: AbortSignal,
@@ -73,18 +81,21 @@ async function abortableSleep(
 ): Promise<void> {
   signal.throwIfAborted();
 
-  let onAbort = (): void => undefined;
+  const controller = new AbortController();
   const aborted = new Promise<never>((_resolve, reject) => {
-    onAbort = (): void => {
-      reject(signal.reason);
-    };
-    signal.addEventListener("abort", onAbort, { once: true });
+    signal.addEventListener(
+      "abort",
+      () => {
+        reject(toAbortError(signal.reason));
+      },
+      { once: true, signal: controller.signal },
+    );
   });
 
   try {
     await Promise.race([sleep(delayMs), aborted]);
   } finally {
-    signal.removeEventListener("abort", onAbort);
+    controller.abort();
   }
 }
 

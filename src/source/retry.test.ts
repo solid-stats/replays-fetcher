@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- Retry scenarios (backoff, abort, Retry-After cap, now injection) are kept together for contract readability. */
 import { expect, test, vi } from "vitest";
 
 import { retryAfterCapMs } from "./backoff.js";
@@ -246,6 +247,38 @@ test("withRetry should abort the chain during the backoff sleep (BL-01)", async 
   expect(sleep).toHaveBeenCalledTimes(1);
 });
 
+test("withRetry should normalize a non-Error abort reason during sleep (BL-01)", async () => {
+  const controller = new AbortController();
+  const read = vi.fn(async () => {
+    throw new Error("transient");
+  });
+  // Abort with a non-Error reason (a plain string) so the chain must wrap it
+  // into an Error before rejecting.
+  const sleep = vi.fn(
+    async () =>
+      new Promise<void>(() => {
+        controller.abort("aborted by operator");
+      }),
+  );
+
+  const pending = withRetry({
+    attempts,
+    classify: () => transient,
+    phase: "list",
+    random: () => 0,
+    read,
+    signal: controller.signal,
+    sleep,
+    url: baseRetryUrl,
+  });
+
+  const error = await pending.catch((error_: unknown) => error_);
+
+  expect(error).toBeInstanceOf(Error);
+  expect((error as Error).cause).toBe("aborted by operator");
+  expect(read).toHaveBeenCalledTimes(1);
+});
+
 test("withRetry should throw immediately when the signal is already aborted (BL-01)", async () => {
   const controller = new AbortController();
   controller.abort();
@@ -330,7 +363,7 @@ test("withRetry should default now to Date.now when none is injected (WR-03)", a
     throw new Error("rate limited");
   });
   const sleep = vi.fn(noopSleep);
-  let observedNow: number | undefined;
+  const observedNow = vi.fn<(value: number) => void>();
 
   await expect(
     withRetry({
@@ -340,7 +373,7 @@ test("withRetry should default now to Date.now when none is injected (WR-03)", a
       random: () => 0,
       read,
       retryAfterMs: (_error, now) => {
-        observedNow = now();
+        observedNow(now());
 
         return 0;
       },
@@ -350,7 +383,7 @@ test("withRetry should default now to Date.now when none is injected (WR-03)", a
     }),
   ).rejects.toBeInstanceOf(Error);
 
-  expect(typeof observedNow).toBe("number");
+  expect(observedNow).toHaveBeenCalledWith(expect.any(Number));
 });
 
 test("withRetry should omit page and causeCode from the event when absent", async () => {
