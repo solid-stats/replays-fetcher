@@ -31,9 +31,9 @@ Cross-cutting prerequisites the convention baseline (`solidstats-backend-ts-conv
 Goal: source failures tell the operator what failed and whether retrying can help.
 
 - [ ] **DIAG-01**: Source-failure diagnostics preserve HTTP status (when a response existed), the low-level error name/`cause.code` and message, the page number, the request/detail URL, the `phase` (`list` | `detail` | `bytes`), and an attempts count — replacing the generic collapse to `source_unavailable` / "Source request failed".
-- [ ] **DIAG-02**: Failures are classified transient vs permanent. Transient: network (`ECONNRESET`, `ENOTFOUND`, `EAI_AGAIN`, `ETIMEDOUT`, `UND_ERR_*`), TLS (bounded), HTTP `429`/`5xx`, and Cloudflare challenge bodies. Permanent: non-Cloudflare `4xx`/`404`/`410`, malformed body, missing external id/filename. `AggregateError` causes (dual-stack) are unwrapped before classification.
-- [ ] **DIAG-03**: Bounded retry with exponential backoff + full jitter and `Retry-After` honoring is applied to list-page and detail/byte reads. Attempts are bounded and operator-configurable; permanent failures are never retried; backoff composes under the existing pacing delay and threads the existing per-request `AbortSignal`.
-- [ ] **DIAG-04**: Diagnostics never include secrets, raw replay bytes, or large HTML/JSON bodies — only a short Cloudflare-marker boolean, status, cause code/message, page, url, phase, and attempts.
+- [x] **DIAG-02**: Failures are classified transient vs permanent. Transient: network (`ECONNRESET`, `ENOTFOUND`, `EAI_AGAIN`, `ETIMEDOUT`, `UND_ERR_*`), TLS (bounded), HTTP `429`/`5xx`, and Cloudflare challenge bodies. Permanent: non-Cloudflare `4xx`/`404`/`410`, malformed body, missing external id/filename. `AggregateError` causes (dual-stack) are unwrapped before classification.
+- [x] **DIAG-03**: Bounded retry with exponential backoff + full jitter and `Retry-After` honoring is applied to list-page and detail/byte reads. Attempts are bounded and operator-configurable; permanent failures are never retried; backoff composes under the existing pacing delay and threads the existing per-request `AbortSignal`.
+- [x] **DIAG-04**: Diagnostics never include secrets, raw replay bytes, or large HTML/JSON bodies — only a short Cloudflare-marker boolean, status, cause code/message, page, url, phase, and attempts.
 
 ### Checkpoint & Resume (RESUME)
 

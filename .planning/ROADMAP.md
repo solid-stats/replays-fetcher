@@ -70,7 +70,7 @@
 
 **Wave 1**
 
-- [ ] 08-01-PLAN.md — Shared failure classifier + full-jitter backoff/Retry-After + bounded retry wrapper (injected sleep/random) + `sourceRetryAttempts` config (DIAG-02/03/04)
+- [x] 08-01-PLAN.md — Shared failure classifier + full-jitter backoff/Retry-After + bounded retry wrapper (injected sleep/random) + `sourceRetryAttempts` config (DIAG-02/03/04)
 
 **Wave 2** *(blocked on Wave 1; plans 02 and 03 run in parallel — disjoint files)*
 
@@ -159,7 +159,7 @@
 | 5. Scheduled Operations and Validation | v1.0 | 4/4 | Complete | 2026-05-09 |
 | 6. Close v1 audit gaps: connectivity checks and discovered timestamp staging evidence | v1.0 | 6/6 | Complete | 2026-05-10 |
 | 7. v2 Foundations | v2.0 | 3/3 | Complete    | 2026-06-07 |
-| 8. Source Failure Diagnostics and Retry | v2.0 | 0/4 | Planned | - |
+| 8. Source Failure Diagnostics and Retry | v2.0 | 1/4 | In Progress|  |
 | 9. Checkpoint and Resume | v2.0 | 0/TBD | Not started | - |
 | 10. Dynamic Source Range and Rate Limiting | v2.0 | 0/TBD | Not started | - |
 | 11. Progress Events and Compact Evidence | v2.0 | 0/TBD | Not started | - |

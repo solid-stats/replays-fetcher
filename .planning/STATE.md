@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Full-Corpus Ingest Resilience
 status: executing
-last_updated: "2026-06-08T02:42:48.761Z"
-last_activity: 2026-06-08 -- Phase 8 planning complete
+last_updated: "2026-06-08T02:58:29.909Z"
+last_activity: 2026-06-08 -- Phase 8 execution started
 progress:
   total_phases: 6
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 7
+  completed_plans: 4
   percent: 17
 ---
 
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-07)
 
 **Core value:** Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
-**Current focus:** Phase 7 — v2 Foundations
+**Current focus:** Phase 8 — Source Failure Diagnostics and Retry
 
 ## Current Position
 
-Phase: 8
-Plan: Not started
+Phase: 8 (Source Failure Diagnostics and Retry) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
-Last activity: 2026-06-08 -- Phase 8 planning complete
+Last activity: 2026-06-08 -- Phase 8 execution started
 
 Progress: `[ ][ ][ ][ ][ ][ ]` 0/6 phases complete
 
@@ -87,6 +87,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 07]: SourceFetchError and ReplayByteFetchError are re-parented onto AppError with their exact narrow code unions; throw sites and instanceof guards are unchanged. Subclasses keep a public constructor (eslint-disable no-useless-constructor) because AppError's constructor is protected and the subclass narrows options to omit isOperational.
 - [Phase 07]: createLogger is injected through the CLI DI map (before the ...dependencies spread) and a child({ runId }) logger is created in run-once. The run-once logger logs only at debug (below default info) so the JSON summary stdout contract stays byte-for-byte unchanged; cli.test.ts passes with zero summary-assertion edits.
 - [Phase 07]: pnpm run verify is green for every phase-7 stage individually (typecheck, 157 unit, 2 integration, 100% coverage, build) but the aggregate gate stops at a pre-existing pnpm-lock.yaml format failure and pre-existing .agents/** tooling lint; both are out of scope and logged in 07-v2-foundations/deferred-items.md.
+- [Phase 08]: 08-01: withRetry takes an injectable retryAfterMs extractor; classifier is transport-agnostic (no Response reads); fullJitterDelay uses a JitterBounds object for ESLint max-params
 
 ### Roadmap Evolution
 
@@ -150,3 +151,4 @@ Plan Phase 7 (v2 Foundations) with `/gsd:plan-phase 7`.
 | Phase 07 P01 | 5min | 2 tasks | 2 files |
 | Phase 07 P02 | 6min | 2 tasks | 4 files |
 | Phase 07 P03 | 11min | 3 tasks | 5 files |
+| Phase 08 P01 | 13min | 3 tasks | 9 files |
