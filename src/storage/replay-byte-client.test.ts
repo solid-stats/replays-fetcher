@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- Replay-byte client transport tests keep direct and SSH behavior together. */
 import { afterEach, expect, test, vi } from "vitest";
 
 import { loadSourceConfig, type SourceConfig } from "../config.js";
@@ -8,6 +9,8 @@ import {
   ReplayByteFetchError,
 } from "./replay-byte-client.js";
 
+import type { RetryAttemptEvent } from "../source/retry.js";
+
 const validSourceEnvironment = {
   REPLAY_SOURCE_URL: "https://sg.zone/replays",
 };
@@ -15,7 +18,15 @@ const replayUrl = new URL("https://sg.zone/replays/1778269931");
 const directBytes = new TextEncoder().encode("direct replay bytes");
 const sshBytes = new TextEncoder().encode("ssh replay bytes");
 const serverErrorStatus = Number("500");
+const tooManyRequestsStatus = Number("429");
+const notFoundStatus = Number("404");
 const shortTimeoutMs = Number("5");
+const retryAttempts = Number("2");
+const noJitter = (): number => 0;
+const immediateSleep = async (): Promise<void> => {
+  await Promise.resolve();
+};
+const secretBytesMarker = "SECRET_BYTES_zzz";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -27,6 +38,7 @@ test("createReplayByteClient should fetch direct replay bytes", async () => {
     "fetch",
     vi.fn(async () => ({
       arrayBuffer: async () => directBytes.buffer,
+      headers: new Headers(),
       ok: true,
     })),
   );
@@ -44,6 +56,7 @@ test("createReplayByteClient should map direct HTTP failures", async () => {
     "fetch",
     vi.fn(async () => ({
       arrayBuffer: async () => new ArrayBuffer(0),
+      headers: new Headers(),
       ok: false,
       status: serverErrorStatus,
     })),
@@ -77,6 +90,180 @@ test("createReplayByteClient should map direct network failures", async () => {
   });
 });
 
+test("createReplayByteClient should enrich transient byte failures with identifiers-only details and retry", async () => {
+  const cause = Object.assign(new Error("connect ETIMEDOUT"), {
+    code: "ETIMEDOUT",
+  });
+  const fetchMock = vi.fn(async () => {
+    throw new Error("fetch failed", { cause });
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  const client = createReplayByteClient(
+    loadSourceConfig(validSourceEnvironment),
+  );
+
+  const error = await client
+    .fetchBytes(replayUrl, {
+      attempts: retryAttempts,
+      random: noJitter,
+      sleep: immediateSleep,
+    })
+    .catch((error_: unknown) => error_);
+
+  expect(error).toBeInstanceOf(ReplayByteFetchError);
+  expect(fetchMock).toHaveBeenCalledTimes(retryAttempts + 1);
+  expect((error as ReplayByteFetchError).details).toMatchObject({
+    attempts: retryAttempts + 1,
+    causeCode: "ETIMEDOUT",
+    cfChallenge: false,
+    phase: "bytes",
+    url: replayUrl.toString(),
+  });
+  expect((error as ReplayByteFetchError).code).toBe("fetch_failed");
+});
+
+test("createReplayByteClient should classify direct HTTP 429 as rate_limited, retry, and emit retry events", async () => {
+  const fetchMock = vi.fn(async () => ({
+    arrayBuffer: async () => new ArrayBuffer(0),
+    headers: new Headers({ "retry-after": "Thu, 01 Jan 1970 00:00:00 GMT" }),
+    ok: false,
+    status: tooManyRequestsStatus,
+  }));
+  vi.stubGlobal("fetch", fetchMock);
+  const client = createReplayByteClient(
+    loadSourceConfig(validSourceEnvironment),
+  );
+  const events: RetryAttemptEvent[] = [];
+  const replayPage = Number("7");
+
+  const error = await client
+    .fetchBytes(replayUrl, {
+      attempts: retryAttempts,
+      onRetry: (event) => {
+        events.push(event);
+      },
+      page: replayPage,
+      random: noJitter,
+      sleep: immediateSleep,
+    })
+    .catch((error_: unknown) => error_);
+
+  expect(error).toBeInstanceOf(ReplayByteFetchError);
+  expect((error as ReplayByteFetchError).code).toBe("rate_limited");
+  expect(fetchMock).toHaveBeenCalledTimes(retryAttempts + 1);
+  expect((error as ReplayByteFetchError).details).toMatchObject({
+    httpStatus: tooManyRequestsStatus,
+    phase: "bytes",
+  });
+  expect(events).toHaveLength(retryAttempts);
+  expect(events[0]).toMatchObject({ page: replayPage, phase: "bytes" });
+});
+
+test("createReplayByteClient should retry rate_limited byte reads with no Retry-After header via backoff", async () => {
+  const fetchMock = vi.fn(async () => ({
+    arrayBuffer: async () => new ArrayBuffer(0),
+    headers: new Headers(),
+    ok: false,
+    status: tooManyRequestsStatus,
+  }));
+  vi.stubGlobal("fetch", fetchMock);
+  const client = createReplayByteClient(
+    loadSourceConfig(validSourceEnvironment),
+  );
+
+  const error = await client
+    .fetchBytes(replayUrl, {
+      attempts: 1,
+      random: noJitter,
+      sleep: immediateSleep,
+    })
+    .catch((error_: unknown) => error_);
+
+  expect((error as ReplayByteFetchError).code).toBe("rate_limited");
+  expect(fetchMock).toHaveBeenCalledTimes(Number("2"));
+});
+
+test("createReplayByteClient should honor Retry-After on rate_limited byte reads", async () => {
+  const slept: number[] = [];
+  const fetchMock = vi.fn(async () => ({
+    arrayBuffer: async () => new ArrayBuffer(0),
+    headers: new Headers({ "retry-after": "30" }),
+    ok: false,
+    status: tooManyRequestsStatus,
+  }));
+  vi.stubGlobal("fetch", fetchMock);
+  const client = createReplayByteClient(
+    loadSourceConfig(validSourceEnvironment),
+  );
+
+  await client
+    .fetchBytes(replayUrl, {
+      attempts: 1,
+      now: () => 0,
+      random: noJitter,
+      sleep: async (milliseconds: number) => {
+        slept.push(milliseconds);
+        await Promise.resolve();
+      },
+    })
+    .catch((error_: unknown) => error_);
+
+  expect(slept).toStrictEqual([Number("30000")]);
+});
+
+test("createReplayByteClient should not retry permanent direct HTTP 404 failures", async () => {
+  const fetchMock = vi.fn(async () => ({
+    arrayBuffer: async () => new ArrayBuffer(0),
+    headers: new Headers(),
+    ok: false,
+    status: notFoundStatus,
+  }));
+  vi.stubGlobal("fetch", fetchMock);
+  const client = createReplayByteClient(
+    loadSourceConfig(validSourceEnvironment),
+  );
+
+  const error = await client
+    .fetchBytes(replayUrl, {
+      attempts: retryAttempts,
+      random: noJitter,
+      sleep: immediateSleep,
+    })
+    .catch((error_: unknown) => error_);
+
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+  expect((error as ReplayByteFetchError).code).toBe("fetch_failed");
+  expect((error as ReplayByteFetchError).details).toMatchObject({
+    httpStatus: notFoundStatus,
+    phase: "bytes",
+  });
+});
+
+test("createReplayByteClient should never leak response bytes into byte error details", async () => {
+  const secretBytes = new TextEncoder().encode(secretBytesMarker);
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      arrayBuffer: async () => secretBytes.buffer,
+      headers: new Headers(),
+      ok: false,
+      status: serverErrorStatus,
+    })),
+  );
+  const client = createReplayByteClient(
+    loadSourceConfig(validSourceEnvironment),
+  );
+
+  const error = await client
+    .fetchBytes(replayUrl)
+    .catch((error_: unknown) => error_);
+
+  expect(error).toBeInstanceOf(ReplayByteFetchError);
+  expect(JSON.stringify((error as ReplayByteFetchError).details)).not.toContain(
+    secretBytesMarker,
+  );
+});
+
 test("createReplayByteClient should abort direct byte fetches after the configured timeout", async () => {
   vi.useFakeTimers();
   vi.stubGlobal(
@@ -103,6 +290,31 @@ test("createReplayByteClient should abort direct byte fetches after the configur
   });
   await vi.advanceTimersByTimeAsync(shortTimeoutMs);
   await result;
+});
+
+test("createReplayByteClient should abort direct byte fetches when the caller signal aborts", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(
+      async (_url: URL | string, init?: RequestInit) =>
+        await new Promise<ArrayBuffer>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => {
+            reject(new Error("aborted"));
+          });
+        }),
+    ),
+  );
+  const client = createReplayByteClient(
+    loadSourceConfig(validSourceEnvironment),
+  );
+  const controller = new AbortController();
+
+  const result = client
+    .fetchBytes(replayUrl, { signal: controller.signal })
+    .catch((error_: unknown) => error_);
+  controller.abort();
+
+  expect(await result).toBeInstanceOf(ReplayByteFetchError);
 });
 
 test("createReplayByteClient should fetch SSH replay bytes through encoded URL transport", async () => {
@@ -143,7 +355,7 @@ test("createReplayByteClient should fetch SSH replay bytes through encoded URL t
   });
 });
 
-test("createReplayByteClient should map SSH transport failures", async () => {
+test("createReplayByteClient should map SSH transport failures through the shared classifier", async () => {
   const client = createReplayByteClient(
     loadSourceConfig({
       ...validSourceEnvironment,
@@ -159,8 +371,41 @@ test("createReplayByteClient should map SSH transport failures", async () => {
 
   await expect(client.fetchBytes(replayUrl)).rejects.toMatchObject({
     code: "fetch_failed",
+    details: { phase: "bytes", url: replayUrl.toString() },
     message: "SSH replay byte request failed",
     name: "ReplayByteFetchError",
+  });
+});
+
+test("createReplayByteClient should retry transient SSH byte failures via cause code", async () => {
+  const cause = Object.assign(new Error("connection reset"), {
+    code: "ECONNRESET",
+  });
+  const execFile = vi.fn(async () => {
+    throw new Error("ssh failed", { cause });
+  });
+  const client = createReplayByteClient(
+    loadSourceConfig({
+      ...validSourceEnvironment,
+      REPLAY_SOURCE_SSH_HOST: "allowlisted-host",
+      REPLAY_SOURCE_TRANSPORT: "ssh",
+    }),
+    { execFile },
+  );
+
+  const error = await client
+    .fetchBytes(replayUrl, {
+      attempts: retryAttempts,
+      random: noJitter,
+      sleep: immediateSleep,
+    })
+    .catch((error_: unknown) => error_);
+
+  expect(execFile).toHaveBeenCalledTimes(retryAttempts + 1);
+  expect((error as ReplayByteFetchError).code).toBe("fetch_failed");
+  expect((error as ReplayByteFetchError).details).toMatchObject({
+    causeCode: "ECONNRESET",
+    phase: "bytes",
   });
 });
 
@@ -197,18 +442,20 @@ test("ReplayByteFetchError should carry byte fetch metadata", () => {
   });
 });
 
-test("ReplayByteFetchError should extend AppError while keeping its narrow code", () => {
-  const error = new ReplayByteFetchError("fetch_failed", "fetch failed");
+test("ReplayByteFetchError should widen its code union additively while preserving instanceof", () => {
+  const failed = new ReplayByteFetchError("fetch_failed", "fetch failed");
+  const limited = new ReplayByteFetchError("rate_limited", "rate limited");
 
-  expect(error).toBeInstanceOf(ReplayByteFetchError);
-  expect(error).toBeInstanceOf(AppError);
-  expect(error).toBeInstanceOf(Error);
-  expect(error.name).toBe("ReplayByteFetchError");
+  expect(failed).toBeInstanceOf(ReplayByteFetchError);
+  expect(failed).toBeInstanceOf(AppError);
+  expect(failed).toBeInstanceOf(Error);
+  expect(failed.name).toBe("ReplayByteFetchError");
 
-  const { code } = error;
-  const narrowed: "fetch_failed" = code;
+  const { code } = limited;
+  const narrowed: "fetch_failed" | "rate_limited" = code;
 
-  expect(narrowed).toBe("fetch_failed");
+  expect(narrowed).toBe("rate_limited");
+  expect(failed.code).toBe("fetch_failed");
 });
 
 test("ReplayByteFetchError should preserve an optional cause when provided", () => {
