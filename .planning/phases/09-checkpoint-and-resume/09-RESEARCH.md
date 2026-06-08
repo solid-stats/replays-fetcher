@@ -476,16 +476,14 @@ export class CheckpointConflictError extends AppError<"checkpoint-conflict"> {
 
 **If this table is empty:** N/A — три LOW-риск допущения выше; A1 требует подтверждения с server-2.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Имя ключа run_id в promotion_evidence (A1)**
-   - What we know: `promotion_evidence` — jsonb; SQL не меняется; server-2 читает через `getFullRunLifecycleCounts`/`ingest-staging`.
-   - What's unclear: ожидает ли server-2 `run_id` (snake_case) vs `runId`, и читает ли он это поле вообще для корреляции.
-   - Recommendation: Дефолт `run_id` (согласуется с column naming server-2). Планировщик добавляет `checkpoint:human-verify` перед финализацией контракта; иначе аддитивный jsonb-ключ безопасен.
+   - What we know: `promotion_evidence` — jsonb; SQL не меняется.
+   - **RESOLVED (cross-app verified against server-2):** прямой осмотр server-2 (`src/modules/ingest/repository/repository.ts:184,699,707`, `routes.ts:83`) показал, что server-2 **сейчас НЕ читает** ни `run_id`, ни `runId` из `promotion_evidence` — он сливает `promotionEvidence` как непрозрачный `JsonObject` через `promotion_evidence || $::jsonb`. Существующего читателя по run-идентификатору НЕТ. Значит конвенцию задаёт fetcher, и она фиксируется как **`run_id`** (snake_case) — дословно по REQUIREMENTS RESUME-04 и CONTEXT, и согласованно с naming самого `promotion_evidence`/SQL-колонок. Будущая корреляция в server-2 будет читать `promotion_evidence->>'run_id'`. Решение: **ключ = `run_id`** (НЕ `runId`). Cross-app verification, которую требовал research-gate `checkpoint:human-verify`, **выполнена оркестратором напрямую** (server-2 grep) — отдельный human gate больше не нужен; результат зафиксирован здесь и в плане.
 2. **Auto-resume vs явный --resume взаимодействие**
    - What we know: locked — auto-resume при `status!=="complete"`; явный `--resume` форсирует resume-read.
-   - What's unclear: должен ли `--resume` при `status==="complete"` рестартовать с page 1 или быть no-op?
-   - Recommendation: `--resume` при complete-чекпойнте → clean page-1 (новый прогон), т.к. complete означает «корпус пройден»; auto-resume пропускает. Claude's discretion — зафиксировать в плане.
+   - **RESOLVED:** `--resume` при `status==="complete"` чекпойнте → **clean page-1** (новый полный прогон), т.к. `complete` означает «корпус пройден»; auto-resume такой чекпойнт пропускает (не возобновляет). Зафиксировано в плане 09-05.
 
 ## Environment Availability
 
