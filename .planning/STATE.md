@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Full-Corpus Ingest Resilience
 status: executing
-last_updated: "2026-06-08T02:58:29.909Z"
+last_updated: "2026-06-08T14:53:03.186Z"
 last_activity: 2026-06-08 -- Phase 8 execution started
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 7
-  completed_plans: 4
+  completed_plans: 5
   percent: 17
 ---
 
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 ## Current Position
 
 Phase: 8 (Source Failure Diagnostics and Retry) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-06-08 -- Phase 8 execution started
 
@@ -88,6 +88,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 07]: createLogger is injected through the CLI DI map (before the ...dependencies spread) and a child({ runId }) logger is created in run-once. The run-once logger logs only at debug (below default info) so the JSON summary stdout contract stays byte-for-byte unchanged; cli.test.ts passes with zero summary-assertion edits.
 - [Phase 07]: pnpm run verify is green for every phase-7 stage individually (typecheck, 157 unit, 2 integration, 100% coverage, build) but the aggregate gate stops at a pre-existing pnpm-lock.yaml format failure and pre-existing .agents/** tooling lint; both are out of scope and logged in 07-v2-foundations/deferred-items.md.
 - [Phase 08]: 08-01: withRetry takes an injectable retryAfterMs extractor; classifier is transport-agnostic (no Response reads); fullJitterDelay uses a JitterBounds object for ESLint max-params
+- [Phase ?]: 08-02: One shared classifier + withRetry drives both direct HTTP and SSH list/detail reads; SSH yields transient/permanent only (no httpStatus for rate_limited)
+- [Phase ?]: 08-02: fetchText read-options seam defaults attempts to 0 (single try) so legacy callers are unchanged until Plan 04 drives retries
 
 ### Roadmap Evolution
 
@@ -152,3 +154,4 @@ Plan Phase 7 (v2 Foundations) with `/gsd:plan-phase 7`.
 | Phase 07 P02 | 6min | 2 tasks | 4 files |
 | Phase 07 P03 | 11min | 3 tasks | 5 files |
 | Phase 08 P01 | 13min | 3 tasks | 9 files |
+| Phase 08 P02 | 50min | 2 tasks | 5 files |
