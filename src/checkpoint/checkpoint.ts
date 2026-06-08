@@ -118,3 +118,76 @@ function parseJsonOrUndefined(raw: string): unknown {
     return undefined;
   }
 }
+
+const FIRST_PAGE = 1;
+const NO_PAGE_COMPLETED = 0;
+
+/**
+ * Resume cursor (RESUME-03). Returns the page the next run should start from:
+ * `1` when there is no checkpoint or no page has completed yet, otherwise the
+ * page after the last completed one. Pure and deterministic.
+ */
+export function resumeStartPage(checkpoint?: Checkpoint): number {
+  if (
+    checkpoint === undefined ||
+    checkpoint.lastCompletedPage === NO_PAGE_COMPLETED
+  ) {
+    return FIRST_PAGE;
+  }
+
+  return checkpoint.lastCompletedPage + FIRST_PAGE;
+}
+
+/**
+ * Resolve a checkpoint write conflict by merging two views of the same run
+ * (RESUME-02). Keeps the maximum `lastCompletedPage`/`discoveredLastPage`, the
+ * union of per-page entries, and adopts the aggregate `counts`, `updatedAt`, and
+ * `status` of whichever side reached the higher `lastCompletedPage` (the
+ * higher-progress side wins ties via `remote`). Pure; the S3 re-read+retry path
+ * that calls this lives in Plan 04.
+ */
+export function mergeCheckpoints(
+  local: Checkpoint,
+  remote: Checkpoint,
+): Checkpoint {
+  const winner = pickHigherProgress(local, remote);
+  const pages: Record<string, CheckpointPage> = {
+    ...local.pages,
+    ...remote.pages,
+  };
+  const merged: {
+    -readonly [Key in keyof Checkpoint]: Checkpoint[Key];
+  } = {
+    counts: winner.counts,
+    createdAt: local.createdAt,
+    discoveredLastPage: Math.max(
+      local.discoveredLastPage,
+      remote.discoveredLastPage,
+    ),
+    lastCompletedPage: Math.max(
+      local.lastCompletedPage,
+      remote.lastCompletedPage,
+    ),
+    pages,
+    runId: winner.runId,
+    sourceUrl: winner.sourceUrl,
+    status: winner.status,
+    updatedAt: winner.updatedAt,
+  };
+  if (winner.lastSourceFailure !== undefined) {
+    merged.lastSourceFailure = winner.lastSourceFailure;
+  }
+
+  return merged;
+}
+
+function pickHigherProgress(
+  local: Checkpoint,
+  remote: Checkpoint,
+): Checkpoint {
+  if (local.lastCompletedPage > remote.lastCompletedPage) {
+    return local;
+  }
+
+  return remote;
+}

@@ -2,7 +2,9 @@ import { expect, test } from "vitest";
 
 import {
   checkpointSchema,
+  mergeCheckpoints,
   parseCheckpoint,
+  resumeStartPage,
   type Checkpoint,
   type CheckpointSourceFailure,
 } from "./checkpoint.js";
@@ -106,4 +108,143 @@ test("a stringified checkpoint carries no body, secret, or HTML fields", () => {
   const serialized = JSON.stringify(validCheckpoint);
 
   expect(serialized).not.toMatch(/<html|<!doctype|body|secret|password|token/iu);
+});
+
+const FIRST_PAGE = 1;
+const NO_PAGE = 0;
+const LOWER_COMPLETED_PAGE = 100;
+const HIGHER_COMPLETED_PAGE = 129;
+const HIGHEST_COMPLETED_PAGE = 150;
+const RESUME_AFTER_HIGHER = HIGHER_COMPLETED_PAGE + 1;
+const LOWER_DISCOVERED_PAGE = 110;
+const HIGHER_DISCOVERED_PAGE = 130;
+
+const firstPageEntry = validCheckpoint.pages["1"] ?? {
+  status: "complete",
+  counts: { discovered: 0, stored: 0, staged: 0, failed: 0 },
+};
+const otherPageEntry = validCheckpoint.pages["129"] ?? {
+  status: "complete",
+  counts: { discovered: 0, stored: 0, staged: 0, failed: 0 },
+};
+
+test("resumeStartPage returns 1 for a missing checkpoint", () => {
+  expect(resumeStartPage()).toBe(FIRST_PAGE);
+});
+
+test("resumeStartPage returns 1 when no page has completed yet", () => {
+  expect(
+    resumeStartPage({ ...validCheckpoint, lastCompletedPage: NO_PAGE }),
+  ).toBe(FIRST_PAGE);
+});
+
+test("resumeStartPage returns lastCompletedPage + 1 for a resumable checkpoint", () => {
+  expect(
+    resumeStartPage({
+      ...validCheckpoint,
+      lastCompletedPage: HIGHER_COMPLETED_PAGE,
+    }),
+  ).toBe(RESUME_AFTER_HIGHER);
+});
+
+test("mergeCheckpoints keeps the higher lastCompletedPage and discoveredLastPage", () => {
+  const local: Checkpoint = {
+    ...validCheckpoint,
+    lastCompletedPage: LOWER_COMPLETED_PAGE,
+    discoveredLastPage: LOWER_DISCOVERED_PAGE,
+  };
+  const remote: Checkpoint = {
+    ...validCheckpoint,
+    lastCompletedPage: HIGHER_COMPLETED_PAGE,
+    discoveredLastPage: HIGHER_DISCOVERED_PAGE,
+  };
+
+  const merged = mergeCheckpoints(local, remote);
+
+  expect(merged.lastCompletedPage).toBe(HIGHER_COMPLETED_PAGE);
+  expect(merged.discoveredLastPage).toBe(HIGHER_DISCOVERED_PAGE);
+});
+
+test("mergeCheckpoints unions the completed page keys", () => {
+  const local: Checkpoint = {
+    ...validCheckpoint,
+    lastCompletedPage: LOWER_COMPLETED_PAGE,
+    pages: { "1": firstPageEntry, "100": otherPageEntry },
+  };
+  const remote: Checkpoint = {
+    ...validCheckpoint,
+    lastCompletedPage: HIGHER_COMPLETED_PAGE,
+    pages: { "1": firstPageEntry, "129": otherPageEntry },
+  };
+
+  const merged = mergeCheckpoints(local, remote);
+
+  expect(Object.keys(merged.pages).toSorted()).toStrictEqual([
+    "1",
+    "100",
+    "129",
+  ]);
+});
+
+test("mergeCheckpoints takes counts and updatedAt from the higher-progress side", () => {
+  const local: Checkpoint = {
+    ...validCheckpoint,
+    lastCompletedPage: LOWER_COMPLETED_PAGE,
+    updatedAt: "2026-06-09T00:01:00.000Z",
+    counts: { discovered: 1, stored: 1, staged: 1, failed: 0 },
+  };
+  const remote: Checkpoint = {
+    ...validCheckpoint,
+    lastCompletedPage: HIGHER_COMPLETED_PAGE,
+    updatedAt: "2026-06-09T00:09:00.000Z",
+    counts: { discovered: 9, stored: 9, staged: 9, failed: 0 },
+  };
+
+  const merged = mergeCheckpoints(local, remote);
+
+  expect(merged.counts).toStrictEqual(remote.counts);
+  expect(merged.updatedAt).toBe("2026-06-09T00:09:00.000Z");
+});
+
+test("mergeCheckpoints prefers the local side when it has higher progress", () => {
+  const local: Checkpoint = {
+    ...validCheckpoint,
+    lastCompletedPage: HIGHEST_COMPLETED_PAGE,
+    updatedAt: "2026-06-09T00:20:00.000Z",
+    counts: { discovered: 20, stored: 20, staged: 20, failed: 0 },
+  };
+  const remote: Checkpoint = {
+    ...validCheckpoint,
+    lastCompletedPage: HIGHER_COMPLETED_PAGE,
+    updatedAt: "2026-06-09T00:09:00.000Z",
+    counts: { discovered: 9, stored: 9, staged: 9, failed: 0 },
+  };
+
+  const merged = mergeCheckpoints(local, remote);
+
+  expect(merged.lastCompletedPage).toBe(HIGHEST_COMPLETED_PAGE);
+  expect(merged.counts).toStrictEqual(local.counts);
+  expect(merged.updatedAt).toBe("2026-06-09T00:20:00.000Z");
+});
+
+test("mergeCheckpoints omits lastSourceFailure when the winner has none", () => {
+  const withoutFailure: Checkpoint = {
+    counts: validCheckpoint.counts,
+    createdAt: validCheckpoint.createdAt,
+    discoveredLastPage: validCheckpoint.discoveredLastPage,
+    lastCompletedPage: HIGHEST_COMPLETED_PAGE,
+    pages: validCheckpoint.pages,
+    runId: validCheckpoint.runId,
+    sourceUrl: validCheckpoint.sourceUrl,
+    status: validCheckpoint.status,
+    updatedAt: validCheckpoint.updatedAt,
+  };
+  const remote: Checkpoint = {
+    ...validCheckpoint,
+    lastCompletedPage: HIGHER_COMPLETED_PAGE,
+  };
+
+  const merged = mergeCheckpoints(withoutFailure, remote);
+
+  expect("lastSourceFailure" in merged).toBe(false);
 });
