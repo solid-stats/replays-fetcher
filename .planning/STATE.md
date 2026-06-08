@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Full-Corpus Ingest Resilience
 status: executing
-last_updated: "2026-06-08T14:53:03.186Z"
+last_updated: "2026-06-08T15:05:37.727Z"
 last_activity: 2026-06-08 -- Phase 8 execution started
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 7
-  completed_plans: 5
+  completed_plans: 6
   percent: 17
 ---
 
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 ## Current Position
 
 Phase: 8 (Source Failure Diagnostics and Retry) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-06-08 -- Phase 8 execution started
 
@@ -90,6 +90,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 08]: 08-01: withRetry takes an injectable retryAfterMs extractor; classifier is transport-agnostic (no Response reads); fullJitterDelay uses a JitterBounds object for ESLint max-params
 - [Phase ?]: 08-02: One shared classifier + withRetry drives both direct HTTP and SSH list/detail reads; SSH yields transient/permanent only (no httpStatus for rate_limited)
 - [Phase ?]: 08-02: fetchText read-options seam defaults attempts to 0 (single try) so legacy callers are unchanged until Plan 04 drives retries
+- [Phase 08-03]: ReplayByteFetchError union widened additively (kept fetch_failed, added rate_limited) closing Phase 7 WR-03; byte reads routed through shared classifyFailure + withRetry
 
 ### Roadmap Evolution
 
@@ -155,3 +156,4 @@ Plan Phase 7 (v2 Foundations) with `/gsd:plan-phase 7`.
 | Phase 07 P03 | 11min | 3 tasks | 5 files |
 | Phase 08 P01 | 13min | 3 tasks | 9 files |
 | Phase 08 P02 | 50min | 2 tasks | 5 files |
+| Phase 08 P03 | ~25min | 1 tasks | 2 files |

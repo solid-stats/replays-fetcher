@@ -75,7 +75,7 @@
 **Wave 2** *(blocked on Wave 1; plans 02 and 03 run in parallel — disjoint files)*
 
 - [x] 08-02-PLAN.md — Wire shared classifier + retry into list/detail `source-client.ts`, widen diagnostic types, Cloudflare status-200 detection, enriched identifiers-only details (DIAG-01/02/03/04)
-- [ ] 08-03-PLAN.md — Wire shared classifier + retry into bytes `replay-byte-client.ts`, widen `ReplayByteFetchError` union additively (closes Phase 7 WR-03), enriched details (DIAG-01/02/03/04)
+- [x] 08-03-PLAN.md — Wire shared classifier + retry into bytes `replay-byte-client.ts`, widen `ReplayByteFetchError` union additively (closes Phase 7 WR-03), enriched details (DIAG-01/02/03/04)
 
 **Wave 3** *(blocked on Wave 2)*
 
@@ -159,7 +159,7 @@
 | 5. Scheduled Operations and Validation | v1.0 | 4/4 | Complete | 2026-05-09 |
 | 6. Close v1 audit gaps: connectivity checks and discovered timestamp staging evidence | v1.0 | 6/6 | Complete | 2026-05-10 |
 | 7. v2 Foundations | v2.0 | 3/3 | Complete    | 2026-06-07 |
-| 8. Source Failure Diagnostics and Retry | v2.0 | 2/4 | In Progress|  |
+| 8. Source Failure Diagnostics and Retry | v2.0 | 3/4 | In Progress|  |
 | 9. Checkpoint and Resume | v2.0 | 0/TBD | Not started | - |
 | 10. Dynamic Source Range and Rate Limiting | v2.0 | 0/TBD | Not started | - |
 | 11. Progress Events and Compact Evidence | v2.0 | 0/TBD | Not started | - |
