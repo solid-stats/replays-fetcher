@@ -355,6 +355,67 @@ test("createReplayByteClient should fetch SSH replay bytes through encoded URL t
   });
 });
 
+test("createReplayByteClient should thread a per-round timeout into SSH execFile", async () => {
+  const observed: {
+    options?: { signal?: AbortSignal; timeout?: number } | undefined;
+  } = {};
+  const client = createReplayByteClient(
+    loadSourceConfig({
+      ...validSourceEnvironment,
+      REPLAY_SOURCE_SSH_HOST: "allowlisted-host",
+      REPLAY_SOURCE_TIMEOUT_MS: String(shortTimeoutMs),
+      REPLAY_SOURCE_TRANSPORT: "ssh",
+    }),
+    {
+      async execFile(_file, _arguments, options) {
+        observed.options = options;
+
+        return {
+          stderr: "",
+          stdout: Buffer.from(sshBytes).toString("base64"),
+        };
+      },
+    },
+  );
+
+  await client.fetchBytes(replayUrl);
+
+  expect(observed.options?.timeout).toBe(shortTimeoutMs);
+  expect(observed.options?.signal).toBeInstanceOf(AbortSignal);
+});
+
+test("createReplayByteClient should abort the SSH read when the caller signal aborts", async () => {
+  const observed: { signal?: AbortSignal | undefined } = {};
+  const client = createReplayByteClient(
+    loadSourceConfig({
+      ...validSourceEnvironment,
+      REPLAY_SOURCE_SSH_HOST: "allowlisted-host",
+      REPLAY_SOURCE_TRANSPORT: "ssh",
+    }),
+    {
+      async execFile(_file, _arguments, options) {
+        observed.signal = options?.signal;
+
+        return new Promise((_resolve, reject) => {
+          options?.signal?.addEventListener("abort", () => {
+            reject(new Error("aborted by caller"));
+          });
+        });
+      },
+    },
+  );
+
+  const controller = new AbortController();
+  const pending = client
+    .fetchBytes(replayUrl, { signal: controller.signal })
+    .catch((error: unknown) => error);
+
+  controller.abort();
+  await pending;
+
+  expect(observed.signal?.aborted).toBe(true);
+});
+
 test("createReplayByteClient should map SSH transport failures through the shared classifier", async () => {
   const client = createReplayByteClient(
     loadSourceConfig({

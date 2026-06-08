@@ -19,9 +19,21 @@ import {
 
 import type { SourceConfig } from "../config.js";
 
+/**
+ * Subset of node's `child_process.execFile` options the SSH adapter threads
+ * through: a caller `AbortSignal` so an external cancel kills the running ssh
+ * process, and a per-round `timeout` so a hung ssh is always bounded regardless
+ * of whether `sourceSshCommand` carries its own time limit (WR-08-01).
+ */
+interface ExecFileOptions {
+  readonly signal?: AbortSignal;
+  readonly timeout?: number;
+}
+
 type ExecFile = (
   file: string,
   arguments_: readonly string[],
+  options?: ExecFileOptions,
 ) => Promise<{ readonly stderr: string; readonly stdout: string }>;
 
 const defaultExecFile = promisify(execFileCallback) as ExecFile;
@@ -117,7 +129,10 @@ function toByteCode(kind: FailureKind): ReplayByteFetchError["code"] {
 interface RetryWiring<T> {
   readonly classify: (error: unknown) => FailureClassification;
   readonly read: (signal: AbortSignal) => Promise<T>;
-  readonly retryAfterMs?: (error: unknown) => number | undefined;
+  readonly retryAfterMs?: (
+    error: unknown,
+    now: () => number,
+  ) => number | undefined;
   readonly url: URL;
 }
 
@@ -399,20 +414,34 @@ function createSshReplayByteClient(
     async fetchBytes(url, options): Promise<Uint8Array> {
       const host = getSshHost(config);
 
-      const read = async (): Promise<Uint8Array> => {
-        const encodedUrl = Buffer.from(url.toString(), "utf8").toString(
-          "base64",
-        );
-        const result = await execFile("ssh", [
-          host,
-          "sh",
-          "-c",
-          `${config.sourceSshCommand} -- "$(printf %s "$1" | base64 -d)" | base64`,
-          "replays-fetcher-byte-source",
-          encodedUrl,
-        ]);
+      const read = async (callerSignal: AbortSignal): Promise<Uint8Array> => {
+        const controller = new AbortController();
+        const onCallerAbort = (): void => {
+          controller.abort();
+        };
+        callerSignal.addEventListener("abort", onCallerAbort);
 
-        return new Uint8Array(Buffer.from(result.stdout, "base64"));
+        try {
+          const encodedUrl = Buffer.from(url.toString(), "utf8").toString(
+            "base64",
+          );
+          const result = await execFile(
+            "ssh",
+            [
+              host,
+              "sh",
+              "-c",
+              `${config.sourceSshCommand} -- "$(printf %s "$1" | base64 -d)" | base64`,
+              "replays-fetcher-byte-source",
+              encodedUrl,
+            ],
+            { signal: controller.signal, timeout: config.sourceTimeoutMs },
+          );
+
+          return new Uint8Array(Buffer.from(result.stdout, "base64"));
+        } finally {
+          callerSignal.removeEventListener("abort", onCallerAbort);
+        }
       };
 
       return runWithRetry({ classify: classifySsh, read, url }, options).catch(

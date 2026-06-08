@@ -490,6 +490,62 @@ test("createSourceClient should invoke SSH transport with configured host and UR
   ]);
 });
 
+test("createSourceClient should thread a per-round timeout into SSH execFile", async () => {
+  const observed: {
+    options?: { signal?: AbortSignal; timeout?: number } | undefined;
+  } = {};
+  const config = loadConfig({
+    ...validEnvironment,
+    REPLAY_SOURCE_SSH_HOST: "allowlisted-host",
+    REPLAY_SOURCE_TIMEOUT_MS: String(shortTimeoutMs),
+    REPLAY_SOURCE_TRANSPORT: "ssh",
+  });
+  const sourceClient = createSourceClient(config, {
+    async execFile(_file, _arguments, options) {
+      observed.options = options;
+
+      return { stderr: "", stdout: "source text" };
+    },
+  });
+
+  await sourceClient.fetchText(new URL("https://example.test/replays/100"));
+
+  expect(observed.options?.timeout).toBe(shortTimeoutMs);
+  expect(observed.options?.signal).toBeInstanceOf(AbortSignal);
+});
+
+test("createSourceClient should abort the SSH read when the caller signal aborts", async () => {
+  const observed: { signal?: AbortSignal | undefined } = {};
+  const config = loadConfig({
+    ...validEnvironment,
+    REPLAY_SOURCE_SSH_HOST: "allowlisted-host",
+    REPLAY_SOURCE_TRANSPORT: "ssh",
+  });
+  const sourceClient = createSourceClient(config, {
+    async execFile(_file, _arguments, options) {
+      observed.signal = options?.signal;
+
+      return new Promise((_resolve, reject) => {
+        options?.signal?.addEventListener("abort", () => {
+          reject(new Error("aborted by caller"));
+        });
+      });
+    },
+  });
+
+  const controller = new AbortController();
+  const pending = sourceClient
+    .fetchText(new URL("https://example.test/replays/100"), {
+      signal: controller.signal,
+    })
+    .catch((error: unknown) => error);
+
+  controller.abort();
+  await pending;
+
+  expect(observed.signal?.aborted).toBe(true);
+});
+
 test("createSourceClient should not pass source-controlled SSH URLs to the remote shell", async () => {
   const calls: {
     readonly arguments_: readonly string[];
