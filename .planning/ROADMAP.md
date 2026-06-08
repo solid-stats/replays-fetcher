@@ -96,7 +96,21 @@
   4. Every staged row written during the run carries the `run_id` stamped into the existing `promotion_evidence` jsonb column of `ingest_staging_records`; no new columns, no new tables, and no `server-2` schema change are introduced.
   5. The final run summary reports `status` as `complete`, `partial`, `failed`, or `resumable`; a partial-but-resumable run includes the exact `--resume` invocation the operator should run next and exits with code 2 so the scheduler retries it.
 
-**Plans**: TBD
+**Plans**: 5 plans
+
+**Wave 1** *(parallel — disjoint files)*
+
+- [ ] 09-01-PLAN.md — Checkpoint state shape + Zod safe-parse degrade + resume-cursor/merge + checkpoint-conflict error (RESUME-01/03)
+- [ ] 09-02-PLAN.md — Stamp `runId` into existing `promotion_evidence` jsonb + checkpoint S3 prefix config (RESUME-04)
+- [ ] 09-03-PLAN.md — Run status taxonomy (complete/partial/failed/resumable) + `resumeInvocation` + exit-2 mapping (RESUME-05)
+
+**Wave 2** *(blocked on 09-01)*
+
+- [ ] 09-04-PLAN.md — S3 checkpoint store: Get + conditional Put (IfNoneMatch/IfMatch), bounded CAS/412 re-read+merge, MinIO integration test (RESUME-01/02)
+
+**Wave 3** *(blocked on 09-01..09-04)*
+
+- [ ] 09-05-PLAN.md — Wire run-once + cli: resume start, write-after-page (never mid-page), `--resume` flag, `runId` into staging, final status/exit (RESUME-03/04/05)
 
 ---
 
@@ -160,14 +174,14 @@
 | 6. Close v1 audit gaps: connectivity checks and discovered timestamp staging evidence | v1.0 | 6/6 | Complete | 2026-05-10 |
 | 7. v2 Foundations | v2.0 | 3/3 | Complete    | 2026-06-07 |
 | 8. Source Failure Diagnostics and Retry | v2.0 | 4/4 | Complete    | 2026-06-08 |
-| 9. Checkpoint and Resume | v2.0 | 0/TBD | Not started | - |
+| 9. Checkpoint and Resume | v2.0 | 0/5 | Planned | - |
 | 10. Dynamic Source Range and Rate Limiting | v2.0 | 0/TBD | Not started | - |
 | 11. Progress Events and Compact Evidence | v2.0 | 0/TBD | Not started | - |
 | 12. Source Contract Guards | v2.0 | 0/TBD | Not started | - |
 
 ## Next Milestone
 
-**v2.0 Full-Corpus Ingest Resilience** is the active milestone. Phase 8 (Source Failure Diagnostics and Retry) is planned (4 plans, 3 waves). Execute with `/gsd-execute-phase 8`.
+**v2.0 Full-Corpus Ingest Resilience** is the active milestone. Phase 9 (Checkpoint and Resume) is planned (5 plans, 3 waves). Execute with `/gsd-execute-phase 9`.
 
 ---
 *v1.0 roadmap archived 2026-05-10. v2.0 phases added 2026-06-07.*
