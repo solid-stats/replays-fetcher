@@ -30,13 +30,13 @@ Does not require prior new-project setup — auto-creates `.planning/sketches/` 
 </objective>
 
 <execution_context>
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/workflows/sketch.md
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/workflows/sketch-wrap-up.md
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/references/ui-brand.md
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/references/sketch-theme-system.md
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/references/sketch-interactivity.md
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/references/sketch-tooling.md
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/references/sketch-variant-patterns.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/workflows/sketch.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/workflows/sketch-wrap-up.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/references/ui-brand.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/references/sketch-theme-system.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/references/sketch-interactivity.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/references/sketch-tooling.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/references/sketch-variant-patterns.md
 </execution_context>
 
 <runtime_note>

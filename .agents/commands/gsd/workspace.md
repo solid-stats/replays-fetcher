@@ -29,10 +29,10 @@ Mode routing:
 </routing>
 
 <execution_context>
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/workflows/new-workspace.md
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/workflows/list-workspaces.md
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/workflows/remove-workspace.md
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/references/ui-brand.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/workflows/new-workspace.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/workflows/list-workspaces.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/workflows/remove-workspace.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/references/ui-brand.md
 </execution_context>
 
 <context>

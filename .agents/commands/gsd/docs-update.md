@@ -26,7 +26,7 @@ Flag handling rule:
 </objective>
 
 <execution_context>
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/workflows/docs-update.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/workflows/docs-update.md
 </execution_context>
 
 <context>

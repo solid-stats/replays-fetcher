@@ -19,7 +19,7 @@ Accepts an optional topic argument: `/gsd-explore authentication strategy`
 </objective>
 
 <execution_context>
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/workflows/explore.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/workflows/explore.md
 </execution_context>
 
 <process>

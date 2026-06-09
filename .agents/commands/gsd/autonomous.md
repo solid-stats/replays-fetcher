@@ -2,6 +2,8 @@
 name: gsd-autonomous
 description: Run all remaining phases autonomously — discuss→plan→execute per phase
 argument-hint: "[--from N] [--to N] [--only N] [--interactive]"
+context: fork
+effort: xhigh
 allowed-tools:
   - Read
   - Write
@@ -26,8 +28,8 @@ Uses ROADMAP.md phase discovery and Skill() flat invocations for each phase comm
 </objective>
 
 <execution_context>
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/workflows/autonomous.md
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/references/ui-brand.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/workflows/autonomous.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/references/ui-brand.md
 </execution_context>
 
 <context>

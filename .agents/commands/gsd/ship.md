@@ -18,7 +18,7 @@ Closes the plan → execute → verify → ship loop.
 </objective>
 
 <execution_context>
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/workflows/ship.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/workflows/ship.md
 </execution_context>
 
-Execute the ship workflow from @/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/workflows/ship.md end-to-end.
+Execute the ship workflow from @/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/workflows/ship.md end-to-end.

@@ -17,7 +17,7 @@ Extract structured learnings from completed phase artifacts (PLAN.md, SUMMARY.md
 </objective>
 
 <execution_context>
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/workflows/extract-learnings.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/workflows/extract-learnings.md
 </execution_context>
 
-Execute the extract-learnings workflow from @/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/workflows/extract-learnings.md end-to-end.
+Execute the extract-learnings workflow from @/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/workflows/extract-learnings.md end-to-end.

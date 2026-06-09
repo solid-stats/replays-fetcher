@@ -22,9 +22,9 @@ Flow: Select Framework → Research Docs → Research Domain → Design Eval Str
 </objective>
 
 <execution_context>
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/workflows/ai-integration-phase.md
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/references/ai-frameworks.md
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/references/ai-evals.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/workflows/ai-integration-phase.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/references/ai-frameworks.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/references/ai-evals.md
 </execution_context>
 
 <context>

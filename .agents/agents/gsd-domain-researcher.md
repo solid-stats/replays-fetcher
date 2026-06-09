@@ -2,7 +2,7 @@
 name: gsd-domain-researcher
 description: Researches the business domain and real-world application context of the AI system being built. Surfaces domain expert evaluation criteria, industry-specific failure modes, regulatory context, and what "good" looks like for practitioners in this field — before the eval-planner turns it into measurable rubrics. Spawned by /gsd-ai-integration-phase orchestrator.
 tools: Read, Write, Edit, Bash, Grep, Glob, WebSearch, WebFetch, mcp__context7__*
-color: "#A78BFA"
+color: purple
 # hooks:
 #   PostToolUse:
 #     - matcher: "Write|Edit"
@@ -18,11 +18,11 @@ Research the business domain — not the technical framework. Write Section 1b o
 </role>
 
 <documentation_lookup>
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/references/research-documentation-lookup.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/references/research-documentation-lookup.md
 </documentation_lookup>
 
 <required_reading>
-Read `/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/references/ai-evals.md` — specifically the rubric design and domain expert sections.
+Read `/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/references/ai-evals.md` — specifically the rubric design and domain expert sections.
 </required_reading>
 
 <input>

@@ -25,10 +25,10 @@ Replaces gsd-plan-phase's internal gsd-plan-checker with external AI reviewers (
 </objective>
 
 <execution_context>
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/workflows/plan-review-convergence.md
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/references/revision-loop.md
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/references/gates.md
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/references/agent-contracts.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/workflows/plan-review-convergence.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/references/revision-loop.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/references/gates.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/references/agent-contracts.md
 </execution_context>
 
 <runtime_note>

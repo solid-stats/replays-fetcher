@@ -10,9 +10,9 @@ requires: [config, update]
 ---
 
 <objective>
-Manage the runtime skill surface without reinstall. Reads/writes `/home/afgan0r/Projects/SolidGames/server-2/.claude/.gsd-surface.json`
-(sibling to `/home/afgan0r/Projects/SolidGames/server-2/.claude/.gsd-profile`) and re-stages the active skills directory in place.
-Skill dirs live at `/home/afgan0r/Projects/SolidGames/server-2/.claude/skills/gsd-*/`.
+Manage the runtime skill surface without reinstall. Reads/writes `/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/.gsd-surface.json`
+(sibling to `/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/.gsd-profile`) and re-stages the active skills directory in place.
+Skill dirs live at `/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/skills/gsd-*/`.
 
 Sub-commands: list · status · profile · disable · enable · reset
 </objective>
@@ -116,11 +116,11 @@ Valid cluster names: `core_loop`, `audit_review`, `milestone`, `research_ideate`
 ## runtimeConfigDir resolution
 
 The `runtimeConfigDir` for `applySurface` is the **base Claude config directory**
-(`~/.claude`), NOT the skills sub-directory (`/home/afgan0r/Projects/SolidGames/server-2/.claude/skills`).
+(`~/.claude`), NOT the skills sub-directory (`/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/skills`).
 
 This matches `installRuntimeArtifacts` and `uninstallRuntimeArtifacts`, which also
 receive `~/.claude` as `configDir`. The skill dirs themselves live at
-`/home/afgan0r/Projects/SolidGames/server-2/.claude/skills/gsd-*/` because the `claude global` layout has `destSubpath =
+`/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/skills/gsd-*/` because the `claude global` layout has `destSubpath =
 'skills'` — they are derived from `configDir`, not the root for it.
 
 ```bash
@@ -134,7 +134,7 @@ SCOPE="global"
 ```
 
 Surface state is stored at `${RUNTIME_CONFIG_DIR}/.gsd-surface.json`
-(i.e. `/home/afgan0r/Projects/SolidGames/server-2/.claude/.gsd-surface.json`).
+(i.e. `/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/.gsd-surface.json`).
 
 All paths can be overridden by reading the `CLAUDE_CONFIG_DIR` env var if set.
 
@@ -147,9 +147,9 @@ All paths can be overridden by reading the `CLAUDE_CONFIG_DIR` env var if set.
 - Missing `surface.cjs` → prompt: "Run `npm i -g gsd-core` to reinstall GSD."
 
 <execution_context>
-Surface state file: `/home/afgan0r/Projects/SolidGames/server-2/.claude/.gsd-surface.json`
-Install profile marker: `/home/afgan0r/Projects/SolidGames/server-2/.claude/.gsd-profile`
-Skill dirs: `/home/afgan0r/Projects/SolidGames/server-2/.claude/skills/gsd-*/`
-Engine module: `/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/bin/lib/surface.cjs`
-Cluster definitions: `/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/bin/lib/clusters.cjs`
+Surface state file: `/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/.gsd-surface.json`
+Install profile marker: `/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/.gsd-profile`
+Skill dirs: `/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/skills/gsd-*/`
+Engine module: `/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/bin/lib/surface.cjs`
+Cluster definitions: `/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/bin/lib/clusters.cjs`
 </execution_context>

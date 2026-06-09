@@ -2,14 +2,14 @@
 
 > **Lazy-loaded and gated.** The parent `workflows/discuss-phase.md` Reads
 > this file ONLY when `ADVISOR_MODE` is true (i.e., when
-> `/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/USER-PROFILE.md` exists). Skip the Read
+> `/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/USER-PROFILE.md` exists). Skip the Read
 > entirely when no profile is present — that's the inverse of the
 > `--advisor` flag from #2174 (don't pay the cost when unused).
 
 ## Activation
 
 ```bash
-PROFILE_PATH="/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/USER-PROFILE.md"
+PROFILE_PATH="/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/USER-PROFILE.md"
 if [ -f "$PROFILE_PATH" ]; then
   ADVISOR_MODE=true
 else
@@ -37,7 +37,7 @@ Map to calibration tier:
 
 Resolve advisor model:
 ```bash
-_GSD_SHIM_NAME="gsd-tools.cjs"; _GSD_RUNTIME_ROOT="${RUNTIME_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"; GSD_TOOLS="${_GSD_RUNTIME_ROOT}/gsd-core/bin/${_GSD_SHIM_NAME}"; if [ -f "$GSD_TOOLS" ]; then gsd_run() { node "$GSD_TOOLS" "$@"; }; elif [ -f "${_GSD_RUNTIME_ROOT}/.claude/gsd-core/bin/${_GSD_SHIM_NAME}" ]; then GSD_TOOLS="${_GSD_RUNTIME_ROOT}/.claude/gsd-core/bin/${_GSD_SHIM_NAME}"; gsd_run() { node "$GSD_TOOLS" "$@"; }; elif command -v gsd-tools >/dev/null 2>&1; then GSD_TOOLS="$(command -v gsd-tools)"; gsd_run() { "$GSD_TOOLS" "$@"; }; elif [ -f "/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/bin/${_GSD_SHIM_NAME}" ]; then GSD_TOOLS="/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/bin/${_GSD_SHIM_NAME}"; gsd_run() { node "$GSD_TOOLS" "$@"; }; else echo "ERROR: gsd-tools.cjs not found at $GSD_TOOLS and gsd-tools is not on PATH. Run: npx -y @opengsd/gsd-core@latest --claude --local" >&2; exit 1; fi
+_GSD_SHIM_NAME="gsd-tools.cjs"; _GSD_RUNTIME_ROOT="${RUNTIME_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"; GSD_TOOLS="${_GSD_RUNTIME_ROOT}/gsd-core/bin/${_GSD_SHIM_NAME}"; if [ -f "$GSD_TOOLS" ]; then gsd_run() { node "$GSD_TOOLS" "$@"; }; elif [ -f "${_GSD_RUNTIME_ROOT}/.claude/gsd-core/bin/${_GSD_SHIM_NAME}" ]; then GSD_TOOLS="${_GSD_RUNTIME_ROOT}/.claude/gsd-core/bin/${_GSD_SHIM_NAME}"; gsd_run() { node "$GSD_TOOLS" "$@"; }; elif command -v gsd-tools >/dev/null 2>&1; then GSD_TOOLS="$(command -v gsd-tools)"; gsd_run() { "$GSD_TOOLS" "$@"; }; elif [ -f "/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/bin/${_GSD_SHIM_NAME}" ]; then GSD_TOOLS="/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/bin/${_GSD_SHIM_NAME}"; gsd_run() { node "$GSD_TOOLS" "$@"; }; else echo "ERROR: gsd-tools.cjs not found at $GSD_TOOLS and gsd-tools is not on PATH. Run: npx -y @opengsd/gsd-core@latest --claude --local" >&2; exit 1; fi
 ADVISOR_MODEL=$(gsd_run query resolve-model gsd-advisor-researcher --raw)
 ```
 
@@ -46,7 +46,7 @@ ADVISOR_MODEL=$(gsd_run query resolve-model gsd-advisor-researcher --raw)
 Read USER-PROFILE.md and check for product-owner signals:
 
 ```bash
-PROFILE_CONTENT=$(cat "/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/USER-PROFILE.md" 2>/dev/null || true)
+PROFILE_CONTENT=$(cat "/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/USER-PROFILE.md" 2>/dev/null || true)
 ```
 
 Set `NON_TECHNICAL_OWNER = true` if ANY of the following are present:
@@ -92,7 +92,7 @@ research agents.
 
    ```
    Agent(
-     prompt="First, read @/home/afgan0r/Projects/SolidGames/server-2/.claude/agents/gsd-advisor-researcher.md for your role and instructions.
+     prompt="First, read @/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/agents/gsd-advisor-researcher.md for your role and instructions.
 
      <gray_area>{area_name}: {area_description from gray area identification}</gray_area>
      <phase_context>{phase_goal and description from ROADMAP.md}</phase_context>

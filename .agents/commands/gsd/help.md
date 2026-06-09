@@ -16,7 +16,7 @@ Output ONLY the reference content of the chosen tier. Do NOT add:
 </objective>
 
 <execution_context>
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/workflows/help.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/workflows/help.md
 </execution_context>
 
 <context>
@@ -24,5 +24,5 @@ Arguments: $ARGUMENTS
 </context>
 
 <process>
-Follow /home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/workflows/help.md with $ARGUMENTS.
+Follow /home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/workflows/help.md with $ARGUMENTS.
 </process>

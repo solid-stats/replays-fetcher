@@ -21,7 +21,7 @@ Routes to the settings workflow which handles:
 </objective>
 
 <execution_context>
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/workflows/settings.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/workflows/settings.md
 </execution_context>
 
 <process>

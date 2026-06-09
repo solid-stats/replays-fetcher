@@ -216,7 +216,7 @@ gsd-core/
 
 **New Workflow:**
 - Implementation: `gsd-core/workflows/{name}.md`
-- Usage: Reference from command with `@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/workflows/{name}.md`
+- Usage: Reference from command with `@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/workflows/{name}.md`
 
 **New Reference Document:**
 - Implementation: `gsd-core/references/{name}.md`
@@ -229,12 +229,12 @@ gsd-core/
 ## Special Directories
 
 **gsd-core/**
-- Purpose: Resources installed to /home/afgan0r/Projects/SolidGames/server-2/.claude/
+- Purpose: Resources installed to /home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/
 - Source: Copied by bin/install.js during installation
 - Committed: Yes (source of truth)
 
 **commands/**
-- Purpose: Slash commands installed to /home/afgan0r/Projects/SolidGames/server-2/.claude/commands/
+- Purpose: Slash commands installed to /home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/commands/
 - Source: Copied by bin/install.js during installation
 - Committed: Yes (source of truth)
 

@@ -36,12 +36,12 @@ Mode routing:
 </routing>
 
 <execution_context>
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/workflows/add-todo.md
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/workflows/note.md
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/workflows/add-backlog.md
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/workflows/plant-seed.md
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/workflows/check-todos.md
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/references/ui-brand.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/workflows/add-todo.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/workflows/note.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/workflows/add-backlog.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/workflows/plant-seed.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/workflows/check-todos.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/references/ui-brand.md
 </execution_context>
 
 <context>

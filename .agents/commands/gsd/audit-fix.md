@@ -26,7 +26,7 @@ Flags:
 </objective>
 
 <execution_context>
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/workflows/audit-fix.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/workflows/audit-fix.md
 </execution_context>
 
 <process>

@@ -27,10 +27,10 @@ Auto-synthesizes most conflicts using the precedence rule `ADR > SPEC > PRD > DO
 </objective>
 
 <execution_context>
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/workflows/ingest-docs.md
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/references/ui-brand.md
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/references/gate-prompts.md
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/references/doc-conflict-engine.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/workflows/ingest-docs.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/references/ui-brand.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/references/gate-prompts.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/references/doc-conflict-engine.md
 </execution_context>
 
 <context>

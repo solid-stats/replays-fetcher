@@ -21,8 +21,8 @@ Output: {phase_num}-UAT.md tracking all test results. If issues found: diagnosed
 </objective>
 
 <execution_context>
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/workflows/verify-work.md
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/templates/UAT.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/workflows/verify-work.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/templates/UAT.md
 </execution_context>
 
 <context>

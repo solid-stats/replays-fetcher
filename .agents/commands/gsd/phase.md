@@ -31,10 +31,10 @@ Mode routing:
 </routing>
 
 <execution_context>
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/workflows/add-phase.md
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/workflows/insert-phase.md
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/workflows/remove-phase.md
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/workflows/edit-phase.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/workflows/add-phase.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/workflows/insert-phase.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/workflows/remove-phase.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/workflows/edit-phase.md
 </execution_context>
 
 <context>

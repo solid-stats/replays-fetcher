@@ -20,8 +20,8 @@ Output: Milestone archived (roadmap + requirements), PROJECT.md evolved, git tag
 <execution_context>
 **Load these files NOW (before proceeding):**
 
-- @/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/workflows/complete-milestone.md (main workflow)
-- @/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/templates/milestone-archive.md (archive template)
+- @/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/workflows/complete-milestone.md (main workflow)
+- @/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/templates/milestone-archive.md (archive template)
   </execution_context>
 
 <context>

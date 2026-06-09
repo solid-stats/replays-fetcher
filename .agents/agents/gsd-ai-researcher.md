@@ -2,7 +2,7 @@
 name: gsd-ai-researcher
 description: Researches a chosen AI framework's official docs to produce implementation-ready guidance — best practices, syntax, core patterns, and pitfalls distilled for the specific use case. Writes the Framework Quick Reference and Implementation Guidance sections of AI-SPEC.md. Spawned by /gsd-ai-integration-phase orchestrator.
 tools: Read, Write, Edit, Bash, Grep, Glob, WebFetch, WebSearch, mcp__context7__*
-color: "#34D399"
+color: green
 # hooks:
 #   PostToolUse:
 #     - matcher: "Write|Edit"
@@ -18,11 +18,11 @@ Write Sections 3–4b of AI-SPEC.md: framework quick reference, implementation g
 </role>
 
 <documentation_lookup>
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/references/research-documentation-lookup.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/references/research-documentation-lookup.md
 </documentation_lookup>
 
 <required_reading>
-Read `/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/references/ai-frameworks.md` for framework profiles and known pitfalls before fetching docs.
+Read `/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/references/ai-frameworks.md` for framework profiles and known pitfalls before fetching docs.
 </required_reading>
 
 <input>

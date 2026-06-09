@@ -44,7 +44,7 @@ Issues without a severity classification are not valid output.
 </adversarial_stance>
 
 <required_reading>
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/references/gates.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/references/gates.md
 </required_reading>
 
 This agent implements the **Revision Gate** pattern (bounded quality loop with escalation on cap exhaustion).
@@ -104,10 +104,10 @@ Same methodology (goal-backward), different timing, different subject matter.
 <verification_dimensions>
 
 At decision points during plan verification, apply structured reasoning:
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/references/thinking-models-planning.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/references/thinking-models-planning.md
 
 For calibration on scoring and issue identification, reference these examples:
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/references/few-shot-examples/plan-checker.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/references/few-shot-examples/plan-checker.md
 
 ## Dimension 1: Requirement Coverage
 

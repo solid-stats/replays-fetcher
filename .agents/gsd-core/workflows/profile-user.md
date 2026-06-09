@@ -8,9 +8,9 @@ This workflow wires Phase 1 (session pipeline) and Phase 2 (profiling engine) in
 Read all files referenced by the invoking prompt's execution_context before starting.
 
 Key references:
-- @/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/references/ui-brand.md (display patterns)
-- @/home/afgan0r/Projects/SolidGames/server-2/.claude/agents/gsd-user-profiler.md (profiler agent definition)
-- @/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/references/user-profiling.md (profiling reference doc)
+- @/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/references/ui-brand.md (display patterns)
+- @/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/agents/gsd-user-profiler.md (profiler agent definition)
+- @/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/references/user-profiling.md (profiling reference doc)
 </required_reading>
 
 <process>
@@ -24,7 +24,7 @@ Parse flags from $ARGUMENTS:
 Check for existing profile:
 
 ```bash
-PROFILE_PATH="/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/USER-PROFILE.md"
+PROFILE_PATH="/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/USER-PROFILE.md"
 [ -f "$PROFILE_PATH" ] && echo "EXISTS" || echo "NOT_FOUND"
 ```
 
@@ -48,7 +48,7 @@ If "Cancel": Display "No changes made." and exit.
 
 Backup existing profile:
 ```bash
-cp "/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/USER-PROFILE.md" "/home/afgan0r/Projects/SolidGames/server-2/.claude/USER-PROFILE.backup.md"
+cp "/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/USER-PROFILE.md" "/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/USER-PROFILE.backup.md"
 ```
 
 Display: "Re-analyzing your sessions to update your profile."
@@ -92,7 +92,7 @@ Your recent Claude Code sessions, looking for patterns in these
 
 ✓ Reads session files locally (read-only, nothing modified)
 ✓ Analyzes message patterns (not content meaning)
-✓ Stores profile at /home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/USER-PROFILE.md
+✓ Stores profile at /home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/USER-PROFILE.md
 ✗ Nothing is sent to external services
 ✗ Sensitive content (API keys, passwords) is automatically excluded
 ```
@@ -130,7 +130,7 @@ Display: "◆ Scanning sessions..."
 
 Run session scan:
 ```bash
-_GSD_SHIM_NAME="gsd-tools.cjs"; _GSD_RUNTIME_ROOT="${RUNTIME_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"; GSD_TOOLS="${_GSD_RUNTIME_ROOT}/gsd-core/bin/${_GSD_SHIM_NAME}"; if [ -f "$GSD_TOOLS" ]; then gsd_run() { node "$GSD_TOOLS" "$@"; }; elif [ -f "${_GSD_RUNTIME_ROOT}/.claude/gsd-core/bin/${_GSD_SHIM_NAME}" ]; then GSD_TOOLS="${_GSD_RUNTIME_ROOT}/.claude/gsd-core/bin/${_GSD_SHIM_NAME}"; gsd_run() { node "$GSD_TOOLS" "$@"; }; elif command -v gsd-tools >/dev/null 2>&1; then GSD_TOOLS="$(command -v gsd-tools)"; gsd_run() { "$GSD_TOOLS" "$@"; }; elif [ -f "/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/bin/${_GSD_SHIM_NAME}" ]; then GSD_TOOLS="/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/bin/${_GSD_SHIM_NAME}"; gsd_run() { node "$GSD_TOOLS" "$@"; }; else echo "ERROR: gsd-tools.cjs not found at $GSD_TOOLS and gsd-tools is not on PATH. Run: npx -y @opengsd/gsd-core@latest --claude --local" >&2; exit 1; fi
+_GSD_SHIM_NAME="gsd-tools.cjs"; _GSD_RUNTIME_ROOT="${RUNTIME_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"; GSD_TOOLS="${_GSD_RUNTIME_ROOT}/gsd-core/bin/${_GSD_SHIM_NAME}"; if [ -f "$GSD_TOOLS" ]; then gsd_run() { node "$GSD_TOOLS" "$@"; }; elif [ -f "${_GSD_RUNTIME_ROOT}/.claude/gsd-core/bin/${_GSD_SHIM_NAME}" ]; then GSD_TOOLS="${_GSD_RUNTIME_ROOT}/.claude/gsd-core/bin/${_GSD_SHIM_NAME}"; gsd_run() { node "$GSD_TOOLS" "$@"; }; elif command -v gsd-tools >/dev/null 2>&1; then GSD_TOOLS="$(command -v gsd-tools)"; gsd_run() { "$GSD_TOOLS" "$@"; }; elif [ -f "/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/bin/${_GSD_SHIM_NAME}" ]; then GSD_TOOLS="/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/bin/${_GSD_SHIM_NAME}"; gsd_run() { node "$GSD_TOOLS" "$@"; }; else echo "ERROR: gsd-tools.cjs not found at $GSD_TOOLS and gsd-tools is not on PATH. Run: npx -y @opengsd/gsd-core@latest --claude --local" >&2; exit 1; fi
 SCAN_RESULT=$(gsd_run query scan-sessions --json 2>/dev/null)
 ```
 
@@ -164,13 +164,13 @@ Display: "◆ Analyzing patterns..."
 
 Use the Task tool to spawn the `gsd-user-profiler` agent. Provide it with:
 - The sampled JSONL file path from profile-sample output
-- The user-profiling reference doc at `/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/references/user-profiling.md`
+- The user-profiling reference doc at `/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/references/user-profiling.md`
 
 The agent prompt should follow this structure:
 ```
 Read the profiling reference document and the sampled session messages, then analyze the developer's behavioral patterns across all 8 dimensions.
 
-Reference: @/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/references/user-profiling.md
+Reference: @/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/references/user-profiling.md
 Session data: @{temp_dir}/profile-sample.jsonl
 
 Analyze these messages and return your analysis in the <analysis> JSON format specified in the reference document.
@@ -275,7 +275,7 @@ Display: "◆ Writing profile..."
 gsd_run query write-profile --input "$ANALYSIS_PATH" --json
 ```
 
-Display: "✓ Profile written to /home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/USER-PROFILE.md"
+Display: "✓ Profile written to /home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/USER-PROFILE.md"
 
 ---
 
@@ -338,9 +338,9 @@ Use AskUserQuestion with multiSelect:
 - options (ALL pre-selected by default):
   - "/gsd-dev-preferences command file" -- "Load your preferences in any session"
   - "CLAUDE.md profile section" -- "Add profile to this project's CLAUDE.md"
-  - "Global CLAUDE.md" -- "Add profile to /home/afgan0r/Projects/SolidGames/server-2/.claude/CLAUDE.md for all projects"
+  - "Global CLAUDE.md" -- "Add profile to /home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/CLAUDE.md for all projects"
 
-**If no artifacts selected:** Display "No artifacts generated. Your profile is saved at /home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/USER-PROFILE.md" and jump to step 10.
+**If no artifacts selected:** Display "No artifacts generated. Your profile is saved at /home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/USER-PROFILE.md" and jump to step 10.
 
 ---
 
@@ -354,7 +354,7 @@ Generate selected artifacts sequentially (file I/O is fast, no benefit from para
 gsd_run query generate-dev-preferences --analysis "$ANALYSIS_PATH" --json
 ```
 
-Display: "✓ Generated /gsd-dev-preferences at /home/afgan0r/Projects/SolidGames/server-2/.claude/skills/gsd-dev-preferences/SKILL.md"
+Display: "✓ Generated /gsd-dev-preferences at /home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/skills/gsd-dev-preferences/SKILL.md"
 
 **For CLAUDE.md profile section (if selected):**
 
@@ -370,7 +370,7 @@ Display: "✓ Added profile section to CLAUDE.md"
 gsd_run query generate-claude-profile --analysis "$ANALYSIS_PATH" --global --json
 ```
 
-Display: "✓ Added profile section to /home/afgan0r/Projects/SolidGames/server-2/.claude/CLAUDE.md"
+Display: "✓ Added profile section to /home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/CLAUDE.md"
 
 **Error handling:** If any `gsd-tools.cjs query` or gsd-tools.cjs call fails, display the error message and use AskUserQuestion to offer "Retry" or "Skip this artifact". On retry, re-run the command. On skip, continue to next artifact.
 
@@ -384,7 +384,7 @@ Read both old backup and new analysis to compare dimension ratings/confidence.
 
 Read the backed-up profile:
 ```bash
-BACKUP_PATH="/home/afgan0r/Projects/SolidGames/server-2/.claude/USER-PROFILE.backup.md"
+BACKUP_PATH="/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/USER-PROFILE.backup.md"
 ```
 
 Compare each dimension's rating and confidence between old and new. Display diff table showing only changed dimensions:
@@ -407,15 +407,15 @@ If nothing changed: Display "No changes detected -- your profile is already up t
  GSD > PROFILE COMPLETE ✓
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Your profile:    /home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/USER-PROFILE.md
+Your profile:    /home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/USER-PROFILE.md
 ```
 
 Then list paths for each generated artifact:
 ```
 Artifacts:
-  ✓ /gsd-dev-preferences   /home/afgan0r/Projects/SolidGames/server-2/.claude/skills/gsd-dev-preferences/SKILL.md
+  ✓ /gsd-dev-preferences   /home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/skills/gsd-dev-preferences/SKILL.md
   ✓ CLAUDE.md section       ./CLAUDE.md
-  ✓ Global CLAUDE.md        /home/afgan0r/Projects/SolidGames/server-2/.claude/CLAUDE.md
+  ✓ Global CLAUDE.md        /home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/CLAUDE.md
 ```
 
 (Only show artifacts that were actually generated.)

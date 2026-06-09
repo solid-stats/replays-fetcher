@@ -8,7 +8,7 @@
 ## Dispatch
 
 ```
-Read @/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/workflows/discuss-phase-power.md
+Read @/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/workflows/discuss-phase-power.md
 ```
 
 Execute it end-to-end. Do not continue with the standard interactive steps.

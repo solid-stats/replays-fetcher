@@ -20,7 +20,7 @@ planning via /gsd-plan-phase --reviews.
 </objective>
 
 <execution_context>
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/workflows/review.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/workflows/review.md
 </execution_context>
 
 <context>

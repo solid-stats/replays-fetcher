@@ -2,7 +2,7 @@
 name: gsd-eval-planner
 description: Designs a structured evaluation strategy for an AI phase. Identifies critical failure modes, selects eval dimensions with rubrics, recommends tooling, and specifies the reference dataset. Writes the Evaluation Strategy, Guardrails, and Production Monitoring sections of AI-SPEC.md. Spawned by /gsd-ai-integration-phase orchestrator.
 tools: Read, Write, Edit, Bash, Grep, Glob, AskUserQuestion
-color: "#F59E0B"
+color: orange
 # hooks:
 #   PostToolUse:
 #     - matcher: "Write|Edit"
@@ -18,7 +18,7 @@ Turn domain rubric ingredients into measurable, tooled evaluation criteria. Writ
 </role>
 
 <required_reading>
-Read `/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/references/ai-evals.md` before planning. This is your evaluation framework.
+Read `/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/references/ai-evals.md` before planning. This is your evaluation framework.
 </required_reading>
 
 <input>

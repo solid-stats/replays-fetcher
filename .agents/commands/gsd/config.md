@@ -32,9 +32,9 @@ Mode routing:
 </routing>
 
 <execution_context>
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/workflows/settings.md
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/workflows/settings-advanced.md
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/workflows/settings-integrations.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/workflows/settings.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/workflows/settings-advanced.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/workflows/settings-integrations.md
 </execution_context>
 
 <context>

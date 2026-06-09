@@ -19,7 +19,7 @@ Spawned by `discuss-phase` via `Task()`. You do NOT present output directly to t
 </role>
 
 <documentation_lookup>
-@/home/afgan0r/Projects/SolidGames/server-2/.claude/gsd-core/references/research-documentation-lookup.md
+@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/references/research-documentation-lookup.md
 </documentation_lookup>
 
 <input>
