@@ -77,7 +77,10 @@ const RESUME_INVOCATION = "replays-fetcher run-once --resume";
 
 export async function runOnce(input: RunOnceInput): Promise<RunOnceResult> {
   const startedAt = input.now().toISOString();
-  const slug = input.sourceUrl.toString();
+  // The slug is persisted in the checkpoint body and reaches promotion_evidence;
+  // strip any userinfo (user:pass@host) so credentials never land in a durable
+  // artifact (WR-02 / threat T-09-01).
+  const slug = sanitizeSourceUrl(input.sourceUrl);
   const discoveryReport = emptyDiscoveryReport(slug);
   const rawStorage: StoreRawReplayResult[] = [];
   const staging: IngestStagingResult[] = [];
@@ -86,6 +89,11 @@ export async function runOnce(input: RunOnceInput): Promise<RunOnceResult> {
   const resumeState = await resolveResumeState(input, slug);
   const pages: Record<string, CheckpointPage> = { ...resumeState.pages };
   let lastCompletedPage = resumeState.startPage - FIRST_PAGE;
+  // The ETag is a moving cursor: each write returns the object's NEW ETag, which
+  // the NEXT write must use for its IfMatch precondition. Reusing the start ETag
+  // for every write would 412 on page 2..N and lose the final `complete` status
+  // through a merge tie-break (CR-01).
+  let { etag } = resumeState;
 
   for (let page = resumeState.startPage; page <= maxPages; page += 1) {
     const pageUrl = toPageUrl(input.sourceUrl, page);
@@ -111,8 +119,8 @@ export async function runOnce(input: RunOnceInput): Promise<RunOnceResult> {
     lastCompletedPage = page;
     pages[String(page)] = { counts: pageCounts, status: "running" };
     // eslint-disable-next-line no-await-in-loop
-    await writePageCheckpoint(input, {
-      etag: resumeState.etag,
+    etag = await writePageCheckpoint(input, {
+      etag,
       lastCompletedPage: page,
       pages,
       slug,
@@ -122,14 +130,28 @@ export async function runOnce(input: RunOnceInput): Promise<RunOnceResult> {
 
   return assembleResult(input, {
     discoveryReport,
+    etag,
     lastCompletedPage,
     pages,
     rawStorage,
-    resumeState,
     slug,
     staging,
     startedAt,
   });
+}
+
+/**
+ * Normalize the source URL for durable persistence: drop any `username`/
+ * `password` userinfo so an operator-supplied `https://user:pass@host/...`
+ * never leaks credentials into the checkpoint body or promotion_evidence
+ * (WR-02, threat T-09-01). Identity (host + path + query) is preserved.
+ */
+function sanitizeSourceUrl(sourceUrl: URL): string {
+  const cleaned = new URL(sourceUrl);
+  cleaned.username = "";
+  cleaned.password = "";
+
+  return cleaned.toString();
 }
 
 interface ProcessPageInput {
@@ -245,7 +267,7 @@ interface WritePageCheckpointInput {
 async function writePageCheckpoint(
   input: RunOnceInput,
   page: WritePageCheckpointInput,
-): Promise<void> {
+): Promise<string | undefined> {
   const checkpoint = buildCheckpoint(input, {
     lastCompletedPage: page.lastCompletedPage,
     pages: page.pages,
@@ -255,15 +277,22 @@ async function writePageCheckpoint(
   });
 
   try {
-    await input.checkpointStore.write(
+    const result = await input.checkpointStore.write(
       writeInput(page.slug, checkpoint, page.etag),
     );
+
+    // Carry the object's new ETag forward so the next write's IfMatch matches
+    // the current object instead of 412-ing on a stale start ETag (CR-01).
+    return result.etag;
   } catch {
-    // A transient (non-precondition) checkpoint-write error must never fail the run.
+    // A transient (non-precondition) checkpoint-write error must never fail the
+    // run. The ETag is unchanged on failure, so reuse the one we held.
     input.log?.warn(
       { page: page.lastCompletedPage, slug: page.slug },
       "checkpoint write failed; continuing run",
     );
+
+    return page.etag;
   }
 }
 
@@ -281,10 +310,10 @@ function writeInput(
 
 interface AssembleResultInput {
   readonly discoveryReport: MutableDiscoveryReport;
+  readonly etag: string | undefined;
   readonly lastCompletedPage: number;
   readonly pages: Record<string, CheckpointPage>;
   readonly rawStorage: readonly StoreRawReplayResult[];
-  readonly resumeState: ResumeState;
   readonly slug: string;
   readonly staging: readonly IngestStagingResult[];
   readonly startedAt: string;
@@ -375,8 +404,12 @@ async function writeFinalCheckpoint(
   });
 
   try {
+    // The final complete-checkpoint write uses the LATEST ETag carried through
+    // the page loop, not the stale start ETag, so it lands as `status:
+    // "complete"` without a spurious 412 + merge that would downgrade it to
+    // `running` (CR-01).
     await input.checkpointStore.write(
-      writeInput(context.slug, checkpoint, context.resumeState.etag),
+      writeInput(context.slug, checkpoint, context.etag),
     );
   } catch {
     input.log?.warn(

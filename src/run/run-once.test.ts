@@ -530,6 +530,7 @@ test("runOnce should auto-skip a complete checkpoint and run a clean page-1", as
 });
 
 test("runOnce should run a clean page-1 when --resume is set on a complete checkpoint", async () => {
+  const info = vi.fn();
   const discovered: string[] = [];
   const discover = vi.fn(async ({ sourceUrl }: { sourceUrl: URL }) => {
     discovered.push(sourceUrl.searchParams.get("p") ?? "1");
@@ -543,6 +544,7 @@ test("runOnce should run a clean page-1 when --resume is set on a complete check
       makeCheckpoint({ lastCompletedPage: twoPages, status: "complete" }),
     ),
     discoverReplays: discover,
+    log: { info } as never,
     now: createClock([startedAt, finishedAt]),
     resume: true,
     runId: "run-complete-resume",
@@ -555,6 +557,146 @@ test("runOnce should run a clean page-1 when --resume is set on a complete check
   });
 
   expect(discovered).toStrictEqual(["1"]);
+  // --resume is a live contract (CR-02): the explicit-re-run branch logs a
+  // distinct message, observably different from the auto-skip path.
+  expect(info).toHaveBeenCalledWith(
+    expect.objectContaining({ slug: "https://example.test/replays" }),
+    expect.stringContaining("re-running the full corpus"),
+  );
+});
+
+test("runOnce should log the auto-skip branch (no --resume) on a complete checkpoint", async () => {
+  const info = vi.fn();
+  const discover = vi.fn(async ({ sourceUrl }: { sourceUrl: URL }) =>
+    discoveryReport({ candidates: [], sourceUrl: sourceUrl.toString() }),
+  );
+
+  await runOnce({
+    byteClient: { fetchBytes: vi.fn() },
+    checkpointStore: fakeCheckpointStore(
+      makeCheckpoint({ lastCompletedPage: twoPages, status: "complete" }),
+    ),
+    discoverReplays: discover,
+    log: { info } as never,
+    now: createClock([startedAt, finishedAt]),
+    runId: "run-complete-auto-log",
+    sourceClient: { fetchText: vi.fn() },
+    sourceUrl: new URL("https://example.test/replays"),
+    stageRawReplay: vi.fn(),
+    stagingRepository: { stage: vi.fn() },
+    storage: { storeRawReplay: vi.fn() },
+    storeRawReplay: vi.fn(),
+  });
+
+  expect(info).toHaveBeenCalledWith(
+    expect.objectContaining({ slug: "https://example.test/replays" }),
+    expect.stringContaining("auto-resumed"),
+  );
+});
+
+test("runOnce threads each write ETag forward so a multi-page run lands complete without a spurious 412", async () => {
+  // An ETag-enforcing store: every successful write returns a NEW etag; a write
+  // whose IfMatch etag does not match the store's current etag throws 412. This
+  // proves runOnce carries each write's returned etag into the next write
+  // (CR-01) — reusing the start etag would 412 on page 2 and on the final write.
+  const HTTP_PRECONDITION_FAILED = 412;
+  const lastIndex = -1;
+  // A mutable holder keeps the store's "current etag" without a bare
+  // uninitialized `let` (init-declarations) or a useless `= undefined`.
+  const state: { current?: string; counter: number; failures: number } = {
+    counter: 0,
+    failures: 0,
+  };
+  const persisted: CheckpointWriteInput[] = [];
+
+  const checkpointStore: S3CheckpointStore = {
+    async read() {
+      return {};
+    },
+    async write(input: CheckpointWriteInput) {
+      if (input.etag !== state.current) {
+        state.failures += 1;
+        const error = new Error("stale etag") as Error & {
+          readonly status: number;
+        };
+
+        throw Object.assign(error, { status: HTTP_PRECONDITION_FAILED });
+      }
+
+      state.counter += 1;
+      state.current = `"etag-${String(state.counter)}"`;
+      persisted.push(input);
+
+      return { etag: state.current };
+    },
+  };
+
+  await runOnce({
+    byteClient: { fetchBytes: vi.fn() },
+    checkpointStore,
+    discoverReplays: async ({ sourceUrl }: { sourceUrl: URL }) =>
+      discoveryReport({
+        candidates: [replayCandidate("100", "replay.ocap")],
+        sourceUrl: sourceUrl.toString(),
+      }),
+    maxPages: twoPages,
+    now: createClock([startedAt, finishedAt]),
+    runId: "run-etag-thread",
+    sourceClient: { fetchText: vi.fn() },
+    sourceUrl: new URL("https://example.test/replays"),
+    async stageRawReplay() {
+      return { stagingId: "staging", status: "staged" };
+    },
+    stagingRepository: { stage: vi.fn() },
+    storage: { storeRawReplay: vi.fn() },
+    async storeRawReplay() {
+      return rawStored();
+    },
+  });
+
+  // No write ever saw a stale etag: page 1, page 2, and the final complete
+  // write all matched the store's current etag.
+  expect(state.failures).toBe(0);
+  const finalWrite = persisted.at(lastIndex);
+  expect(finalWrite?.checkpoint.status).toBe("complete");
+  expect(finalWrite?.checkpoint.lastCompletedPage).toBe(twoPages);
+});
+
+test("runOnce strips userinfo from the source URL before persisting it (no credential leak)", async () => {
+  const checkpointStore = fakeCheckpointStore();
+  const secret = "s3cr3t-pass";
+
+  const result = await runOnce({
+    byteClient: { fetchBytes: vi.fn() },
+    checkpointStore,
+    async discoverReplays() {
+      return discoveryReport();
+    },
+    now: createClock([startedAt, finishedAt]),
+    runId: "run-userinfo",
+    sourceClient: { fetchText: vi.fn() },
+    sourceUrl: new URL(`https://operator:${secret}@example.test/replays`),
+    async stageRawReplay() {
+      return { stagingId: "staging", status: "staged" };
+    },
+    stagingRepository: { stage: vi.fn() },
+    storage: { storeRawReplay: vi.fn() },
+    async storeRawReplay() {
+      return rawStored();
+    },
+  });
+
+  const persistedCheckpoints = JSON.stringify(
+    checkpointStore.writes.map((write) => write.checkpoint),
+  );
+  expect(persistedCheckpoints).not.toContain(secret);
+  expect(persistedCheckpoints).not.toContain("operator:");
+  expect(JSON.stringify(result.summary)).not.toContain(secret);
+  // Identity (host + path) is preserved, only userinfo is stripped.
+  const [firstWrite] = checkpointStore.writes;
+  expect(firstWrite?.checkpoint.sourceUrl).toBe(
+    "https://example.test/replays",
+  );
 });
 
 test("runOnce should write a checkpoint once per completed page with that page number", async () => {
