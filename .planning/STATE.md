@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Full-Corpus Ingest Resilience
 status: executing
-last_updated: "2026-06-08T18:08:37Z"
+last_updated: "2026-06-09T03:49:36.200Z"
 last_activity: 2026-06-08 -- Completed 09-02-PLAN.md (run_id in promotion_evidence, checkpoint config prefix)
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 12
-  completed_plans: 9
-  percent: 38
+  completed_plans: 10
+  percent: 33
 ---
 
 # Project State
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 ## Current Position
 
 Phase: 9 (Checkpoint and Resume) — EXECUTING
-Plan: 3 of 5
+Plan: 4 of 5
 Status: Ready to execute
 Last activity: 2026-06-08 -- Completed 09-02-PLAN.md (run_id in promotion_evidence, checkpoint config prefix)
 
@@ -99,6 +99,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: Phase 9: Checkpoint type derived from checkpointSchema via z.infer (single source of truth); details flattened via toDetailsRecord to keep an interface without an as cast
 - [Phase 09-02]: RESUME-04 run identity is the snake_case `run_id` key stamped additively into the existing `promotion_evidence` jsonb (no new column/table/SQL); TS option stays camelCase `runId`. camelcase eslint disable only on value writes, not interface members. server-2 currently merges promotion_evidence as opaque jsonb (no run_id reader yet).
 - [Phase 09-02]: Checkpoint S3 prefix is operator-configurable via `s3.checkpointPrefix` (env `S3_CHECKPOINT_PREFIX`, Zod min(1) default "checkpoints"); non-secret, visible in redactConfig, shares the existing bucket.
+- [Phase ?]: RunStatus taxonomy: resumable absorbs any recoverable (transient/rate_limited) stop; partial = non-recoverable with >=1 page done; failed = no page + non-recoverable
 
 ### Roadmap Evolution
 
@@ -169,3 +170,4 @@ Plan Phase 7 (v2 Foundations) with `/gsd:plan-phase 7`.
 | Phase 09 P01 | 35min | 2 tasks | 4 files |
 | Phase 09 P01 | 13 | 2 tasks | 4 files |
 | Phase 09 P02 | 7min | 3 tasks | 9 files |
+| Phase 09 P03 | 13min | 2 tasks | 3 files |
