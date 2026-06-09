@@ -52,6 +52,29 @@ test("stageRawReplay should map stageable raw evidence and call the staging repo
   });
 });
 
+test("stageRawReplay should stamp the run identity into promotion_evidence.run_id", async () => {
+  const payloads: IngestStagingPayload[] = [];
+  await stageRawReplay({
+    rawResult: rawEvidence,
+    repository: {
+      async stage(payload) {
+        payloads.push(payload);
+
+        return {
+          stagingId: "00000000-0000-4000-8000-000000000001",
+          status: "staged",
+        };
+      },
+    },
+    runId: "run-1778269931",
+  });
+
+  expect(payloads[0]?.promotionEvidence).toMatchObject({
+    // eslint-disable-next-line camelcase -- run_id is the cross-service promotion_evidence jsonb contract key (RESUME-04)
+    run_id: "run-1778269931",
+  });
+});
+
 test("stageRawReplay should skip non-stageable fetch or storage failures", async () => {
   const rawResults: StoreRawReplayResult[] = [
     {

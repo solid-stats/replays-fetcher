@@ -11,6 +11,7 @@ export interface StagingRepository {
 interface StageRawReplayInput {
   readonly rawResult: StoreRawReplayResult;
   readonly repository: StagingRepository;
+  readonly runId?: string;
 }
 
 export async function stageRawReplay(
@@ -23,7 +24,10 @@ export async function stageRawReplay(
     };
   }
 
-  const payloadResult = toIngestStagingPayload(input.rawResult);
+  const payloadResult = toIngestStagingPayload(
+    input.rawResult,
+    payloadOptions(input.runId),
+  );
 
   if (!payloadResult.stageable) {
     return {
@@ -33,6 +37,14 @@ export async function stageRawReplay(
   }
 
   return input.repository.stage(payloadResult.payload);
+}
+
+function payloadOptions(runId: string | undefined): { runId?: string } {
+  if (runId === undefined) {
+    return {};
+  }
+
+  return { runId };
 }
 
 function isRawStorageEvidence(

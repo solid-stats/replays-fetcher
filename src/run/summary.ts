@@ -175,7 +175,7 @@ function sourceFailureClassification(
  * or secret is copied (DIAG-04). Returns undefined when the run had no
  * source-level failure.
  */
-function deriveSourceFailure(
+export function deriveSourceFailure(
   discoveryReport: DiscoveryReport,
 ): RunSourceFailure | undefined {
   if (discoveryReport.ok) {
