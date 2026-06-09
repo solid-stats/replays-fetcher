@@ -181,10 +181,7 @@ export function mergeCheckpoints(
   return merged;
 }
 
-function pickHigherProgress(
-  local: Checkpoint,
-  remote: Checkpoint,
-): Checkpoint {
+function pickHigherProgress(local: Checkpoint, remote: Checkpoint): Checkpoint {
   if (local.lastCompletedPage > remote.lastCompletedPage) {
     return local;
   }

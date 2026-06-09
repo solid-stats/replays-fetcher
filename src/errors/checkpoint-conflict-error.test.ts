@@ -43,14 +43,19 @@ test("CheckpointConflictError details carry no body, secret, or HTML", () => {
   });
   const serialized = JSON.stringify(error.details);
 
-  expect(serialized).not.toMatch(/<html|<!doctype|body|secret|password|token/iu);
+  expect(serialized).not.toMatch(
+    /<html|<!doctype|body|secret|password|token/iu,
+  );
 });
 
 test("CheckpointConflictError preserves a passed cause", () => {
   const cause = new Error("412 Precondition Failed");
-  const error = new CheckpointConflictError({ slug: "sg-zone-replays" }, {
-    cause,
-  });
+  const error = new CheckpointConflictError(
+    { slug: "sg-zone-replays" },
+    {
+      cause,
+    },
+  );
 
   expect(error.cause).toBe(cause);
 });

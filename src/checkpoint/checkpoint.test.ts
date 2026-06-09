@@ -107,7 +107,9 @@ test("CheckpointSourceFailure stays compatible with RunSourceFailure", () => {
 test("a stringified checkpoint carries no body, secret, or HTML fields", () => {
   const serialized = JSON.stringify(validCheckpoint);
 
-  expect(serialized).not.toMatch(/<html|<!doctype|body|secret|password|token/iu);
+  expect(serialized).not.toMatch(
+    /<html|<!doctype|body|secret|password|token/iu,
+  );
 });
 
 const FIRST_PAGE = 1;
