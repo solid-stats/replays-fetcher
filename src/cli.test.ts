@@ -1074,6 +1074,59 @@ test("buildCli should reject staging without raw storage", async () => {
   expect(process.exitCode).toBe(2);
 });
 
+test("buildCli run-once should keep checkpoint warn logs on stderr while stdout stays a single clean JSON summary", async () => {
+  stubValidEnvironment();
+  const writes: string[] = [];
+  const logLines: string[] = [];
+  vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+    writes.push(String(chunk));
+    return true;
+  });
+
+  // The REAL runOnce drives one page; the checkpoint store's write rejects so a
+  // genuine "checkpoint write failed" warn is emitted. WR-04: that warn must
+  // land on the captured stderr destination, never on stdout, and the stdout
+  // summary must remain a single parseable JSON document.
+  await buildCli({
+    ...createCapturingLogger(logLines),
+    createPostgresStagingRepositoryFromDatabaseUrl: () => ({ stage: vi.fn() }),
+    createReplayByteClient: () => ({ fetchBytes: vi.fn() }),
+    createRunId: () => "run-stderr-isolation",
+    createS3CheckpointStoreFromConfig: () => ({
+      async read() {
+        return {};
+      },
+      async write() {
+        throw new Error("transient checkpoint failure");
+      },
+    }),
+    createS3RawReplayStorageFromConfig: () => ({ storeRawReplay: vi.fn() }),
+    createSourceClient: () => ({ fetchText: vi.fn() }),
+    now: () => new Date("2026-05-09T12:00:00.000Z"),
+    async discoverReplaysDryRun(input) {
+      return {
+        candidates: [],
+        counts: { candidates: 0, diagnostics: 0, discovered: 0 },
+        diagnostics: [],
+        generatedAt: "2026-05-09T12:00:00.000Z",
+        mode: "dry-run",
+        ok: true,
+        sourceUrl: input.sourceUrl.toString(),
+      };
+    },
+  }).parseAsync(["node", "replays-fetcher", "run-once"]);
+
+  // (1) stdout is exactly one clean JSON document (the run summary).
+  const summary = parseCliOutput(writes);
+  expect(summary).toMatchObject({ mode: "run-once" });
+  expect(writes.join("").trimEnd().split("\n}\n{").length).toBe(1);
+
+  // (2) the checkpoint warn is on the captured stderr destination, not stdout.
+  const stderr = logLines.join("");
+  expect(stderr).toContain("checkpoint write failed");
+  expect(writes.join("")).not.toContain("checkpoint write failed");
+});
+
 test("buildCli run-once should execute one scheduled cycle and write a structured summary", async () => {
   stubValidEnvironment();
   const writes: string[] = [];
