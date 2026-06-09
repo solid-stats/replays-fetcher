@@ -229,6 +229,49 @@ test("mergeCheckpoints prefers the local side when it has higher progress", () =
   expect(merged.updatedAt).toBe("2026-06-09T00:20:00.000Z");
 });
 
+test("mergeCheckpoints keeps complete over running at an equal page (remote complete)", () => {
+  // The local in-progress write (running) loses the tie to the remote terminal
+  // (complete) at the SAME page, so a merge never downgrades a finished run
+  // back to running (BL-01 / CR-01).
+  const local: Checkpoint = {
+    ...validCheckpoint,
+    lastCompletedPage: HIGHER_COMPLETED_PAGE,
+    status: "running",
+    updatedAt: "2026-06-09T00:01:00.000Z",
+  };
+  const remote: Checkpoint = {
+    ...validCheckpoint,
+    lastCompletedPage: HIGHER_COMPLETED_PAGE,
+    status: "complete",
+    updatedAt: "2026-06-09T00:09:00.000Z",
+  };
+
+  const merged = mergeCheckpoints(local, remote);
+
+  expect(merged.status).toBe("complete");
+  expect(merged.updatedAt).toBe("2026-06-09T00:09:00.000Z");
+});
+
+test("mergeCheckpoints keeps complete over running at an equal page (local complete)", () => {
+  const local: Checkpoint = {
+    ...validCheckpoint,
+    lastCompletedPage: HIGHER_COMPLETED_PAGE,
+    status: "complete",
+    updatedAt: "2026-06-09T00:09:00.000Z",
+  };
+  const remote: Checkpoint = {
+    ...validCheckpoint,
+    lastCompletedPage: HIGHER_COMPLETED_PAGE,
+    status: "running",
+    updatedAt: "2026-06-09T00:01:00.000Z",
+  };
+
+  const merged = mergeCheckpoints(local, remote);
+
+  expect(merged.status).toBe("complete");
+  expect(merged.updatedAt).toBe("2026-06-09T00:09:00.000Z");
+});
+
 test("mergeCheckpoints omits lastSourceFailure when the winner has none", () => {
   const withoutFailure: Checkpoint = {
     counts: validCheckpoint.counts,

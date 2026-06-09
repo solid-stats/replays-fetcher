@@ -139,11 +139,31 @@ export function resumeStartPage(checkpoint?: Checkpoint): number {
 }
 
 /**
+ * Status precedence for merge tie-breaks (BL-01). A higher rank is a "more
+ * determined" lifecycle state that must never be downgraded by a concurrent
+ * writer at the SAME progress: a terminal `complete` outranks the in-progress
+ * `running`, so an equal-page merge can never silently lose a finished run's
+ * `complete` status.
+ */
+const statusRanks: Readonly<Record<CheckpointStatus, number>> = {
+  complete: 5,
+  failed: 4,
+  partial: 3,
+  resumable: 2,
+  running: 1,
+};
+
+function statusRank(status: CheckpointStatus): number {
+  return statusRanks[status];
+}
+
+/**
  * Resolve a checkpoint write conflict by merging two views of the same run
  * (RESUME-02). Keeps the maximum `lastCompletedPage`/`discoveredLastPage`, the
  * union of per-page entries, and adopts the aggregate `counts`, `updatedAt`, and
- * `status` of whichever side reached the higher `lastCompletedPage` (the
- * higher-progress side wins ties via `remote`). Pure; the S3 re-read+retry path
+ * `status` of the higher-progress side. Progress is `lastCompletedPage` first;
+ * at EQUAL pages the higher status rank wins (`complete` > `running`) so a merge
+ * never downgrades a terminal status (BL-01). Pure; the S3 re-read+retry path
  * that calls this lives in Plan 04.
  */
 export function mergeCheckpoints(
@@ -183,6 +203,17 @@ export function mergeCheckpoints(
 
 function pickHigherProgress(local: Checkpoint, remote: Checkpoint): Checkpoint {
   if (local.lastCompletedPage > remote.lastCompletedPage) {
+    return local;
+  }
+
+  if (local.lastCompletedPage < remote.lastCompletedPage) {
+    return remote;
+  }
+
+  // Equal progress: the more-determined status wins so `complete` is never
+  // downgraded to `running` (BL-01). `local` wins exact ties to keep the
+  // intended write (the side the caller is trying to persist).
+  if (statusRank(local.status) >= statusRank(remote.status)) {
     return local;
   }
 
