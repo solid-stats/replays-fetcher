@@ -22,6 +22,8 @@ export type SourceFailureClassification =
   | "rate_limited"
   | "transient";
 
+export type RunStatus = "complete" | "failed" | "partial" | "resumable";
+
 export interface RunSourceFailure {
   readonly attempts?: number;
   readonly classification: SourceFailureClassification;
@@ -50,11 +52,13 @@ export interface RunSummary {
   readonly mode: "run-once";
   readonly ok: boolean;
   readonly rawStorage: readonly StoreRawReplayResult[];
+  readonly resumeInvocation?: string;
   readonly runId: string;
   readonly sourceFailure?: RunSourceFailure;
   readonly sourceUrl?: string;
   readonly staging: readonly IngestStagingResult[];
   readonly startedAt: string;
+  readonly status?: RunStatus;
 }
 
 export interface RunConfigFailureSummary {

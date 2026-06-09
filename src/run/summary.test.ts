@@ -7,8 +7,27 @@ import {
   runExitCode,
 } from "./summary.js";
 
+import type { RunStatus, RunSummary } from "./types.js";
 import type { DiscoveryReport, ReplayCandidate } from "../discovery/types.js";
 import type { StoreRawReplayResult } from "../storage/store-raw-replay.js";
+
+const resumeInvocation = "replays-fetcher run-once --resume";
+
+test("RunSummary should accept additive status and resumeInvocation fields", () => {
+  const status: RunStatus = "resumable";
+  const summary: Pick<RunSummary, "resumeInvocation" | "status"> = {
+    resumeInvocation,
+    status,
+  };
+
+  expect(summary).toStrictEqual({ resumeInvocation, status });
+});
+
+test("RunSummary should remain valid without status or resumeInvocation", () => {
+  const summary: Pick<RunSummary, "ok"> = { ok: true };
+
+  expect(summary.ok).toBe(true);
+});
 
 const runId = "run-2026-05-09T13-30-00Z";
 const startedAt = "2026-05-09T13:30:00.000Z";
