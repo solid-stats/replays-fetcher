@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Full-Corpus Ingest Resilience
 status: executing
-last_updated: "2026-06-09T03:49:36.200Z"
+last_updated: "2026-06-09T16:37:16.606Z"
 last_activity: 2026-06-08 -- Completed 09-02-PLAN.md (run_id in promotion_evidence, checkpoint config prefix)
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 12
-  completed_plans: 10
+  completed_plans: 11
   percent: 33
 ---
 
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 ## Current Position
 
 Phase: 9 (Checkpoint and Resume) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
 Last activity: 2026-06-08 -- Completed 09-02-PLAN.md (run_id in promotion_evidence, checkpoint config prefix)
 
@@ -100,6 +100,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 09-02]: RESUME-04 run identity is the snake_case `run_id` key stamped additively into the existing `promotion_evidence` jsonb (no new column/table/SQL); TS option stays camelCase `runId`. camelcase eslint disable only on value writes, not interface members. server-2 currently merges promotion_evidence as opaque jsonb (no run_id reader yet).
 - [Phase 09-02]: Checkpoint S3 prefix is operator-configurable via `s3.checkpointPrefix` (env `S3_CHECKPOINT_PREFIX`, Zod min(1) default "checkpoints"); non-secret, visible in redactConfig, shares the existing bucket.
 - [Phase ?]: RunStatus taxonomy: resumable absorbs any recoverable (transient/rate_limited) stop; partial = non-recoverable with >=1 page done; failed = no page + non-recoverable
+- [Phase ?]: 09-04: S3 checkpoint store conditional CAS (IfNoneMatch:* / IfMatch:<etag>); 412/409 -> bounded re-read+merge keeping max(lastCompletedPage); exhaustion -> CheckpointConflictError
+- [Phase ?]: 09-04: store read/write return the ETag for the caller to thread as next IfMatch; non-precondition write errors propagate for log-and-continue (09-05)
 
 ### Roadmap Evolution
 
@@ -171,3 +173,4 @@ Plan Phase 7 (v2 Foundations) with `/gsd:plan-phase 7`.
 | Phase 09 P01 | 13 | 2 tasks | 4 files |
 | Phase 09 P02 | 7min | 3 tasks | 9 files |
 | Phase 09 P03 | 13min | 2 tasks | 3 files |
+| Phase 09 P04 | 35min | 3 tasks | 5 files |
