@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Full-Corpus Ingest Resilience
-status: executing
-last_updated: "2026-06-09T16:37:16.606Z"
+status: verifying
+last_updated: "2026-06-09T16:57:21.317Z"
 last_activity: 2026-06-08 -- Completed 09-02-PLAN.md (run_id in promotion_evidence, checkpoint config prefix)
 progress:
   total_phases: 6
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 12
-  completed_plans: 11
-  percent: 33
+  completed_plans: 12
+  percent: 50
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 
 Phase: 9 (Checkpoint and Resume) — EXECUTING
 Plan: 5 of 5
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-06-08 -- Completed 09-02-PLAN.md (run_id in promotion_evidence, checkpoint config prefix)
 
 Progress: `[ ][ ][ ][ ][ ][ ]` 0/6 phases complete
@@ -102,6 +102,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: RunStatus taxonomy: resumable absorbs any recoverable (transient/rate_limited) stop; partial = non-recoverable with >=1 page done; failed = no page + non-recoverable
 - [Phase ?]: 09-04: S3 checkpoint store conditional CAS (IfNoneMatch:* / IfMatch:<etag>); 412/409 -> bounded re-read+merge keeping max(lastCompletedPage); exhaustion -> CheckpointConflictError
 - [Phase ?]: 09-04: store read/write return the ETag for the caller to thread as next IfMatch; non-precondition write errors propagate for log-and-continue (09-05)
+- [Phase ?]: 09-05: run-once resumes at lastCompletedPage+1; complete checkpoint + --resume -> clean page-1; runId stamped into promotion_evidence.run_id; status/exit-2 via deriveRunStatus
 
 ### Roadmap Evolution
 
@@ -174,3 +175,4 @@ Plan Phase 7 (v2 Foundations) with `/gsd:plan-phase 7`.
 | Phase 09 P02 | 7min | 3 tasks | 9 files |
 | Phase 09 P03 | 13min | 2 tasks | 3 files |
 | Phase 09 P04 | 35min | 3 tasks | 5 files |
+| Phase 9 P05 | 16min | 3 tasks | 7 files |
