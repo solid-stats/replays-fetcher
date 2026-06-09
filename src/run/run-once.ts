@@ -192,8 +192,22 @@ async function resolveResumeState(
   }
 
   if (checkpoint.status === "complete") {
-    // A complete corpus is never auto-resumed; an explicit --resume re-runs the
-    // full corpus from page 1 (Q2 RESOLVED). Either way: a clean page-1 start.
+    // Both paths produce a clean page-1 start, but the distinction is observable
+    // (CR-02): an explicit `--resume` is an intentional re-run of a finished
+    // corpus, while a scheduled run auto-skips. `input.resume` is consulted here
+    // so the flag is a live contract, not a dead parameter.
+    if (input.resume === true) {
+      input.log?.info(
+        { slug },
+        "explicit --resume on a complete checkpoint; re-running the full corpus from page 1",
+      );
+    } else {
+      input.log?.info(
+        { slug },
+        "complete checkpoint auto-resumed; starting a clean page-1 run",
+      );
+    }
+
     return startFresh(read.etag);
   }
 
