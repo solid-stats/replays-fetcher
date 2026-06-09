@@ -60,6 +60,14 @@ test("toCheckpointObjectKey rejects an empty prefix", () => {
   );
 });
 
+test("toCheckpointObjectKey rejects a URL that sanitizes to an empty slug", () => {
+  // `file:///` has an empty host and a bare `/` path, so the derived slug is
+  // empty after sanitization — the defensive empty-slug guard must throw.
+  expect(() => toCheckpointObjectKey(prefix, new URL("file:///"))).toThrow(
+    Error,
+  );
+});
+
 test("toCheckpointObjectKey rejects a prefix with unsafe characters", () => {
   expect(() =>
     toCheckpointObjectKey("BAD PREFIX!", new URL("https://sg.zone/r")),
