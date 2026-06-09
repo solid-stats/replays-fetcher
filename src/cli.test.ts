@@ -116,6 +116,15 @@ const stagingBoundaryFiles = [
   "src/cli.ts",
 ] as const;
 
+const runOnceBoundaryTokens = [
+  /insert\s+into\s+replays/iu,
+  /insert\s+into\s+parse_jobs/iu,
+  /insert\s+into\s+parser_results/iu,
+  /parse\.completed/iu,
+  /parse\.failed/iu,
+  /writeFile/iu,
+] as const;
+
 const stagingBoundaryTokens = [
   /insert\s+into\s+replays/iu,
   /insert\s+into\s+parse_jobs/iu,
@@ -1069,6 +1078,7 @@ test("buildCli run-once should execute one scheduled cycle and write a structure
   stubValidEnvironment();
   const writes: string[] = [];
   const byteClient = { fetchBytes: vi.fn() };
+  const checkpointStore = { read: vi.fn(), write: vi.fn() };
   const sourceClient = { fetchText: vi.fn() };
   const stagingRepository = { stage: vi.fn() };
   const storage = { storeRawReplay: vi.fn() };
@@ -1103,6 +1113,10 @@ test("buildCli run-once should execute one scheduled cycle and write a structure
       expect(config.sourceUrl).toBe(validEnvironment.REPLAY_SOURCE_URL);
       return byteClient;
     },
+    createS3CheckpointStoreFromConfig(config) {
+      expect(config.bucket).toBe(validEnvironment.S3_BUCKET);
+      return checkpointStore;
+    },
     createS3RawReplayStorageFromConfig(config) {
       expect(config.bucket).toBe(validEnvironment.S3_BUCKET);
       return storage;
@@ -1118,10 +1132,13 @@ test("buildCli run-once should execute one scheduled cycle and write a structure
   expect(injectedRunOnce).toHaveBeenCalledWith({
     attempts: 3,
     byteClient,
+    checkpointStore,
     discoverReplays: expect.any(Function) as typeof createDiscoveryReport,
+    log: expect.any(Object) as unknown,
     maxPages: 1,
     now: expect.any(Function) as () => Date,
     onRetry: expect.any(Function) as (event: unknown) => void,
+    resume: false,
     runId: expect.stringMatching(/^run-2026-05-09T12:00:00\.000Z-/u) as string,
     sourceClient,
     sourceUrl: new URL(validEnvironment.REPLAY_SOURCE_URL),
@@ -1156,6 +1173,10 @@ test("buildCli run-once should set exit code 2 for expected operational failures
     createPostgresStagingRepositoryFromDatabaseUrl: () => ({ stage: vi.fn() }),
     createReplayByteClient: () => ({ fetchBytes: vi.fn() }),
     createRunId: () => "run-failed",
+    createS3CheckpointStoreFromConfig: () => ({
+      read: vi.fn(),
+      write: vi.fn(),
+    }),
     createS3RawReplayStorageFromConfig: () => ({ storeRawReplay: vi.fn() }),
     createSourceClient: () => ({ fetchText: vi.fn() }),
     runOnce: vi.fn(async () => ({
@@ -1163,7 +1184,9 @@ test("buildCli run-once should set exit code 2 for expected operational failures
       summary: createRunSummary({
         failureCategories: ["source_unavailable"],
         ok: false,
+        resumeInvocation: "replays-fetcher run-once --resume",
         runId: "run-failed",
+        status: "resumable",
       }),
     })),
   }).parseAsync(["node", "replays-fetcher", "run-once"]);
@@ -1173,8 +1196,56 @@ test("buildCli run-once should set exit code 2 for expected operational failures
     mode: "run-once",
     ok: false,
     runId: "run-failed",
+    status: "resumable",
   });
   expect(process.exitCode).toBe(2);
+});
+
+test("buildCli run-once --resume should thread resume true into runOnce and feed one runId to checkpoint and staging", async () => {
+  stubValidEnvironment();
+  const writes: string[] = [];
+  const checkpointStore = { read: vi.fn(), write: vi.fn() };
+  const injectedRunOnce = vi.fn(
+    async (input: {
+      readonly checkpointStore: unknown;
+      readonly resume?: boolean;
+      readonly runId: string;
+    }) => {
+      expect(input.checkpointStore).toBe(checkpointStore);
+      expect(input.resume).toBe(true);
+
+      return {
+        exitCode: 0 as const,
+        summary: createRunSummary({ runId: input.runId, status: "complete" }),
+      };
+    },
+  );
+  vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+    writes.push(String(chunk));
+    return true;
+  });
+
+  await buildCli({
+    createPostgresStagingRepositoryFromDatabaseUrl: () => ({ stage: vi.fn() }),
+    createReplayByteClient: () => ({ fetchBytes: vi.fn() }),
+    createS3CheckpointStoreFromConfig: () => checkpointStore,
+    createS3RawReplayStorageFromConfig: () => ({ storeRawReplay: vi.fn() }),
+    createSourceClient: () => ({ fetchText: vi.fn() }),
+    now: () => new Date("2026-05-09T12:00:00.000Z"),
+    runOnce: injectedRunOnce,
+  }).parseAsync(["node", "replays-fetcher", "run-once", "--resume"]);
+
+  expect(injectedRunOnce).toHaveBeenCalledWith(
+    expect.objectContaining({
+      checkpointStore,
+      resume: true,
+      runId: expect.stringMatching(
+        /^run-2026-05-09T12:00:00\.000Z-/u,
+      ) as string,
+    }),
+  );
+  expect(JSON.stringify(parseCliOutput(writes))).not.toContain("secret-key");
+  expect(process.exitCode).toBe(0);
 });
 
 test("buildCli run-once should report config errors before creating mutating resources", async () => {
@@ -1243,6 +1314,18 @@ test("staging path source should not write forbidden business tables or parser a
     expect(sourceText).not.toMatch(token);
   }
   expect(sourceText).toMatch(/insert\s+into\s+ingest_staging_records/iu);
+});
+
+test("run-once orchestrator should only touch checkpoint, raw storage, and staging surfaces", async () => {
+  const sourceText = await readProjectFile("src/run/run-once.ts");
+
+  for (const token of runOnceBoundaryTokens) {
+    expect(sourceText).not.toMatch(token);
+  }
+  // It wires the three accepted v1 write surfaces and nothing else.
+  expect(sourceText).toContain("checkpointStore");
+  expect(sourceText).toContain("stageRawReplay");
+  expect(sourceText).toContain("storeRawReplay");
 });
 
 test("unit tests should remain colocated beside source files", async () => {

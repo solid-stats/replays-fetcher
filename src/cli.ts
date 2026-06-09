@@ -12,6 +12,10 @@ import {
 } from "./check/s3-connectivity.js";
 import { checkSourceConnectivity } from "./check/source-connectivity.js";
 import {
+  createS3CheckpointStoreFromConfig,
+  type S3CheckpointStore,
+} from "./checkpoint/s3-checkpoint-store.js";
+import {
   ConfigError,
   loadConfig,
   loadSourceConfig,
@@ -79,6 +83,9 @@ interface BuildCliDependencies {
   readonly checkSourceConnectivity?: typeof checkSourceConnectivity;
   readonly createLogger?: (options?: CreateLoggerOptions) => Logger;
   readonly createRunId?: (now: Date) => string;
+  readonly createS3CheckpointStoreFromConfig?: (
+    config: AppConfig["s3"],
+  ) => S3CheckpointStore;
   readonly createS3ConnectivitySenderFromConfig?: typeof createS3ConnectivitySenderFromConfig;
   readonly createReplayByteClient?: (config: SourceConfig) => ReplayByteClient;
   readonly createS3RawReplayStorageFromConfig?: (
@@ -103,6 +110,10 @@ interface DiscoverOptions {
   readonly storeRaw?: boolean;
 }
 
+interface RunOnceOptions {
+  readonly resume?: boolean;
+}
+
 interface RawStorageCounts {
   readonly candidates: number;
   readonly conflict: number;
@@ -122,6 +133,7 @@ interface StagingCounts {
 
 interface StoreRawResources {
   readonly byteClient: ReplayByteClient;
+  readonly checkpointStore: S3CheckpointStore;
   readonly sourceClient: SourceClient;
   readonly stagingRepository: StagingRepository | undefined;
   readonly storage: S3RawReplayStorage;
@@ -153,6 +165,7 @@ function resolveDependencies(
     createLogger,
     createRunId,
     createReplayByteClient,
+    createS3CheckpointStoreFromConfig,
     createS3ConnectivitySenderFromConfig,
     createPostgresStagingRepositoryFromDatabaseUrl,
     createS3RawReplayStorageFromConfig,
@@ -321,7 +334,11 @@ function registerRunOnceCommand(
   program
     .command("run-once")
     .description("Execute one scheduled ingest cycle")
-    .action(async () => {
+    .option(
+      "--resume",
+      "resume from the last completed page using the source checkpoint",
+    )
+    .action(async (options: RunOnceOptions) => {
       const startedAt = dependencies.now();
       const runId = dependencies.createRunId(startedAt);
       const rootLogger = dependencies.createLogger();
@@ -355,9 +372,12 @@ function registerRunOnceCommand(
       const result = await dependencies.runOnce({
         attempts: configResult.config.sourceRetryAttempts,
         byteClient: resources.byteClient,
+        checkpointStore: resources.checkpointStore,
         discoverReplays: dependencies.discoverReplaysDryRun,
+        log,
         now: dependencies.now,
         onRetry: buildRetryWarnEmitter(log),
+        resume: options.resume === true,
         runId,
         maxPages: configResult.config.sourceMaxPages,
         sourceClient: resources.sourceClient,
@@ -515,6 +535,7 @@ function createStoreRawResources(
 ): StoreRawResources {
   return {
     byteClient: dependencies.createReplayByteClient(config),
+    checkpointStore: dependencies.createS3CheckpointStoreFromConfig(config.s3),
     sourceClient: dependencies.createSourceClient(config),
     stagingRepository: createStagingRepository(
       dependencies,
