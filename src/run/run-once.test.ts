@@ -694,9 +694,7 @@ test("runOnce strips userinfo from the source URL before persisting it (no crede
   expect(JSON.stringify(result.summary)).not.toContain(secret);
   // Identity (host + path) is preserved, only userinfo is stripped.
   const [firstWrite] = checkpointStore.writes;
-  expect(firstWrite?.checkpoint.sourceUrl).toBe(
-    "https://example.test/replays",
-  );
+  expect(firstWrite?.checkpoint.sourceUrl).toBe("https://example.test/replays");
 });
 
 test("runOnce should write a checkpoint once per completed page with that page number", async () => {
