@@ -42,6 +42,25 @@ function isStageable(
   return evidence.status === "stored" || evidence.status === "skipped";
 }
 
+/**
+ * Strip any `username`/`password` userinfo from the source URL before it lands
+ * in `promotion_evidence.sourceUrl` (a durable, cross-service jsonb field). An
+ * operator-supplied `https://user:pass@host/...` must never leak credentials
+ * into staging evidence (WR-02, threat T-09-01). A non-URL string is returned
+ * unchanged — it carries no parsable userinfo to strip.
+ */
+function sanitizeSourceUrl(sourceUrl: string): string {
+  try {
+    const cleaned = new URL(sourceUrl);
+    cleaned.username = "";
+    cleaned.password = "";
+
+    return cleaned.toString();
+  } catch {
+    return sourceUrl;
+  }
+}
+
 function toPayload(
   evidence: StageableRawReplayEvidence,
   sourceSystem: string,
@@ -55,7 +74,7 @@ function toPayload(
     objectKey: evidence.objectKey,
     rawStorageStatus: evidence.status,
     sourceFilename: evidence.sourceFilename,
-    sourceUrl: evidence.source.url,
+    sourceUrl: sanitizeSourceUrl(evidence.source.url),
   };
 
   if (evidence.discoveredAt !== undefined) {

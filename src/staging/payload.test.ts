@@ -169,6 +169,49 @@ test("toIngestStagingPayload should derive deterministic source identity when ex
   expect(JSON.stringify(result)).not.toContain("sourceExternalId");
 });
 
+test("toIngestStagingPayload should strip userinfo from the persisted source URL (no credential leak)", () => {
+  const secret = "s3cr3t-pass";
+  const result = toIngestStagingPayload({
+    ...storedEvidence,
+    source: {
+      ...storedEvidence.source,
+      url: `https://operator:${secret}@sg.zone/replays/1778269931`,
+    },
+  });
+
+  const serialized = JSON.stringify(result);
+  expect(serialized).not.toContain(secret);
+  expect(serialized).not.toContain("operator:");
+  expect(result).toMatchObject({
+    payload: {
+      promotionEvidence: {
+        // Host + path identity is preserved; only userinfo is stripped (WR-02).
+        sourceUrl: "https://sg.zone/replays/1778269931",
+      },
+    },
+    stageable: true,
+  });
+});
+
+test("toIngestStagingPayload should leave a non-URL source string unchanged", () => {
+  const result = toIngestStagingPayload({
+    ...storedEvidence,
+    source: {
+      ...storedEvidence.source,
+      url: "not-a-valid-url",
+    },
+  });
+
+  expect(result).toMatchObject({
+    payload: {
+      promotionEvidence: {
+        sourceUrl: "not-a-valid-url",
+      },
+    },
+    stageable: true,
+  });
+});
+
 test("toIngestStagingPayload should return non-stageable evidence for failed or conflict raw storage", () => {
   for (const status of ["conflict", "failed"] as const) {
     expect(
