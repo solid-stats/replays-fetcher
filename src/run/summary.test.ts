@@ -4,6 +4,7 @@ import { expect, test } from "vitest";
 import {
   buildConfigInvalidRunSummary,
   buildRunSummary,
+  deriveRunStatus,
   runExitCode,
 } from "./summary.js";
 
@@ -201,6 +202,152 @@ test("buildRunSummary should classify source, raw storage, and staging failures"
     ok: false,
   });
   expect(runExitCode(summary)).toBe(2);
+});
+
+test("deriveRunStatus should return complete when ok and all discovered pages finished", () => {
+  expect(
+    deriveRunStatus({
+      discoveredLastPage: 3,
+      lastCompletedPage: 3,
+      ok: true,
+    }),
+  ).toBe("complete");
+});
+
+test("deriveRunStatus should return resumable for a recoverable mid-run stop", () => {
+  expect(
+    deriveRunStatus({
+      discoveredLastPage: 5,
+      lastCompletedPage: 2,
+      ok: false,
+      sourceFailure: {
+        classification: "transient",
+        code: "source_transient",
+      },
+    }),
+  ).toBe("resumable");
+
+  expect(
+    deriveRunStatus({
+      discoveredLastPage: 5,
+      lastCompletedPage: 1,
+      ok: false,
+      sourceFailure: {
+        classification: "rate_limited",
+        code: "rate_limited",
+      },
+    }),
+  ).toBe("resumable");
+});
+
+test("deriveRunStatus should return partial for a non-recoverable mid-run stop with progress", () => {
+  expect(
+    deriveRunStatus({
+      discoveredLastPage: 5,
+      lastCompletedPage: 2,
+      ok: false,
+      sourceFailure: {
+        classification: "permanent",
+        code: "source_unavailable",
+      },
+    }),
+  ).toBe("partial");
+
+  // No source-level classification (e.g. raw/staging failure) but a page did
+  // complete → still salvageable as partial, not failed.
+  expect(
+    deriveRunStatus({
+      discoveredLastPage: 5,
+      lastCompletedPage: 2,
+      ok: false,
+    }),
+  ).toBe("partial");
+});
+
+test("deriveRunStatus should return failed when nothing is salvageable", () => {
+  expect(
+    deriveRunStatus({
+      discoveredLastPage: 5,
+      lastCompletedPage: 0,
+      ok: false,
+      sourceFailure: {
+        classification: "permanent",
+        code: "source_unavailable",
+      },
+    }),
+  ).toBe("failed");
+
+  expect(
+    deriveRunStatus({
+      discoveredLastPage: 5,
+      lastCompletedPage: 0,
+      ok: false,
+    }),
+  ).toBe("failed");
+});
+
+test("deriveRunStatus should treat a no-page recoverable failure as resumable", () => {
+  // Nothing completed yet, but the stop cause is transient → the next run can
+  // resume from page 1 and is expected to make progress.
+  expect(
+    deriveRunStatus({
+      discoveredLastPage: 5,
+      lastCompletedPage: 0,
+      ok: false,
+      sourceFailure: {
+        classification: "transient",
+        code: "source_transient",
+      },
+    }),
+  ).toBe("resumable");
+});
+
+test("buildRunSummary should spread status and resumeInvocation additively", () => {
+  const summary = buildRunSummary({
+    discoveryReport: discoveryReport(),
+    finishedAt,
+    rawStorage: [raw("stored")],
+    resumeInvocation,
+    runId,
+    staging: [{ stagingId: "staging-1", status: "staged" }],
+    startedAt,
+    status: "resumable",
+  });
+
+  // Additive: prior contract still matches via toMatchObject (T-09-06).
+  expect(summary).toMatchObject({
+    counts: { discovered: 1, staged: 1, stored: 1 },
+    mode: "run-once",
+    runId,
+    sourceUrl: "https://example.test/replays",
+  });
+  expect(summary.status).toBe("resumable");
+  expect(summary.resumeInvocation).toBe(resumeInvocation);
+  expect(summary.resumeInvocation?.endsWith("--resume")).toBe(true);
+  // resumeInvocation carries only the command + flag, no secret (T-09-07).
+  expect(JSON.stringify(summary)).not.toContain("secret");
+  expect(JSON.stringify(summary)).not.toContain("password");
+});
+
+test("buildRunSummary should omit status and resumeInvocation when not supplied", () => {
+  const summary = buildRunSummary({
+    discoveryReport: discoveryReport(),
+    finishedAt,
+    rawStorage: [raw("stored")],
+    runId,
+    staging: [],
+    startedAt,
+  });
+
+  expect(summary.status).toBeUndefined();
+  expect(summary.resumeInvocation).toBeUndefined();
+});
+
+test("runExitCode should map run status to the exit-code-2 convention", () => {
+  expect(runExitCode({ ok: true, status: "complete" })).toBe(0);
+  expect(runExitCode({ ok: true, status: "partial" })).toBe(2);
+  expect(runExitCode({ ok: true, status: "resumable" })).toBe(2);
+  expect(runExitCode({ ok: true, status: "failed" })).toBe(2);
 });
 
 test("buildRunSummary should surface final attempts and classification for a failed source read", () => {

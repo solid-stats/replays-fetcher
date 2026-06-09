@@ -1,8 +1,10 @@
+/* eslint-disable max-lines -- run summary keeps the builders, status derivation, exit-code mapping, and counting helpers co-located so the stdout summary contract reads as one unit. */
 import type {
   RunConfigFailureSummary,
   RunExitCode,
   RunFailureCategory,
   RunSourceFailure,
+  RunStatus,
   RunSummary,
   RunSummaryCounts,
   SourceFailureClassification,
@@ -16,12 +18,23 @@ import type { IngestStagingResult } from "../staging/types.js";
 import type { StoreRawReplayResult } from "../storage/store-raw-replay.js";
 
 interface BuildRunSummaryInput {
+  readonly discoveredLastPage?: number;
   readonly discoveryReport: DiscoveryReport;
   readonly finishedAt: string;
+  readonly lastCompletedPage?: number;
   readonly rawStorage: readonly StoreRawReplayResult[];
+  readonly resumeInvocation?: string;
   readonly runId: string;
   readonly staging: readonly IngestStagingResult[];
   readonly startedAt: string;
+  readonly status?: RunStatus;
+}
+
+interface DeriveRunStatusInput {
+  readonly discoveredLastPage: number;
+  readonly lastCompletedPage: number;
+  readonly ok: boolean;
+  readonly sourceFailure?: RunSourceFailure;
 }
 
 interface BuildConfigInvalidRunSummaryInput {
@@ -68,10 +81,73 @@ export function buildRunSummary(input: BuildRunSummaryInput): RunSummary {
   const sourceFailure = deriveSourceFailure(input.discoveryReport);
 
   if (sourceFailure === undefined) {
-    return summary;
+    return withRunStatus(summary, input);
   }
 
-  return { ...summary, sourceFailure };
+  return withRunStatus({ ...summary, sourceFailure }, input);
+}
+
+/**
+ * Conditionally spreads the caller-supplied `status` and `resumeInvocation`
+ * into the summary using the SAME additive pattern as `sourceFailure`
+ * (RESUME-05). run-once (Plan 05) supplies these from the live checkpoint;
+ * when absent the prior stdout contract is returned unchanged (T-09-06).
+ */
+function withRunStatus(
+  summary: RunSummary,
+  input: BuildRunSummaryInput,
+): RunSummary {
+  let next = summary;
+
+  if (input.status !== undefined) {
+    next = { ...next, status: input.status };
+  }
+
+  if (input.resumeInvocation !== undefined) {
+    next = { ...next, resumeInvocation: input.resumeInvocation };
+  }
+
+  return next;
+}
+
+const NO_PAGE_COMPLETED = 0;
+
+/**
+ * Maps a run's page-loop outcome to the RunStatus taxonomy (RESUME-05):
+ * - `complete`: the run is ok and every discovered page finished.
+ * - `resumable`: the stop cause is recoverable (transient/rate_limited), so the
+ *   next `--resume` run is expected to make progress (regardless of how far it
+ *   got this time).
+ * - `partial`: a non-recoverable stop that still completed at least one page —
+ *   some evidence was salvaged, but resuming will not clear the cause.
+ * - `failed`: nothing salvageable — no page completed and the cause is not
+ *   recoverable. Pure and deterministic.
+ */
+export function deriveRunStatus(input: DeriveRunStatusInput): RunStatus {
+  if (input.ok && input.lastCompletedPage >= input.discoveredLastPage) {
+    return "complete";
+  }
+
+  if (isRecoverable(input.sourceFailure)) {
+    return "resumable";
+  }
+
+  if (input.lastCompletedPage > NO_PAGE_COMPLETED) {
+    return "partial";
+  }
+
+  return "failed";
+}
+
+function isRecoverable(sourceFailure?: RunSourceFailure): boolean {
+  if (sourceFailure === undefined) {
+    return false;
+  }
+
+  return (
+    sourceFailure.classification === "rate_limited" ||
+    sourceFailure.classification === "transient"
+  );
 }
 
 function sourceFailureClassification(
@@ -161,7 +237,17 @@ export function buildConfigInvalidRunSummary(
   };
 }
 
-export function runExitCode(summary: { readonly ok: boolean }): RunExitCode {
+export function runExitCode(summary: {
+  readonly ok: boolean;
+  readonly status?: RunStatus;
+}): RunExitCode {
+  // A resumable/partial/failed run is an operational failure even when the
+  // discovery `ok` flag is true (the loop stopped before finishing): the
+  // scheduler must see exit 2 so it retries (reuses the Phase 5 convention).
+  if (summary.status !== undefined && summary.status !== "complete") {
+    return 2;
+  }
+
   if (summary.ok) {
     return 0;
   }
