@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Full-Corpus Ingest Resilience
-status: verifying
-last_updated: "2026-06-09T16:57:21.317Z"
-last_activity: 2026-06-08 -- Completed 09-02-PLAN.md (run_id in promotion_evidence, checkpoint config prefix)
+status: in_progress
+last_updated: "2026-06-10T00:00:00.000Z"
+last_activity: 2026-06-10 -- Phase 9 verified (5/5 success criteria, status passed); milestone advancing to Phase 10
 progress:
   total_phases: 6
   completed_phases: 3
@@ -24,12 +24,12 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 
 ## Current Position
 
-Phase: 9 (Checkpoint and Resume) — EXECUTING
-Plan: 5 of 5
-Status: Phase complete — ready for verification
-Last activity: 2026-06-08 -- Completed 09-02-PLAN.md (run_id in promotion_evidence, checkpoint config prefix)
+Phase: 10 (Dynamic Source Range and Rate Limiting) — NOT STARTED
+Plan: 0 of TBD
+Status: Phase 9 verified (status passed, 5/5 criteria); ready to discuss/plan Phase 10
+Last activity: 2026-06-10 -- Phase 9 verified; VERIFICATION.md written
 
-Progress: `[ ][ ][ ][ ][ ][ ]` 0/6 phases complete
+Progress: `[x][x][x][ ][ ][ ]` 3/6 phases complete
 
 ## Accumulated Context
 
@@ -153,11 +153,11 @@ None.
 
 ## Next Step
 
-Plan Phase 7 (v2 Foundations) with `/gsd:plan-phase 7`.
+Plan Phase 10 (Dynamic Source Range and Rate Limiting) with `/gsd:plan-phase 10`.
 
 ## Operator Next Steps
 
-- Run `/gsd:plan-phase 7` to decompose Phase 7 into executable plans (AppError base + pino logger factory).
+- Run `/gsd:plan-phase 10` to decompose Phase 10 into executable plans (stop-on-empty range discovery, p-limit concurrency, adaptive throttling, pacing config).
 
 ## Performance Metrics
 
