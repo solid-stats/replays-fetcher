@@ -29,7 +29,6 @@ function makeController(): ReturnType<typeof createThrottleController> {
     min: minConcurrency,
     max: maxConcurrency,
     baseSpacingMs,
-    now: scriptedClock(),
   });
 }
 
@@ -67,7 +66,6 @@ test("MD: a full rate-limited window halves concurrency and bumps the pacing flo
     min: minConcurrency,
     max: maxConcurrency,
     baseSpacingMs,
-    now,
   });
 
   signalRateLimited(controller, rateLimitedWindow, now);
@@ -83,7 +81,6 @@ test("MD repeated: successive windows drive 8 → 4 → 2 → 1 and floor at 1",
     min: minConcurrency,
     max: maxConcurrency,
     baseSpacingMs,
-    now,
   });
 
   signalRateLimited(controller, rateLimitedWindow, now);
@@ -107,7 +104,6 @@ test("AI: a sustained clean window raises concurrency by +1 toward max", () => {
     min: minConcurrency,
     max: maxConcurrency,
     baseSpacingMs,
-    now,
   });
 
   // Decrease twice (8 → 4 → 2) so there is headroom to recover.
@@ -126,7 +122,6 @@ test("AI caps at max: clean windows never raise concurrency above max", () => {
     min: minConcurrency,
     max: maxConcurrency,
     baseSpacingMs,
-    now,
   });
 
   // Already at max (baseConcurrency === maxConcurrency): a clean window is a no-op cap.
@@ -141,7 +136,6 @@ test("steady/no-change: a single rate-limited signal below the window is a no-op
     min: minConcurrency,
     max: maxConcurrency,
     baseSpacingMs,
-    now,
   });
 
   controller.onRateLimited(now());
@@ -157,7 +151,6 @@ test("steady/no-change: a single clean signal below the clean window is a no-op"
     min: minConcurrency,
     max: maxConcurrency,
     baseSpacingMs,
-    now,
   });
 
   // Decrease once so concurrency is below max and recovery is observable if it fired.
@@ -176,14 +169,35 @@ test("a clean signal resets the rate-limited streak (no compounding partial wind
     min: minConcurrency,
     max: maxConcurrency,
     baseSpacingMs,
-    now,
   });
 
-  controller.onRateLimited(now()); // partial streak (1 of 2)
-  controller.onCleanWindow(now()); // resets the rate-limited streak
-  controller.onRateLimited(now()); // streak restarts at 1, not 2
+  // A partial rate-limited streak (1 of 2), then a clean signal resets it, so the
+  // next rate-limited signal restarts the streak at 1 (not 2) and MD does not fire.
+  controller.onRateLimited(now());
+  controller.onCleanWindow(now());
+  controller.onRateLimited(now());
 
   expect(controller.effectiveConcurrency).toBe(baseConcurrency);
+});
+
+test("records the injected signal timestamp as lastSignalAtMs evidence", () => {
+  const now = scriptedClock();
+  const controller = createThrottleController({
+    baseConcurrency,
+    min: minConcurrency,
+    max: maxConcurrency,
+    baseSpacingMs,
+  });
+
+  expect(controller.lastSignalAtMs).toBeNaN();
+
+  const firstStamp = now();
+  controller.onRateLimited(firstStamp);
+  expect(controller.lastSignalAtMs).toBe(firstStamp);
+
+  const secondStamp = now();
+  controller.onCleanWindow(secondStamp);
+  expect(controller.lastSignalAtMs).toBe(secondStamp);
 });
 
 test("no double-delay: the controller exposes only concurrency + pacing floor, no backoff method", () => {
