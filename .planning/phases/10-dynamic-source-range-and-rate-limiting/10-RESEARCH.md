@@ -71,8 +71,9 @@ The hardest correctness work is **RANGE-06 ordering** in the page loop: run `cla
 *before* writing the page checkpoint. The good news: `run-once.ts` already checkpoints only after
 `processPage` returns (never mid-page), and the discovery adapter already attaches DIAG
 classification to `pageReport`. Phase 10 does not parallelize list pages — it parallelizes the
-inner `processPage` candidate loop (currently a sequential `for…await` over store+stage) and the
-per-candidate detail fetch inside `discoverPageCandidates`.
+inner `processPage` candidate loop (currently a sequential `for…await` over store+stage). The
+per-candidate detail fetch inside `discoverPageCandidates` stays sequential this phase (see Open
+Question A1 RESOLVED).
 
 The throttle controller, pacing floor, and rolling-rate metrics all hang off the existing DI seams
 (injectable `sleep`, injectable clock `now`) so every new behavior is deterministically testable
@@ -94,7 +95,7 @@ discovered range, and optional ETA to `RunSummary` computed from `now`.
 |------------|-------------|----------------|-----------|
 | Outer list-page loop + stop-on-empty | Run orchestrator (`run-once.ts`) | — | The page loop, checkpoint ordering, and run-status assembly already live here; stop-on-empty is a loop-termination decision, not a discovery concern. |
 | Per-candidate parallel fan-out (store+stage) | Run orchestrator (`processPage` in `run-once.ts`) | Concurrency seam | `processPage` owns the store→stage sequence per candidate; it becomes `Promise.allSettled` over a shared limiter. |
-| Per-candidate detail fetch parallelization | Discovery (`discoverPageCandidates`) | Concurrency seam | The detail-HTML fetch loop is inside `discover.ts`; if parallelized it must share the same limiter to keep one global in-flight cap. |
+| Per-candidate detail fetch parallelization | Discovery (`discoverPageCandidates`) | Concurrency seam | The detail-HTML fetch loop is inside `discover.ts`; **deferred this phase** — detail fetch stays sequential (Open Question A1 RESOLVED); if later parallelized it must share the same limiter to keep one global in-flight cap. |
 | Bounded concurrency primitive | New `src/source/` limiter seam | `p-limit` | A single shared limiter is the global in-flight governor; injectable for tests. |
 | Adaptive throttle (AIMD) | New `src/source/throttle.ts` controller | Classifier (`rate_limited` signal) | Pure state machine driven by classification + clock; mutates `limit.concurrency` and pacing floor. |
 | Per-request backoff/jitter | Existing `withRetry` (`src/source/retry.ts`) | — | UNCHANGED — backoff stays per-request; throttle is layered above, never duplicated. |
@@ -154,8 +155,8 @@ Verification: `gsd-tools query package-legitimacy check --ecosystem npm p-limit 
        │   2. pageReport = discoverReplays({ page, sourceClient, … })  │
        │        │                                                      │
        │        └─► discover.ts: fetch LIST page (withRetry) ──────────┼──► classifyFailure on throw
-       │            then per-candidate DETAIL fetch (parallel via      │
-       │            shared limiter)                                    │
+       │            then per-candidate DETAIL fetch (SEQUENTIAL this   │
+       │            phase — A1 RESOLVED)                               │
        │                                                               │
        │   3. RANGE-06 ORDER:                                          │
        │        if !pageReport.ok:                                     │
@@ -182,8 +183,8 @@ Verification: `gsd-tools query package-legitimacy check --ecosystem npm p-limit 
 ```
 
 The list-page loop stays sequential (checkpoint ordering, RANGE-06). Only the inner per-candidate
-store/stage (and the per-candidate detail fetch) fan out through the single shared limiter, which
-the throttle controller resizes via `limit.concurrency`.
+store/stage fan out through the single shared limiter, which the throttle controller resizes via
+`limit.concurrency`. The per-candidate detail fetch stays sequential this phase (A1 RESOLVED).
 
 ### Recommended Project Structure
 ```
@@ -199,13 +200,13 @@ src/
 │   ├── summary.ts            # CHANGED: discoveredRange/pagesPerMinute/candidatesPerMinute/etaSeconds derivation
 │   └── types.ts              # CHANGED: RunSummary extended with range/rate/ETA fields
 ├── discovery/
-│   └── discover.ts           # CHANGED: retire createPacedSourceClient blanket delay; optionally share limiter for detail fetch
+│   └── discover.ts           # CHANGED: retire createPacedSourceClient blanket delay; detail fetch stays sequential (A1 RESOLVED)
 └── config.ts                 # CHANGED: optional sourceMaxPages; add concurrency + requestSpacingMs (Zod min/max)
 ```
 
 ### Pattern 1: Single shared limiter created once per run
-**What:** Create one `pLimit(config.concurrency)` at run start; thread it into `processPage` (and,
-if parallelizing detail fetch, into `discoverReplays`).
+**What:** Create one `pLimit(config.concurrency)` at run start; thread it into `processPage` (the
+store+stage fan-out only this phase).
 **When to use:** Whenever a run needs a *global* in-flight cap (RANGE-02) that the throttle can
 shrink globally (RANGE-03).
 **Example:**
@@ -471,7 +472,7 @@ Because `storeRawReplay`/`stageRawReplay` already return result objects (never t
 fetch/storage/staging failures — they map to `failed`/`conflict` statuses tallied by
 `tallyRawResult`/`tallyStagingResult`), `allSettled` rejections should be rare; treat any rejected
 settle as a programmer error (rethrow) to preserve the Phase 5 "operational vs programmer error"
-boundary. Verify which paths can reject during planning.
+boundary (A3 RESOLVED below).
 
 ### AIMD throttle controller (pure, injectable clock) (RANGE-03)
 ```typescript
@@ -483,7 +484,8 @@ interface ThrottleController {
   onCleanWindow(nowMs: number): void;  // AI after sustained clean window: concurrency = min(max, concurrency + 1)
 }
 // Constants (Claude's discretion): MD factor 0.5, AI step +1, clean-window threshold (e.g. N consecutive
-// clean pages or T ms), pacing-floor step. Keep them as named UPPER_SNAKE_CASE constants (no-magic-numbers).
+// clean pages — page-count window, A3/Q3 RESOLVED below), pacing-floor step. Keep them as named
+// UPPER_SNAKE_CASE constants (no-magic-numbers).
 ```
 
 ### Config additions (RANGE-04)
@@ -504,7 +506,8 @@ const sourceConfigSchema = z.object({
 Note the magic numbers `32`, `8`, `5000`, `250` will trip `no-magic-numbers` if inlined elsewhere;
 in the Zod schema they are default/argument values (`ignoreDefaultValues: true` covers `.default(8)`,
 but `.min(1).max(32)` args are NOT ignored) — hoist `MIN_CONCURRENCY`/`MAX_CONCURRENCY`/
-`MAX_SPACING_MS` as named constants like the existing `defaultSourceTimeoutMs`.
+`MAX_SPACING_MS` as named constants like the existing `defaultSourceTimeoutMs`. The `.min(0)` arg is
+likewise hoisted (`MIN_SPACING_MS = 0`) for consistency rather than left inline.
 
 ### Rolling-rate metrics + ETA (RANGE-05)
 ```typescript
@@ -550,12 +553,12 @@ number; lastPage: number }`, `pagesPerMinute?: number`, `candidatesPerMinute?: n
 
 | # | Claim | Section | Risk if Wrong |
 |---|-------|---------|---------------|
-| A1 | The per-candidate detail fetch inside `discoverPageCandidates` should share the SAME limiter as `processPage` (one global cap), rather than running list-page detail fetches under a separate cap. | §Architecture, §Pattern 1 | If kept separate, the "single shared limiter / global in-flight cap" decision (locked) is violated; if the planner instead chooses to keep detail fetch sequential and only parallelize store+stage, the throughput gain is smaller. Confirm the intended fan-out breadth with the planner. LOW risk — locked decision favors a single shared limiter. |
+| A1 | The per-candidate detail fetch inside `discoverPageCandidates` should share the SAME limiter as `processPage` (one global cap), rather than running list-page detail fetches under a separate cap. | §Architecture, §Pattern 1 | If kept separate, the "single shared limiter / global in-flight cap" decision (locked) is violated; if the planner instead chooses to keep detail fetch sequential and only parallelize store+stage, the throughput gain is smaller. **RESOLVED in Open Questions:** detail fetch stays sequential this phase; the single shared limiter governs store+stage only. LOW risk — no second limiter is introduced. |
 | A2 | Default concurrency `8` and spacing `250ms` meet the ~1–2h target for ~786 pages / ~23.5k replays. These come from CONTEXT (locked), not from a measured benchmark in this session. | §Config, §Summary | If too aggressive, Cloudflare 429s trigger AIMD frequently (self-correcting); if too timid, the run overshoots 1–2h. AIMD + operator-tunable knobs mitigate. LOW risk. |
-| A3 | `storeRawReplay`/`stageRawReplay` never reject for operational (fetch/storage/staging) failures — they return `failed`/`conflict` result objects — so `Promise.allSettled` rejections indicate programmer errors. | §Code Examples (processPage) | If some path does reject operationally, a rejected settle would be silently dropped unless handled. Planner MUST verify the throw-vs-return contract of these two functions before finalizing the gather. MEDIUM risk — affects correctness of failure tallying. |
+| A3 | `storeRawReplay`/`stageRawReplay` never reject for operational (fetch/storage/staging) failures — they return `failed`/`conflict` result objects — so `Promise.allSettled` rejections indicate programmer errors. | §Code Examples (processPage) | If some path does reject operationally, a rejected settle would be silently dropped unless handled. **RESOLVED in Open Questions:** a rejected settle is a programmer error and is rethrown; expected `failed`/`conflict` results are tallied. MEDIUM→LOW risk — policy locked. |
 | A4 | The source does not currently expose a parsed "last page" number; ETA upper bound is therefore usually absent and ETA is reported as "rate known, total unknown". | §6, §ETA | If a last-page is parseable from the list HTML, an exact ETA becomes possible; absence only means the estimate is open-ended. LOW risk — handled by the optional `etaSeconds`. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Detail-fetch fan-out breadth (A1)**
    - What we know: `processPage` (store+stage) clearly parallelizes; `discoverPageCandidates` also
@@ -564,12 +567,25 @@ number; lastPage: number }`, `pagesPerMinute?: number`, `candidatesPerMinute?: n
      store+stage. The locked "single shared limiter" implies one cap if both parallelize.
    - Recommendation: parallelize both through the one shared limiter (one global in-flight cap);
      thread the limiter into `discoverReplays` as an optional injected dependency. Confirm in planning.
+   - **RESOLVED (Phase 10):** detail-fetch stays **sequential** this phase. The single shared
+     `p-limit` instance governs **only** the per-page store+stage fan-out (`processPage`); no
+     detail-fetch parallelization ships in Phase 10. This keeps exactly one global in-flight cap (no
+     second uncapped limiter) without re-plumbing `discoverReplays`; detail-fetch fan-out under the
+     same shared limiter remains a candidate for a later phase. Implemented in plan 10-04 Task 2
+     (store+stage fan-out) and Task 3 (detail fetch left sequential, no second limiter introduced).
 
 2. **`Promise.allSettled` rejection policy (A3)**
    - What we know: current `processPage` tallies `failed`/`conflict` results without throwing.
    - What's unclear: whether any store/stage path can reject (vs. return a `failed` result).
    - Recommendation: planner audits `storeRawReplay`/`stageRawReplay` return contracts; rethrow
      unexpected rejections (programmer-error boundary, Phase 5), tally expected `failed` results.
+   - **RESOLVED (Phase 10):** a **rejected** `Promise.allSettled` settle is a **programmer error**
+     (a non-`ReplayByteFetchError` storage-adapter throw, or a raw `repository.stage` DB rejection)
+     and is **rethrown** — never silently dropped. Operational outcomes (`storeRawReplay` →
+     `failed`, `stageRawReplay` → `not_stageable`/`conflict`) are returned as result objects,
+     gathered as `fulfilled`, and **tallied** (not thrown). This preserves the Phase 5
+     operational-vs-programmer boundary. Implemented in plan 10-04 Task 2 (`<behavior>` "rethrow
+     programmer error" + "failures tallied, not thrown").
 
 3. **Throttle window definition (Claude's discretion)**
    - What we know: AIMD triggers on `rate_limited` "after repeated signals within a window".
@@ -577,6 +593,11 @@ number; lastPage: number }`, `pagesPerMinute?: number`, `candidatesPerMinute?: n
      N clean pages or T ms?
    - Recommendation: page-count windows are simplest to test deterministically (no wall clock for
      the *decision*, only the injected clock for *timestamps*). Pick small named constants; document them.
+   - **RESOLVED (Phase 10):** the throttle window is **page-count based** with named constants — the
+     AIMD multiplicative-decrease decision triggers after N rate-limited pages and additive-increase
+     recovery after N clean pages; the injected clock supplies only timestamps, never the decision
+     boundary (no wall-clock window). Constants are hoisted/named to satisfy `no-magic-numbers`.
+     Implemented in plan 10-03 (AIMD throttle controller, deterministic over injected clock).
 
 ## Environment Availability
 

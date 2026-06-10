@@ -2,7 +2,7 @@
 phase: 10
 slug: dynamic-source-range-and-rate-limiting
 status: draft
-nyquist_compliant: false
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-06-10
 ---
@@ -43,7 +43,7 @@ created: 2026-06-10
 | 10-concurrency | concurrency | 1 | RANGE-02, RANGE-06 | — | Shared p-limit fan-out; `Promise.allSettled`; deterministic index order; never checkpoint mid-page | unit | `pnpm test src/run/run-once.test.ts` | ✅ | ⬜ pending |
 | 10-throttle | throttle | 1 | RANGE-03 | — | AIMD reduces effective concurrency on `rate_limited`; bounded floor 1; additive recovery | unit | `pnpm test src/source` | ❌ W0 | ⬜ pending |
 | 10-stop-empty | range | 2 | RANGE-01, RANGE-06 | — | classifier runs before stop-on-empty; only ok+0 rows → `complete`; transient → `resumable` (no silent truncation) | unit | `pnpm test src/run/run-once.test.ts` | ✅ | ⬜ pending |
-| 10-metrics | metrics | 2 | RANGE-05 | — | pages/min, candidates/min, discovered range, ETA (labelled estimate) in `RunSummary`; injectable clock | unit | `pnpm test src/run/summary.test.ts` | ✅ | ⬜ pending |
+| 10-metrics | metrics | 2 | RANGE-05 | — | pages/min, candidates/min, discovered range, ETA (labelled estimate) in `RunSummary`; injectable clock; minimal per-page rate line | unit | `pnpm test src/run/summary.test.ts` | ✅ | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -72,11 +72,11 @@ created: 2026-06-10
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 5s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 5s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** plans satisfy checks 8a–8d (every task has an `<automated>` verify or a Wave-0 dependency; sampling continuity holds; Wave-0 covers the throttle/pacing/run-once tests plus the `p-limit` install; no watch-mode; latency < 5s). `wave_0_complete: false` stays until the Wave-0 tests go green during execution.
