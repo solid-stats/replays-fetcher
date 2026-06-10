@@ -2031,6 +2031,7 @@ module.exports = {
     findProjectRoot: project_root_cjs_1.findProjectRoot,
     detectSubRepos,
     reapStaleTempFiles,
+    ensureGsdTempDir,
     GSD_TEMP_DIR,
     MODEL_ALIAS_MAP: model_catalog_cjs_1.MODEL_ALIAS_MAP,
     CONFIG_DEFAULTS,
