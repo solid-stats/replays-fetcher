@@ -22,6 +22,17 @@ const overrideSourceTimeoutMs = Number("1500");
 const fullRunMaxPages = Number("786");
 const overrideSourceRetryAttempts = Number("5");
 const disabledSourceRetryAttempts = Number("0");
+const defaultSourceConcurrency = Number("8");
+const minSourceConcurrency = Number("1");
+const maxSourceConcurrency = Number("32");
+const aboveMaxSourceConcurrency = Number("33");
+const belowMinSourceConcurrency = Number("0");
+const defaultSourceRequestSpacingMs = Number("250");
+const minSourceRequestSpacingMs = Number("0");
+const maxSourceRequestSpacingMs = Number("5000");
+const aboveMaxSourceRequestSpacingMs = Number("5001");
+const belowMinSourceRequestSpacingMs = Number("-1");
+const safetyValveMaxPages = Number("5");
 
 test("loadConfig should load required source, S3, and staging settings when valid environment is provided", () => {
   const config = loadConfig(validEnvironment);
@@ -29,7 +40,9 @@ test("loadConfig should load required source, S3, and staging settings when vali
   expect(config.sourceUrl).toBe("https://example.test/replays");
   expect(config.sourceTransport).toBe("direct");
   expect(config.sourceSshCommand).toBe("curl -fsSL --max-time 30");
-  expect(config.sourceMaxPages).toBe(1);
+  expect(config.sourceMaxPages).toBeUndefined();
+  expect(config.sourceConcurrency).toBe(defaultSourceConcurrency);
+  expect(config.sourceRequestSpacingMs).toBe(defaultSourceRequestSpacingMs);
   expect(config.sourceTimeoutMs).toBe(defaultSourceTimeoutMs);
   expect(config.sourceRetryAttempts).toBe(defaultSourceRetryAttempts);
   expect(config.s3.bucket).toBe("solid-stats-replays");
@@ -65,13 +78,129 @@ test("loadSourceConfig should parse source timeout override", () => {
   expect(config.sourceTimeoutMs).toBe(overrideSourceTimeoutMs);
 });
 
-test("loadSourceConfig should parse source max pages override", () => {
+test("loadSourceConfig should leave source max pages undefined when the optional cap is omitted", () => {
+  const config = loadSourceConfig({
+    REPLAY_SOURCE_URL: "https://example.test/replays",
+  });
+
+  expect(config.sourceMaxPages).toBeUndefined();
+});
+
+test("loadSourceConfig should parse the optional source max pages safety-valve cap", () => {
+  const config = loadSourceConfig({
+    REPLAY_SOURCE_MAX_PAGES: "5",
+    REPLAY_SOURCE_URL: "https://example.test/replays",
+  });
+
+  expect(config.sourceMaxPages).toBe(safetyValveMaxPages);
+});
+
+test("loadSourceConfig should still parse a large source max pages cap", () => {
   const config = loadSourceConfig({
     REPLAY_SOURCE_MAX_PAGES: "786",
     REPLAY_SOURCE_URL: "https://example.test/replays",
   });
 
   expect(config.sourceMaxPages).toBe(fullRunMaxPages);
+});
+
+test("loadConfig should reject a zero source max pages cap", () => {
+  expect(() =>
+    loadConfig({ ...validEnvironment, REPLAY_SOURCE_MAX_PAGES: "0" }),
+  ).toThrow("sourceMaxPages");
+});
+
+test("loadConfig should reject a negative source max pages cap", () => {
+  expect(() =>
+    loadConfig({ ...validEnvironment, REPLAY_SOURCE_MAX_PAGES: "-3" }),
+  ).toThrow("sourceMaxPages");
+});
+
+const sourceConcurrencyBoundaryCases: ReadonlyArray<
+  readonly [string, number]
+> = [
+  [String(minSourceConcurrency), minSourceConcurrency],
+  [String(maxSourceConcurrency), maxSourceConcurrency],
+];
+
+test.each(sourceConcurrencyBoundaryCases)(
+  "loadSourceConfig should accept source concurrency at boundary %s",
+  (environmentValue, expected) => {
+    const config = loadSourceConfig({
+      REPLAY_SOURCE_CONCURRENCY: environmentValue,
+      REPLAY_SOURCE_URL: "https://example.test/replays",
+    });
+
+    expect(config.sourceConcurrency).toBe(expected);
+  },
+);
+
+const sourceConcurrencyRejectCases: ReadonlyArray<readonly [string]> = [
+  [String(belowMinSourceConcurrency)],
+  [String(aboveMaxSourceConcurrency)],
+  ["abc"],
+];
+
+test.each(sourceConcurrencyRejectCases)(
+  "loadConfig should reject out-of-range source concurrency %s",
+  (environmentValue) => {
+    expect(() =>
+      loadConfig({
+        ...validEnvironment,
+        REPLAY_SOURCE_CONCURRENCY: environmentValue,
+      }),
+    ).toThrow("sourceConcurrency");
+  },
+);
+
+const sourceRequestSpacingBoundaryCases: ReadonlyArray<
+  readonly [string, number]
+> = [
+  [String(minSourceRequestSpacingMs), minSourceRequestSpacingMs],
+  [String(maxSourceRequestSpacingMs), maxSourceRequestSpacingMs],
+];
+
+test.each(sourceRequestSpacingBoundaryCases)(
+  "loadSourceConfig should accept source request spacing at boundary %s",
+  (environmentValue, expected) => {
+    const config = loadSourceConfig({
+      REPLAY_SOURCE_REQUEST_SPACING_MS: environmentValue,
+      REPLAY_SOURCE_URL: "https://example.test/replays",
+    });
+
+    expect(config.sourceRequestSpacingMs).toBe(expected);
+  },
+);
+
+const sourceRequestSpacingRejectCases: ReadonlyArray<readonly [string]> = [
+  [String(belowMinSourceRequestSpacingMs)],
+  [String(aboveMaxSourceRequestSpacingMs)],
+  ["abc"],
+];
+
+test.each(sourceRequestSpacingRejectCases)(
+  "loadConfig should reject out-of-range source request spacing %s",
+  (environmentValue) => {
+    expect(() =>
+      loadConfig({
+        ...validEnvironment,
+        REPLAY_SOURCE_REQUEST_SPACING_MS: environmentValue,
+      }),
+    ).toThrow("sourceRequestSpacingMs");
+  },
+);
+
+test("redactConfig should keep the non-secret source concurrency and spacing visible", () => {
+  const redacted = redactConfig(
+    loadConfig({
+      ...validEnvironment,
+      REPLAY_SOURCE_CONCURRENCY: "32",
+      REPLAY_SOURCE_REQUEST_SPACING_MS: "5000",
+    }),
+  );
+
+  expect(redacted.sourceConcurrency).toBe(maxSourceConcurrency);
+  expect(redacted.sourceRequestSpacingMs).toBe(maxSourceRequestSpacingMs);
 });
 
 test("loadSourceConfig should default source retry attempts when override is omitted", () => {
