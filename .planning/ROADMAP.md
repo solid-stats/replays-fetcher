@@ -134,7 +134,7 @@
 
 - [x] 10-01-PLAN.md — Add `REPLAY_SOURCE_CONCURRENCY`/`REPLAY_SOURCE_REQUEST_SPACING_MS` Zod knobs; make `REPLAY_SOURCE_MAX_PAGES` an optional safety-valve cap (RANGE-04/01)
 - [x] 10-02-PLAN.md — `createPacer` remaining-floor pacing seam over injected clock; replaces the blanket 2000ms delay as the pacing source (RANGE-04)
-- [ ] 10-03-PLAN.md — Install `p-limit@^7.3.0`; `createLimiter` seam + pure AIMD `ThrottleController` (MD halve floor-1, AI +1 cap-max) (RANGE-02/03)
+- [x] 10-03-PLAN.md — Install `p-limit@^7.3.0`; `createLimiter` seam + pure AIMD `ThrottleController` (MD halve floor-1, AI +1 cap-max) (RANGE-02/03)
 
 **Wave 2** *(blocked on Wave 1; owns `run-once.ts` + `discover.ts`)*
 

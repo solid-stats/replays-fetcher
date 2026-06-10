@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Full-Corpus Ingest Resilience
 status: executing
-last_updated: "2026-06-10T16:06:11.162Z"
-last_activity: 2026-06-10 -- Completed 10-01-PLAN.md (concurrency/spacing/optional max-pages config)
+last_updated: "2026-06-10T16:14:25.000Z"
+last_activity: 2026-06-10 -- Completed 10-03-PLAN.md (p-limit createLimiter seam + pure AIMD ThrottleController)
 progress:
   total_phases: 6
   completed_phases: 3
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 ## Current Position
 
 Phase: 10 (Dynamic Source Range and Rate Limiting) — EXECUTING
-Plan: 3 of 5
+Plan: 4 of 5
 Status: Ready to execute
-Last activity: 2026-06-10 -- Completed 10-01-PLAN.md (concurrency/spacing/optional max-pages config)
+Last activity: 2026-06-10 -- Completed 10-03-PLAN.md (p-limit createLimiter seam + pure AIMD ThrottleController)
 
 Progress: `[x][x][x][ ][ ][ ]` 3/6 phases complete
 
@@ -106,6 +106,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: Phase 10-01: dropped sourceMaxPages default(1); unset now means unbounded (stop-on-empty governs in Wave-2)
 - [Phase ?]: Phase 10-01: all Zod numeric bounds hoisted as named constants incl. MIN_SPACING_MS=0 (.min/.max args are not no-magic-numbers exempt)
 - [Phase ?]: 10-02: createPacer is a pure remaining-floor seam (sleeps spacingMs - elapsed, never spacingMs + backoff); now/sleep injected, lastRequestAt NaN-seeded so the first call never sleeps.
+- [Phase ?]: 10-03: createLimiter is a thin p-limit seam (default import, no .js) returning a limiter with a runtime-settable .concurrency — the AIMD lever (RANGE-02).
+- [Phase ?]: 10-03: createThrottleController is a pure AIMD machine over page-count windows (RATE_LIMITED_WINDOW=2, CLEAN_WINDOW=3): MD halve floor-1 + pacing-floor bump, AI +1 cap-max; reduces concurrency + pacing floor ONLY, no backoff (Pitfall 2). nowMs is a method parameter recorded as lastSignalAtMs evidence, never the decision boundary (RANGE-03).
 
 ### Roadmap Evolution
 
@@ -138,6 +140,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 | 07 | 01 | 5min | 2 | 2 |
 | 07 | 02 | 6min | 2 | 4 |
 | 07 | 03 | 11min | 3 | 5 |
+| 10 | 03 | ~8min | 3 | 6 |
 
 ### Pending Todos
 
@@ -181,3 +184,4 @@ Execute Phase 10 (Dynamic Source Range and Rate Limiting) with `/gsd:execute-pha
 | Phase 9 P05 | 16min | 3 tasks | 7 files |
 | Phase 10-dynamic-source-range-and-rate-limiting P10-01 | 9min | 2 tasks | 6 files |
 | Phase 10-dynamic-source-range-and-rate-limiting P02 | 6min | 2 tasks | 2 files |
+| Phase 10-dynamic-source-range-and-rate-limiting P03 | ~8min | 3 tasks | 6 files |
