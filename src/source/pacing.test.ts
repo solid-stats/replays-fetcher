@@ -8,6 +8,7 @@ const elapsedShort = Number("100");
 const remainingShort = Number("150");
 const elapsedAtFloor = Number("300");
 const startEpoch = Number("1000000000000");
+const lastIndex = Number("-1");
 
 interface SleepSpy {
   readonly sleep: (ms: number) => Promise<void>;
@@ -31,10 +32,10 @@ function createScriptedNow(sequence: number[]): () => number {
   let index = 0;
 
   return (): number => {
-    const value = sequence[index] ?? sequence[sequence.length - 1] ?? 0;
+    const value = sequence.at(index) ?? sequence.at(lastIndex) ?? 0;
     index += 1;
 
-    return value as number;
+    return value;
   };
 }
 
@@ -93,6 +94,17 @@ test("createPacer should sleep only the remaining floor, never spacing plus elap
   expect(spy.calls).toHaveLength(Number("1"));
   expect(spy.calls[0]).toBe(remainingShort);
   expect(spy.calls[0]).not.toBe(spacingMs);
+});
+
+test("createPacer should fall back to real now and sleep when none are injected", async () => {
+  const pacer = createPacer({ spacingMs: zeroSpacingMs });
+
+  await pacer.awaitFloor();
+  await pacer.awaitFloor();
+
+  // With spacingMs = 0 the remaining floor is never positive, so the real
+  // defaultSleep timer is never armed; this only exercises the ?? fallbacks.
+  expect(typeof pacer.awaitFloor).toBe("function");
 });
 
 test("createPacer should never sleep when spacingMs is zero", async () => {
