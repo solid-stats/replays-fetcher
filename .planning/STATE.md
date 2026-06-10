@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Full-Corpus Ingest Resilience
 status: in_progress
-last_updated: "2026-06-10T00:00:00.000Z"
-last_activity: 2026-06-10 -- Phase 9 verified (5/5 success criteria, status passed); milestone advancing to Phase 10
+last_updated: "2026-06-10T16:00:00.000Z"
+last_activity: 2026-06-10 -- Phase 10 planned (5 plans, 3 waves); ready to execute
 progress:
   total_phases: 6
   completed_phases: 3
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-07)
 
 **Core value:** Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
-**Current focus:** Phase 9 — Checkpoint and Resume
+**Current focus:** Phase 10 — Dynamic Source Range and Rate Limiting
 
 ## Current Position
 
-Phase: 10 (Dynamic Source Range and Rate Limiting) — NOT STARTED
-Plan: 0 of TBD
-Status: Phase 9 verified (status passed, 5/5 criteria); ready to discuss/plan Phase 10
-Last activity: 2026-06-10 -- Phase 9 verified; VERIFICATION.md written
+Phase: 10 (Dynamic Source Range and Rate Limiting) — PLANNED
+Plan: 0 of 5 (3 waves) — ready to execute
+Status: Plans pass checker (RANGE-01..06 covered); ready for /gsd-execute-phase 10
+Last activity: 2026-06-10 -- Phase 10 planned (5 plans, 3 waves); plan-checker VERIFICATION PASSED
 
 Progress: `[x][x][x][ ][ ][ ]` 3/6 phases complete
 
@@ -153,11 +153,11 @@ None.
 
 ## Next Step
 
-Plan Phase 10 (Dynamic Source Range and Rate Limiting) with `/gsd:plan-phase 10`.
+Execute Phase 10 (Dynamic Source Range and Rate Limiting) with `/gsd:execute-phase 10`.
 
 ## Operator Next Steps
 
-- Run `/gsd:plan-phase 10` to decompose Phase 10 into executable plans (stop-on-empty range discovery, p-limit concurrency, adaptive throttling, pacing config).
+- Run `/gsd:execute-phase 10` to execute the 5 plans across 3 waves (config knobs → pacer/p-limit/AIMD throttle → run-once integration → summary metrics).
 
 ## Performance Metrics
 
