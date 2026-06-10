@@ -198,6 +198,9 @@ Optional:
 - `REPLAY_SOURCE_TRANSPORT` defaults to `direct`; set to `ssh` to fetch source pages through an operator-managed SSH host.
 - `REPLAY_SOURCE_SSH_HOST` is required when `REPLAY_SOURCE_TRANSPORT=ssh`.
 - `REPLAY_SOURCE_SSH_COMMAND` defaults to `curl -fsSL --max-time 30`.
+- `REPLAY_SOURCE_CONCURRENCY` bounds the per-page detail/byte/store/stage fan-out. Defaults to `8`; valid range `1`-`32`. Out-of-range or non-numeric values are rejected before any S3/PostgreSQL write.
+- `REPLAY_SOURCE_REQUEST_SPACING_MS` is the minimum spacing applied between source requests (the pacing floor that replaces the old blanket per-request delay). Defaults to `250`; valid range `0`-`5000`. Out-of-range or non-numeric values are rejected before any write.
+- `REPLAY_SOURCE_MAX_PAGES` is now an **optional safety-valve cap** with **no default**. When unset, a full `run-once` is unbounded and stops on the first empty source page (stop-on-empty governs the range). Set it only to cap partial runs or tests to a fixed number of pages; any operator or scheduler env that relied on the previous `default(1)` behavior to fetch only page 1 must now set `REPLAY_SOURCE_MAX_PAGES=1` explicitly. Must be a positive integer when set.
 
 For operators whose local IP is blocked by Cloudflare, dry-run discovery can use an allowlisted SSH host:
 
