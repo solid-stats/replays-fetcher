@@ -128,7 +128,21 @@
   5. The run reports pages-per-minute, candidates-per-minute, and estimated remaining time (labelled as an estimate until the empty-page stop) per page and in the final summary; the discovered source range appears in the summary.
   6. The transient/permanent classifier (DIAG-02) runs before the stop-on-empty check on every page result; per-page results are gathered with `Promise.allSettled` before the page is marked complete and checkpointed; a page is never checkpointed mid-way through its detail/byte fan-out.
 
-**Plans**: TBD
+**Plans**: 5 plans
+
+**Wave 1** *(parallel — disjoint files)*
+
+- [ ] 10-01-PLAN.md — Add `REPLAY_SOURCE_CONCURRENCY`/`REPLAY_SOURCE_REQUEST_SPACING_MS` Zod knobs; make `REPLAY_SOURCE_MAX_PAGES` an optional safety-valve cap (RANGE-04/01)
+- [ ] 10-02-PLAN.md — `createPacer` remaining-floor pacing seam over injected clock; replaces the blanket 2000ms delay as the pacing source (RANGE-04)
+- [ ] 10-03-PLAN.md — Install `p-limit@^7.3.0`; `createLimiter` seam + pure AIMD `ThrottleController` (MD halve floor-1, AI +1 cap-max) (RANGE-02/03)
+
+**Wave 2** *(blocked on Wave 1; owns `run-once.ts` + `discover.ts`)*
+
+- [ ] 10-04-PLAN.md — Stop-on-empty loop + classify-before-stop (no silent truncation) + parallel `processPage` over shared limiter (`Promise.allSettled`, index-ordered, rethrow programmer errors) + throttle/pacer wiring; retire blanket delay in `discover.ts` (RANGE-01/02/03/04/06)
+
+**Wave 3** *(blocked on Wave 2)*
+
+- [ ] 10-05-PLAN.md — `RunSummary` discovered range + pages/min + candidates/min + labelled-estimate ETA (additive-spread, exactOptional-safe); cli wires concurrency + spacing into `runOnce` (RANGE-05)
 
 ---
 
@@ -175,7 +189,7 @@
 | 7. v2 Foundations | v2.0 | 3/3 | Complete    | 2026-06-07 |
 | 8. Source Failure Diagnostics and Retry | v2.0 | 4/4 | Complete    | 2026-06-08 |
 | 9. Checkpoint and Resume | v2.0 | 5/5 | Complete   | 2026-06-09 |
-| 10. Dynamic Source Range and Rate Limiting | v2.0 | 0/TBD | Not started | - |
+| 10. Dynamic Source Range and Rate Limiting | v2.0 | 0/5 | Planned | - |
 | 11. Progress Events and Compact Evidence | v2.0 | 0/TBD | Not started | - |
 | 12. Source Contract Guards | v2.0 | 0/TBD | Not started | - |
 
