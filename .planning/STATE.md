@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Full-Corpus Ingest Resilience
 status: executing
-last_updated: "2026-06-10T15:44:46.607Z"
+last_updated: "2026-06-10T15:58:06.798Z"
 last_activity: 2026-06-10 -- Phase 10 execution started
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 17
-  completed_plans: 12
+  completed_plans: 13
   percent: 50
 ---
 
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 ## Current Position
 
 Phase: 10 (Dynamic Source Range and Rate Limiting) — EXECUTING
-Plan: 1 of 5
-Status: Executing Phase 10
-Last activity: 2026-06-10 -- Phase 10 execution started
+Plan: 2 of 5
+Status: Ready to execute
+Last activity: 2026-06-10 -- Completed 10-01-PLAN.md (concurrency/spacing/optional max-pages config)
 
 Progress: `[x][x][x][ ][ ][ ]` 3/6 phases complete
 
@@ -103,6 +103,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: 09-04: S3 checkpoint store conditional CAS (IfNoneMatch:* / IfMatch:<etag>); 412/409 -> bounded re-read+merge keeping max(lastCompletedPage); exhaustion -> CheckpointConflictError
 - [Phase ?]: 09-04: store read/write return the ETag for the caller to thread as next IfMatch; non-precondition write errors propagate for log-and-continue (09-05)
 - [Phase ?]: 09-05: run-once resumes at lastCompletedPage+1; complete checkpoint + --resume -> clean page-1; runId stamped into promotion_evidence.run_id; status/exit-2 via deriveRunStatus
+- [Phase ?]: Phase 10-01: dropped sourceMaxPages default(1); unset now means unbounded (stop-on-empty governs in Wave-2)
+- [Phase ?]: Phase 10-01: all Zod numeric bounds hoisted as named constants incl. MIN_SPACING_MS=0 (.min/.max args are not no-magic-numbers exempt)
 
 ### Roadmap Evolution
 
@@ -176,3 +178,4 @@ Execute Phase 10 (Dynamic Source Range and Rate Limiting) with `/gsd:execute-pha
 | Phase 09 P03 | 13min | 2 tasks | 3 files |
 | Phase 09 P04 | 35min | 3 tasks | 5 files |
 | Phase 9 P05 | 16min | 3 tasks | 7 files |
+| Phase 10-dynamic-source-range-and-rate-limiting P10-01 | 9min | 2 tasks | 6 files |

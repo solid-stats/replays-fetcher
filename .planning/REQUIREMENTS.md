@@ -49,10 +49,10 @@ Goal: a restarted full run resumes from the first incomplete page instead of pag
 
 Goal: full-run scope is discovered and paced instead of hardcoded, and meets the ~1–2h target politely.
 
-- [ ] **RANGE-01**: The full-run range is discovered at runtime — keep fetching until a list page yields zero replay rows (stop-on-empty), with an optional parsed last-page used only as an ETA upper bound. Reliance on hardcoded `REPLAY_SOURCE_MAX_PAGES` for normal full runs is removed; it remains only as an optional cap/safety valve for partial runs and tests.
+- [x] **RANGE-01**: The full-run range is discovered at runtime — keep fetching until a list page yields zero replay rows (stop-on-empty), with an optional parsed last-page used only as an ETA upper bound. Reliance on hardcoded `REPLAY_SOURCE_MAX_PAGES` for normal full runs is removed; it remains only as an optional cap/safety valve for partial runs and tests.
 - [ ] **RANGE-02**: Source reads use bounded, operator-configurable concurrency — the per-page detail/byte fan-out is parallelized (e.g. `p-limit`) while list pages stay sequential to preserve checkpoint page ordering. The default is tuned to the ~1–2h full-corpus target while staying polite to the Cloudflare-fronted source.
 - [ ] **RANGE-03**: Adaptive throttling reduces effective concurrency and/or extends pacing after repeated `429`/`403` signals, then is bounded so a source hiccup cannot fan out simultaneous retry storms.
-- [ ] **RANGE-04**: Operator-configurable pacing is retained but applied as a floor between list pages / minimum spacing within the limiter — not a blanket per-request 2s delay. Concurrency and delay are bounded, Zod-validated config (`min`/`max` ranges).
+- [x] **RANGE-04**: Operator-configurable pacing is retained but applied as a floor between list pages / minimum spacing within the limiter — not a blanket per-request 2s delay. Concurrency and delay are bounded, Zod-validated config (`min`/`max` ranges).
 - [ ] **RANGE-05**: The run records and reports pages-per-minute, candidates-per-minute, and estimated remaining time (labelled an estimate until the empty-page stop), and the discovered source range appears in the summary.
 - [ ] **RANGE-06**: Transient-vs-permanent classification (DIAG-02) runs before the stop-on-empty check, so a transient failure is never mistaken for end-of-corpus (no silent truncation). Per-page results are gathered (`Promise.allSettled`) before the page is marked complete and checkpointed; never checkpoint mid-page.
 
