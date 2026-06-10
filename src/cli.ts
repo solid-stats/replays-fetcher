@@ -379,7 +379,7 @@ function registerRunOnceCommand(
         onRetry: buildRetryWarnEmitter(log),
         resume: options.resume === true,
         runId,
-        maxPages: configResult.config.sourceMaxPages,
+        ...maxPagesOption(configResult.config.sourceMaxPages),
         sourceClient: resources.sourceClient,
         sourceUrl: new URL(configResult.config.sourceUrl),
         stageRawReplay: dependencies.stageRawReplay,
@@ -690,6 +690,16 @@ function countStaging(
 
 function writeJson(value: unknown): void {
   process.stdout.write(`${JSON.stringify(value, undefined, 2)}\n`);
+}
+
+function maxPagesOption(maxPages: number | undefined): {
+  maxPages?: number;
+} {
+  if (maxPages === undefined) {
+    return {};
+  }
+
+  return { maxPages };
 }
 
 const [, entrypointPath] = process.argv;

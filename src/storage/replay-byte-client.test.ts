@@ -475,7 +475,8 @@ test("createReplayByteClient should retry transient SSH byte failures via cause 
 
 test("createReplayByteClient should fail SSH transport when host is missing", async () => {
   const sourceConfig: SourceConfig = {
-    sourceMaxPages: 1,
+    sourceConcurrency: Number("8"),
+    sourceRequestSpacingMs: Number("250"),
     sourceRetryAttempts: 3,
     sourceSshCommand: "curl -fsSL --max-time 30",
     sourceSshHost: undefined,

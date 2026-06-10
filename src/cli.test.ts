@@ -25,6 +25,7 @@ const validEnvironment = {
   S3_REGION: "us-east-1",
   S3_SECRET_ACCESS_KEY: "secret-key",
 };
+const safetyValveMaxPages = Number("5");
 
 interface CheckOutput {
   readonly checks: {
@@ -1188,7 +1189,6 @@ test("buildCli run-once should execute one scheduled cycle and write a structure
     checkpointStore,
     discoverReplays: expect.any(Function) as typeof createDiscoveryReport,
     log: expect.any(Object) as unknown,
-    maxPages: 1,
     now: expect.any(Function) as () => Date,
     onRetry: expect.any(Function) as (event: unknown) => void,
     resume: false,
@@ -1211,6 +1211,51 @@ test("buildCli run-once should execute one scheduled cycle and write a structure
     runId: expect.stringMatching(/^run-2026-05-09T12:00:00\.000Z-/u) as string,
   });
   expect(JSON.stringify(parseCliOutput(writes))).not.toContain("secret-key");
+  expect(process.exitCode).toBe(0);
+});
+
+test("buildCli run-once should thread the optional max-pages safety-valve cap into runOnce", async () => {
+  stubValidEnvironment();
+  vi.stubEnv("REPLAY_SOURCE_MAX_PAGES", "5");
+  const writes: string[] = [];
+  const injectedRunOnce = vi.fn(async (input: { readonly runId: string }) => ({
+    exitCode: 0 as const,
+    summary: createRunSummary({
+      counts: {
+        conflict: 0,
+        diagnostics: 0,
+        discovered: 1,
+        duplicate: 0,
+        failed: 0,
+        fetched: 1,
+        skipped: 0,
+        staged: 1,
+        stored: 1,
+      },
+      runId: input.runId,
+    }),
+  }));
+  vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+    writes.push(String(chunk));
+    return true;
+  });
+
+  await buildCli({
+    createPostgresStagingRepositoryFromDatabaseUrl: () => ({ stage: vi.fn() }),
+    createReplayByteClient: () => ({ fetchBytes: vi.fn() }),
+    createS3CheckpointStoreFromConfig: () => ({
+      read: vi.fn(),
+      write: vi.fn(),
+    }),
+    createS3RawReplayStorageFromConfig: () => ({ storeRawReplay: vi.fn() }),
+    createSourceClient: () => ({ fetchText: vi.fn() }),
+    now: () => new Date("2026-05-09T12:00:00.000Z"),
+    runOnce: injectedRunOnce,
+  }).parseAsync(["node", "replays-fetcher", "run-once"]);
+
+  expect(injectedRunOnce).toHaveBeenCalledWith(
+    expect.objectContaining({ maxPages: safetyValveMaxPages }),
+  );
   expect(process.exitCode).toBe(0);
 });
 

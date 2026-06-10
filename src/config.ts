@@ -27,9 +27,28 @@ const booleanFromEnvironment = z
 const defaultSourceTimeoutMs = 30_000;
 export const defaultSourceRetryAttempts = 3;
 
+const MIN_CONCURRENCY = 1;
+const MAX_CONCURRENCY = 32;
+const defaultSourceConcurrency = 8;
+const MIN_SPACING_MS = 0;
+const MAX_SPACING_MS = 5000;
+const defaultSourceRequestSpacingMs = 250;
+
 const sourceConfigSchema = z
   .object({
-    sourceMaxPages: z.coerce.number().int().positive().default(1),
+    sourceMaxPages: z.coerce.number().int().positive().optional(),
+    sourceConcurrency: z.coerce
+      .number()
+      .int()
+      .min(MIN_CONCURRENCY)
+      .max(MAX_CONCURRENCY)
+      .default(defaultSourceConcurrency),
+    sourceRequestSpacingMs: z.coerce
+      .number()
+      .int()
+      .min(MIN_SPACING_MS)
+      .max(MAX_SPACING_MS)
+      .default(defaultSourceRequestSpacingMs),
     sourceUrl: z.url(),
     sourceTransport: z.enum(["direct", "ssh"]).default("direct"),
     sourceSshHost: z.string().min(1).optional(),
@@ -165,7 +184,9 @@ export function redactConfig(config: AppConfig): RedactedAppConfig {
 }
 
 function readSourceConfigInput(source: ConfigSource): {
+  readonly sourceConcurrency: string | boolean | undefined;
   readonly sourceMaxPages: string | boolean | undefined;
+  readonly sourceRequestSpacingMs: string | boolean | undefined;
   readonly sourceRetryAttempts: string | boolean | undefined;
   readonly sourceSshCommand: string | undefined;
   readonly sourceSshHost: string | undefined;
@@ -174,7 +195,9 @@ function readSourceConfigInput(source: ConfigSource): {
   readonly sourceUrl: string | boolean | undefined;
 } {
   return {
+    sourceConcurrency: source["REPLAY_SOURCE_CONCURRENCY"],
     sourceMaxPages: source["REPLAY_SOURCE_MAX_PAGES"],
+    sourceRequestSpacingMs: source["REPLAY_SOURCE_REQUEST_SPACING_MS"],
     sourceUrl: source["REPLAY_SOURCE_URL"],
     sourceTransport: sourceTransportOrUndefined(
       source["REPLAY_SOURCE_TRANSPORT"],

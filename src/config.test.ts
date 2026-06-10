@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- config scenarios (source, S3, staging, bounds, redaction) are kept together for config-contract readability. */
 import { expect, test } from "vitest";
 
 import {
@@ -116,9 +117,7 @@ test("loadConfig should reject a negative source max pages cap", () => {
   ).toThrow("sourceMaxPages");
 });
 
-const sourceConcurrencyBoundaryCases: ReadonlyArray<
-  readonly [string, number]
-> = [
+const sourceConcurrencyBoundaryCases: readonly (readonly [string, number])[] = [
   [String(minSourceConcurrency), minSourceConcurrency],
   [String(maxSourceConcurrency), maxSourceConcurrency],
 ];
@@ -135,7 +134,7 @@ test.each(sourceConcurrencyBoundaryCases)(
   },
 );
 
-const sourceConcurrencyRejectCases: ReadonlyArray<readonly [string]> = [
+const sourceConcurrencyRejectCases: readonly (readonly [string])[] = [
   [String(belowMinSourceConcurrency)],
   [String(aboveMaxSourceConcurrency)],
   ["abc"],
@@ -153,9 +152,10 @@ test.each(sourceConcurrencyRejectCases)(
   },
 );
 
-const sourceRequestSpacingBoundaryCases: ReadonlyArray<
-  readonly [string, number]
-> = [
+const sourceRequestSpacingBoundaryCases: readonly (readonly [
+  string,
+  number,
+])[] = [
   [String(minSourceRequestSpacingMs), minSourceRequestSpacingMs],
   [String(maxSourceRequestSpacingMs), maxSourceRequestSpacingMs],
 ];
@@ -172,7 +172,7 @@ test.each(sourceRequestSpacingBoundaryCases)(
   },
 );
 
-const sourceRequestSpacingRejectCases: ReadonlyArray<readonly [string]> = [
+const sourceRequestSpacingRejectCases: readonly (readonly [string])[] = [
   [String(belowMinSourceRequestSpacingMs)],
   [String(aboveMaxSourceRequestSpacingMs)],
   ["abc"],
