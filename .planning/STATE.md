@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Full-Corpus Ingest Resilience
 status: executing
-last_updated: "2026-06-10T15:58:06.798Z"
-last_activity: 2026-06-10 -- Phase 10 execution started
+last_updated: "2026-06-10T16:06:11.162Z"
+last_activity: 2026-06-10 -- Completed 10-01-PLAN.md (concurrency/spacing/optional max-pages config)
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 17
-  completed_plans: 13
+  completed_plans: 14
   percent: 50
 ---
 
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 ## Current Position
 
 Phase: 10 (Dynamic Source Range and Rate Limiting) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
 Last activity: 2026-06-10 -- Completed 10-01-PLAN.md (concurrency/spacing/optional max-pages config)
 
@@ -105,6 +105,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: 09-05: run-once resumes at lastCompletedPage+1; complete checkpoint + --resume -> clean page-1; runId stamped into promotion_evidence.run_id; status/exit-2 via deriveRunStatus
 - [Phase ?]: Phase 10-01: dropped sourceMaxPages default(1); unset now means unbounded (stop-on-empty governs in Wave-2)
 - [Phase ?]: Phase 10-01: all Zod numeric bounds hoisted as named constants incl. MIN_SPACING_MS=0 (.min/.max args are not no-magic-numbers exempt)
+- [Phase ?]: 10-02: createPacer is a pure remaining-floor seam (sleeps spacingMs - elapsed, never spacingMs + backoff); now/sleep injected, lastRequestAt NaN-seeded so the first call never sleeps.
 
 ### Roadmap Evolution
 
@@ -179,3 +180,4 @@ Execute Phase 10 (Dynamic Source Range and Rate Limiting) with `/gsd:execute-pha
 | Phase 09 P04 | 35min | 3 tasks | 5 files |
 | Phase 9 P05 | 16min | 3 tasks | 7 files |
 | Phase 10-dynamic-source-range-and-rate-limiting P10-01 | 9min | 2 tasks | 6 files |
+| Phase 10-dynamic-source-range-and-rate-limiting P02 | 6min | 2 tasks | 2 files |

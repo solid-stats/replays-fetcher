@@ -133,7 +133,7 @@
 **Wave 1** *(parallel — disjoint files)*
 
 - [x] 10-01-PLAN.md — Add `REPLAY_SOURCE_CONCURRENCY`/`REPLAY_SOURCE_REQUEST_SPACING_MS` Zod knobs; make `REPLAY_SOURCE_MAX_PAGES` an optional safety-valve cap (RANGE-04/01)
-- [ ] 10-02-PLAN.md — `createPacer` remaining-floor pacing seam over injected clock; replaces the blanket 2000ms delay as the pacing source (RANGE-04)
+- [x] 10-02-PLAN.md — `createPacer` remaining-floor pacing seam over injected clock; replaces the blanket 2000ms delay as the pacing source (RANGE-04)
 - [ ] 10-03-PLAN.md — Install `p-limit@^7.3.0`; `createLimiter` seam + pure AIMD `ThrottleController` (MD halve floor-1, AI +1 cap-max) (RANGE-02/03)
 
 **Wave 2** *(blocked on Wave 1; owns `run-once.ts` + `discover.ts`)*
@@ -189,7 +189,7 @@
 | 7. v2 Foundations | v2.0 | 3/3 | Complete    | 2026-06-07 |
 | 8. Source Failure Diagnostics and Retry | v2.0 | 4/4 | Complete    | 2026-06-08 |
 | 9. Checkpoint and Resume | v2.0 | 5/5 | Complete   | 2026-06-09 |
-| 10. Dynamic Source Range and Rate Limiting | v2.0 | 1/5 | In Progress|  |
+| 10. Dynamic Source Range and Rate Limiting | v2.0 | 2/5 | In Progress|  |
 | 11. Progress Events and Compact Evidence | v2.0 | 0/TBD | Not started | - |
 | 12. Source Contract Guards | v2.0 | 0/TBD | Not started | - |
 
