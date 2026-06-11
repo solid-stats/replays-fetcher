@@ -25,6 +25,7 @@ export interface RetryAttemptEvent {
   readonly attempt: number;
   readonly causeCode?: string;
   readonly delayMs: number;
+  readonly httpStatus?: number;
   readonly page?: number;
   readonly phase: SourceReadPhase;
 }
@@ -125,6 +126,10 @@ function buildRetryEvent<T>(
 
   if (classification.causeCode !== undefined) {
     event = { ...event, causeCode: classification.causeCode };
+  }
+
+  if (classification.httpStatus !== undefined) {
+    event = { ...event, httpStatus: classification.httpStatus };
   }
 
   return event;
