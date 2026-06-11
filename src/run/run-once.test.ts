@@ -1,7 +1,7 @@
 /* eslint-disable max-lines -- run-once cycle scenarios are kept together for orchestration readability. */
 import { expect, test, vi } from "vitest";
 
-import { runOnce } from "./run-once.js";
+import { derivePagesPerMinute, runOnce } from "./run-once.js";
 
 import type { Checkpoint } from "../checkpoint/checkpoint.js";
 import type {
@@ -11,6 +11,9 @@ import type {
   S3CheckpointStore,
 } from "../checkpoint/s3-checkpoint-store.js";
 import type { DiscoveryReport, ReplayCandidate } from "../discovery/types.js";
+import type { LimitFunction } from "../source/concurrency.js";
+import type { Pacer } from "../source/pacing.js";
+import type { ThrottleController } from "../source/throttle.js";
 import type { IngestStagingResult } from "../staging/types.js";
 import type { StoreRawReplayResult } from "../storage/store-raw-replay.js";
 
@@ -20,6 +23,8 @@ const startedAt = "2026-05-09T13:40:00.000Z";
 const finishedAt = "2026-05-09T13:40:05.000Z";
 const pageTwo = "2";
 const twoPages = 2;
+const testConcurrency = 4;
+const OUT_OF_ORDER_DELAY_MS = 10;
 const candidate: ReplayCandidate = {
   identity: {
     filename: "replay-a.ocap",
@@ -159,8 +164,11 @@ test("runOnce should execute one discovery, raw storage, and staging cycle", asy
 
   const result = await runOnce({
     byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
     checkpointStore: fakeCheckpointStore(),
     discoverReplays: async () => discoveryReport(),
+    maxPages: 1,
     now: createClock([startedAt, finishedAt]),
     runId: "run-1",
     sourceClient: { fetchText: vi.fn() },
@@ -207,6 +215,8 @@ test("runOnce should thread attempts and onRetry into discovery", async () => {
   await runOnce({
     attempts: 4,
     byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
     checkpointStore: fakeCheckpointStore(),
     discoverReplays: discover,
     now: createClock([startedAt, finishedAt]),
@@ -251,6 +261,8 @@ test("runOnce should store and stage each page before discovering the next page"
 
   const result = await runOnce({
     byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
     checkpointStore: fakeCheckpointStore(),
     discoverReplays: discover,
     maxPages: twoPages,
@@ -306,6 +318,8 @@ test("runOnce should return source failure summary without raw storage or stagin
 
   const result = await runOnce({
     byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
     checkpointStore: fakeCheckpointStore(),
     discoverReplays: async () =>
       discoveryReport({
@@ -345,8 +359,11 @@ test("runOnce should return source failure summary without raw storage or stagin
 test("runOnce should classify raw and staging failures", async () => {
   const result = await runOnce({
     byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
     checkpointStore: fakeCheckpointStore(),
     discoverReplays: async () => discoveryReport(),
+    maxPages: 1,
     now: createClock([startedAt, finishedAt]),
     runId: "run-1",
     sourceClient: { fetchText: vi.fn() },
@@ -382,8 +399,11 @@ test("runOnce should tally a failed staging result into the page counts", async 
 
   await runOnce({
     byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
     checkpointStore,
     discoverReplays: async () => discoveryReport(),
+    maxPages: 1,
     now: createClock([startedAt, finishedAt]),
     runId: "run-stage-failed",
     sourceClient: { fetchText: vi.fn() },
@@ -419,6 +439,8 @@ test("runOnce should resume at lastCompletedPage + 1 without re-discovering comp
 
   await runOnce({
     byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
     checkpointStore,
     discoverReplays: discover,
     maxPages: 3,
@@ -454,6 +476,8 @@ test("runOnce should start at page 1 when no checkpoint exists", async () => {
 
   await runOnce({
     byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
     checkpointStore: fakeCheckpointStore(),
     discoverReplays: discover,
     now: createClock([startedAt, finishedAt]),
@@ -480,6 +504,8 @@ test("runOnce should warn and start at page 1 when the checkpoint is corrupt", a
 
   await runOnce({
     byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
     // A corrupt checkpoint degrades to {} inside the store (parseCheckpoint -> undefined).
     checkpointStore: fakeCheckpointStore(),
     discoverReplays: discover,
@@ -511,6 +537,8 @@ test("runOnce should auto-skip a complete checkpoint and run a clean page-1", as
 
   await runOnce({
     byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
     checkpointStore: fakeCheckpointStore(
       makeCheckpoint({ lastCompletedPage: twoPages, status: "complete" }),
       '"etag-complete"',
@@ -540,6 +568,8 @@ test("runOnce should run a clean page-1 when --resume is set on a complete check
 
   await runOnce({
     byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
     checkpointStore: fakeCheckpointStore(
       makeCheckpoint({ lastCompletedPage: twoPages, status: "complete" }),
     ),
@@ -573,6 +603,8 @@ test("runOnce should log the auto-skip branch (no --resume) on a complete checkp
 
   await runOnce({
     byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
     checkpointStore: fakeCheckpointStore(
       makeCheckpoint({ lastCompletedPage: twoPages, status: "complete" }),
     ),
@@ -633,6 +665,8 @@ test("runOnce threads each write ETag forward so a multi-page run lands complete
 
   await runOnce({
     byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
     checkpointStore,
     discoverReplays: async ({ sourceUrl }: { sourceUrl: URL }) =>
       discoveryReport({
@@ -668,10 +702,13 @@ test("runOnce strips userinfo from the source URL before persisting it (no crede
 
   const result = await runOnce({
     byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
     checkpointStore,
     async discoverReplays() {
       return discoveryReport();
     },
+    maxPages: 1,
     now: createClock([startedAt, finishedAt]),
     runId: "run-userinfo",
     sourceClient: { fetchText: vi.fn() },
@@ -702,6 +739,8 @@ test("runOnce should write a checkpoint once per completed page with that page n
 
   await runOnce({
     byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
     checkpointStore,
     discoverReplays: async ({ sourceUrl }: { sourceUrl: URL }) =>
       discoveryReport({
@@ -749,9 +788,12 @@ test("runOnce should continue when a checkpoint write rejects transiently", asyn
 
   const result = await runOnce({
     byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
     checkpointStore,
     discoverReplays: async () => discoveryReport(),
-    log: { warn } as never,
+    maxPages: 1,
+    log: { info: vi.fn(), warn } as never,
     now: createClock([startedAt, finishedAt]),
     runId: "run-transient",
     sourceClient: { fetchText: vi.fn() },
@@ -805,6 +847,8 @@ test("runOnce full resume cycle skips completed pages across two runs", async ()
   // First run: page 1 succeeds, page 2 stops resumable (rate_limited).
   await runOnce({
     byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
     checkpointStore,
     async discoverReplays({ sourceUrl: pageUrl }: { sourceUrl: URL }) {
       const page = pageUrl.searchParams.get("p") ?? "1";
@@ -851,6 +895,8 @@ test("runOnce full resume cycle skips completed pages across two runs", async ()
   // re-discovers the completed page 1.
   await runOnce({
     byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
     checkpointStore,
     async discoverReplays({ sourceUrl: pageUrl }: { sourceUrl: URL }) {
       discoveredSecondRun.push(pageUrl.searchParams.get("p") ?? "1");
@@ -877,10 +923,13 @@ test("runOnce persists only identifiers in the checkpoint and summary (no leak)"
 
   const result = await runOnce({
     byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
     checkpointStore,
     async discoverReplays() {
       return discoveryReport();
     },
+    maxPages: 1,
     now: createClock([startedAt, finishedAt]),
     runId: "run-no-leak",
     sourceClient: { fetchText: vi.fn() },
@@ -918,3 +967,575 @@ function createClock(values: readonly string[]): () => Date {
     return new Date(value);
   };
 }
+
+interface InspectableLimiter {
+  readonly assignments: number[];
+  readonly limit: LimitFunction;
+  readonly maxInFlight: () => number;
+}
+
+/**
+ * A `p-limit`-compatible limiter stub that honors the concurrency cap, records
+ * every `.concurrency =` assignment the throttle makes, and tracks the maximum
+ * simultaneous in-flight tasks so a test can prove the shared cap serializes or
+ * parallelizes dispatch.
+ */
+function inspectableLimiter(initial: number): InspectableLimiter {
+  const assignments: number[] = [];
+  let concurrency = initial;
+  let running = 0;
+  let maxInFlight = 0;
+  const queue: (() => void)[] = [];
+
+  const pump = (): void => {
+    while (running < concurrency && queue.length > 0) {
+      const next = queue.shift();
+      // Count the slot as taken at release time so a second pump cannot
+      // over-release before the released task's continuation runs.
+      running += 1;
+      maxInFlight = Math.max(maxInFlight, running);
+      next?.();
+    }
+  };
+
+  const limit = (async <Arguments extends unknown[], Result>(
+    task: (...arguments_: Arguments) => Promise<Result> | Result,
+    ...arguments_: Arguments
+  ): Promise<Result> => {
+    await new Promise<void>((resolve) => {
+      queue.push(resolve);
+      pump();
+    });
+
+    try {
+      return await task(...arguments_);
+    } finally {
+      running -= 1;
+      pump();
+    }
+  }) as unknown as LimitFunction;
+
+  Object.defineProperty(limit, "concurrency", {
+    get: () => concurrency,
+    set: (value: number) => {
+      concurrency = value;
+      assignments.push(value);
+      pump();
+    },
+  });
+
+  return { assignments, limit, maxInFlight: () => maxInFlight };
+}
+
+interface SpyPacer {
+  readonly awaited: () => number;
+  readonly pacer: Pacer;
+}
+
+function spyPacer(): SpyPacer {
+  let awaited = 0;
+
+  return {
+    awaited: () => awaited,
+    pacer: {
+      awaitFloor(): Promise<void> {
+        awaited += 1;
+
+        return Promise.resolve();
+      },
+    },
+  };
+}
+
+interface ThrottleEvent {
+  readonly kind: "clean" | "rate_limited";
+  readonly nowMs: number;
+}
+
+interface SpyThrottle {
+  readonly events: ThrottleEvent[];
+  readonly throttle: ThrottleController;
+}
+
+/**
+ * A throttle stub whose `effectiveConcurrency` returns each scripted value in
+ * turn on every `onRateLimited`/`onCleanWindow` call, so a test can assert the
+ * shared limiter is resized to the controller's shrunk/grown concurrency.
+ */
+function spyThrottle(scripted: readonly number[]): SpyThrottle {
+  const events: ThrottleEvent[] = [];
+  let cursor = 0;
+  let effective = scripted.at(0) ?? 0;
+
+  const advance = (kind: ThrottleEvent["kind"], nowMs: number): void => {
+    events.push({ kind, nowMs });
+    effective = scripted.at(cursor) ?? effective;
+    cursor += 1;
+  };
+
+  return {
+    events,
+    throttle: {
+      get effectiveConcurrency(): number {
+        return effective;
+      },
+      get lastSignalAtMs(): number {
+        return Number.NaN;
+      },
+      onCleanWindow(nowMs: number): void {
+        advance("clean", nowMs);
+      },
+      onRateLimited(nowMs: number): void {
+        advance("rate_limited", nowMs);
+      },
+      get pacingFloorMs(): number {
+        return 0;
+      },
+    },
+  };
+}
+
+function rateLimitedReport(sourceUrl: string): DiscoveryReport {
+  return discoveryReport({
+    candidates: [],
+    diagnostics: [
+      {
+        code: "rate_limited",
+        message: "Source rate limited",
+        severity: "error",
+      },
+    ],
+    ok: false,
+    sourceUrl,
+  });
+}
+
+test("runOnce runs past the old single-page bound and stops complete on the first empty page", async () => {
+  const lastContentPage = 3;
+  const discovered: string[] = [];
+  const discover = vi.fn(async ({ sourceUrl }: { sourceUrl: URL }) => {
+    const page = Number(sourceUrl.searchParams.get("p") ?? "1");
+    discovered.push(String(page));
+
+    if (page > lastContentPage) {
+      return discoveryReport({ candidates: [], sourceUrl: sourceUrl.toString() });
+    }
+
+    return discoveryReport({
+      candidates: [replayCandidate(String(page), `replay-${String(page)}.ocap`)],
+      sourceUrl: sourceUrl.toString(),
+    });
+  });
+
+  const result = await runOnce({
+    byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
+    checkpointStore: fakeCheckpointStore(),
+    discoverReplays: discover,
+    now: createClock([startedAt, finishedAt]),
+    runId: "run-stop-on-empty",
+    sourceClient: { fetchText: vi.fn() },
+    sourceUrl: new URL("https://example.test/replays"),
+    async stageRawReplay() {
+      return { stagingId: "staging", status: "staged" };
+    },
+    stagingRepository: { stage: vi.fn() },
+    storage: { storeRawReplay: vi.fn() },
+    async storeRawReplay() {
+      return rawStored();
+    },
+  });
+
+  // The loop ran well past the old default-1 bound: pages 1..3 had content and
+  // page 4 was empty (stop-on-empty), with no maxPages cap supplied.
+  expect(discovered).toStrictEqual(["1", "2", "3", "4"]);
+  expect(result.summary.status).toBe("complete");
+  expect(result.exitCode).toBe(0);
+});
+
+test("runOnce honors the optional max-pages cap even when the capped page still has candidates", async () => {
+  const discovered: string[] = [];
+  const discover = vi.fn(async ({ sourceUrl }: { sourceUrl: URL }) => {
+    discovered.push(sourceUrl.searchParams.get("p") ?? "1");
+
+    return discoveryReport({
+      candidates: [replayCandidate("200", "replay-capped.ocap")],
+      sourceUrl: sourceUrl.toString(),
+    });
+  });
+
+  await runOnce({
+    byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
+    checkpointStore: fakeCheckpointStore(),
+    discoverReplays: discover,
+    maxPages: twoPages,
+    now: createClock([startedAt, finishedAt]),
+    runId: "run-cap",
+    sourceClient: { fetchText: vi.fn() },
+    sourceUrl: new URL("https://example.test/replays"),
+    async stageRawReplay() {
+      return { stagingId: "staging", status: "staged" };
+    },
+    stagingRepository: { stage: vi.fn() },
+    storage: { storeRawReplay: vi.fn() },
+    async storeRawReplay() {
+      return rawStored();
+    },
+  });
+
+  // Every page had candidates, so only the explicit cap stopped the loop at 2.
+  expect(discovered).toStrictEqual(["1", pageTwo]);
+});
+
+test("runOnce never reports complete when a transient empty page stops the loop (no silent truncation)", async () => {
+  const result = await runOnce({
+    byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
+    checkpointStore: fakeCheckpointStore(),
+    discoverReplays: async ({ sourceUrl }: { sourceUrl: URL }) =>
+      // An empty candidates array on a !ok transient page is the 2026-05-11
+      // trap: classify-before-stop must read `resumable`, never `complete`.
+      discoveryReport({
+        candidates: [],
+        diagnostics: [
+          {
+            code: "source_transient",
+            message: "Source transiently failed",
+            severity: "error",
+          },
+        ],
+        ok: false,
+        sourceUrl: sourceUrl.toString(),
+      }),
+    now: createClock([startedAt, finishedAt]),
+    runId: "run-transient-empty",
+    sourceClient: { fetchText: vi.fn() },
+    sourceUrl: new URL("https://example.test/replays"),
+    stageRawReplay: vi.fn(),
+    stagingRepository: { stage: vi.fn() },
+    storage: { storeRawReplay: vi.fn() },
+    storeRawReplay: vi.fn(),
+  });
+
+  expect(result.summary.status).toBe("resumable");
+  expect(result.summary.status).not.toBe("complete");
+});
+
+test("runOnce shrinks the shared limiter on a rate-limited page and grows it on a clean page", async () => {
+  const shrunkConcurrency = 2;
+  const grownConcurrency = 5;
+  const limiter = inspectableLimiter(testConcurrency);
+  const throttle = spyThrottle([grownConcurrency, shrunkConcurrency]);
+  const discover = vi.fn(async ({ sourceUrl }: { sourceUrl: URL }) => {
+    if (sourceUrl.searchParams.get("p") === pageTwo) {
+      return rateLimitedReport(sourceUrl.toString());
+    }
+
+    return discoveryReport({
+      candidates: [replayCandidate("301", "replay-clean.ocap")],
+      sourceUrl: sourceUrl.toString(),
+    });
+  });
+
+  await runOnce({
+    byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
+    checkpointStore: fakeCheckpointStore(),
+    createLimiter: () => limiter.limit,
+    createThrottle: () => throttle.throttle,
+    discoverReplays: discover,
+    maxPages: twoPages,
+    now: createClock([startedAt, finishedAt]),
+    runId: "run-throttle",
+    sourceClient: { fetchText: vi.fn() },
+    sourceUrl: new URL("https://example.test/replays"),
+    async stageRawReplay() {
+      return { stagingId: "staging", status: "staged" };
+    },
+    stagingRepository: { stage: vi.fn() },
+    storage: { storeRawReplay: vi.fn() },
+    async storeRawReplay() {
+      return rawStored();
+    },
+  });
+
+  // Page 1 clean → onCleanWindow then grow; page 2 rate_limited → onRateLimited
+  // then shrink. The limiter received both resized concurrency values in order.
+  expect(throttle.events.map((event) => event.kind)).toStrictEqual([
+    "clean",
+    "rate_limited",
+  ]);
+  expect(limiter.assignments).toStrictEqual([grownConcurrency, shrunkConcurrency]);
+});
+
+test("runOnce awaits the pacer floor once before each list page", async () => {
+  const pacer = spyPacer();
+  const discover = vi.fn(async ({ sourceUrl }: { sourceUrl: URL }) => {
+    if (sourceUrl.searchParams.get("p") === pageTwo) {
+      return discoveryReport({ candidates: [], sourceUrl: sourceUrl.toString() });
+    }
+
+    return discoveryReport({
+      candidates: [replayCandidate("400", "replay-paced.ocap")],
+      sourceUrl: sourceUrl.toString(),
+    });
+  });
+
+  await runOnce({
+    byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 250,
+    checkpointStore: fakeCheckpointStore(),
+    createPacer: () => pacer.pacer,
+    discoverReplays: discover,
+    now: createClock([startedAt, finishedAt]),
+    runId: "run-pacer",
+    sourceClient: { fetchText: vi.fn() },
+    sourceUrl: new URL("https://example.test/replays"),
+    async stageRawReplay() {
+      return { stagingId: "staging", status: "staged" };
+    },
+    stagingRepository: { stage: vi.fn() },
+    storage: { storeRawReplay: vi.fn() },
+    async storeRawReplay() {
+      return rawStored();
+    },
+  });
+
+  // Page 1 (content) + page 2 (empty, stop) = two list reads, each preceded by
+  // exactly one pacer floor await.
+  expect(pacer.awaited()).toBe(twoPages);
+});
+
+test("runOnce emits exactly one identifiers-only rate line per completed page", async () => {
+  const info = vi.fn();
+  const discover = vi.fn(async ({ sourceUrl }: { sourceUrl: URL }) => {
+    if (sourceUrl.searchParams.get("p") === pageTwo) {
+      return discoveryReport({ candidates: [], sourceUrl: sourceUrl.toString() });
+    }
+
+    return discoveryReport({
+      candidates: [replayCandidate("500", "replay-rate.ocap")],
+      sourceUrl: sourceUrl.toString(),
+    });
+  });
+
+  await runOnce({
+    byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
+    checkpointStore: fakeCheckpointStore(),
+    discoverReplays: discover,
+    log: { info, warn: vi.fn() } as never,
+    now: createClock([
+      "2026-05-09T13:40:00.000Z",
+      "2026-05-09T13:40:01.000Z",
+      "2026-05-09T13:40:02.000Z",
+    ]),
+    runId: "run-rate-line",
+    sourceClient: { fetchText: vi.fn() },
+    sourceUrl: new URL("https://example.test/replays"),
+    async stageRawReplay() {
+      return { stagingId: "staging", status: "staged" };
+    },
+    stagingRepository: { stage: vi.fn() },
+    storage: { storeRawReplay: vi.fn() },
+    async storeRawReplay() {
+      return rawStored();
+    },
+  });
+
+  // Exactly one completed page (page 1; page 2 is the empty stop page).
+  const rateCalls = info.mock.calls.filter(
+    (call) => call[1] === "page rate",
+  );
+  expect(rateCalls).toHaveLength(1);
+  const [payload] = rateCalls[0] as [Record<string, unknown>, string];
+  // Identifiers-only: keys are exactly `page` + `pagesPerMinute`, nothing else.
+  expect(Object.keys(payload).toSorted()).toStrictEqual([
+    "page",
+    "pagesPerMinute",
+  ]);
+  expect(payload["page"]).toBe(1);
+  expect(typeof payload["pagesPerMinute"]).toBe("number");
+});
+
+test("processPage tallies evidence in candidate-index order despite out-of-order completion", async () => {
+  const candidateOne = replayCandidate("601", "replay-a.ocap");
+  const candidateTwo = replayCandidate("602", "replay-b.ocap");
+  const stageCallOrder: string[] = [];
+
+  const result = await runOnce({
+    byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
+    checkpointStore: fakeCheckpointStore(),
+    discoverReplays: async ({ sourceUrl }: { sourceUrl: URL }) =>
+      discoveryReport({
+        candidates: [candidateOne, candidateTwo],
+        sourceUrl: sourceUrl.toString(),
+      }),
+    maxPages: 1,
+    now: createClock([startedAt, finishedAt]),
+    runId: "run-order",
+    sourceClient: { fetchText: vi.fn() },
+    sourceUrl: new URL("https://example.test/replays"),
+    async stageRawReplay({ rawResult }) {
+      stageCallOrder.push(rawResult.sourceFilename);
+
+      return { stagingId: rawResult.sourceFilename, status: "staged" };
+    },
+    stagingRepository: { stage: vi.fn() },
+    storage: { storeRawReplay: vi.fn() },
+    async storeRawReplay({ candidate: entry }) {
+      // Candidate B resolves before candidate A (out-of-order completion).
+      let delay = 0;
+      if (entry.identity.filename === "replay-a.ocap") {
+        delay = OUT_OF_ORDER_DELAY_MS;
+      }
+      await new Promise((resolve) => {
+        setTimeout(resolve, delay);
+      });
+
+      return {
+        ...rawStored(),
+        sourceFilename: entry.identity.filename,
+      };
+    },
+  });
+
+  // The fan-out completed out of order (B's store/stage finished first)...
+  expect(stageCallOrder).toStrictEqual(["replay-b.ocap", "replay-a.ocap"]);
+  // ...yet the gathered evidence is re-ordered by candidate index (A then B)
+  // before the tally/checkpoint, so the persisted staging order is deterministic.
+  expect(result.summary.staging.map((entry) => entry.stagingId)).toStrictEqual([
+    "replay-a.ocap",
+    "replay-b.ocap",
+  ]);
+});
+
+test("processPage tallies operational store/stage failures instead of throwing", async () => {
+  const result = await runOnce({
+    byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
+    checkpointStore: fakeCheckpointStore(),
+    discoverReplays: async ({ sourceUrl }: { sourceUrl: URL }) =>
+      discoveryReport({
+        candidates: [
+          replayCandidate("701", "replay-fail.ocap"),
+          replayCandidate("702", "replay-skip.ocap"),
+        ],
+        sourceUrl: sourceUrl.toString(),
+      }),
+    maxPages: 1,
+    now: createClock([startedAt, finishedAt]),
+    runId: "run-op-failures",
+    sourceClient: { fetchText: vi.fn() },
+    sourceUrl: new URL("https://example.test/replays"),
+    async stageRawReplay({ rawResult }) {
+      if (rawResult.status === "failed") {
+        return {
+          reason: "Raw storage status failed is not stageable",
+          status: "not_stageable",
+        };
+      }
+
+      return { stagingId: "staging", status: "staged" };
+    },
+    stagingRepository: { stage: vi.fn() },
+    storage: { storeRawReplay: vi.fn() },
+    async storeRawReplay({ candidate: entry }) {
+      if (entry.identity.filename === "replay-fail.ocap") {
+        return rawFetchFailed();
+      }
+
+      return rawStored();
+    },
+  });
+
+  // The page completed with both outcomes tallied (allSettled, not all).
+  expect(result.summary.counts.failed).toBe(1);
+  expect(result.summary.counts.skipped).toBe(1);
+});
+
+test("processPage serializes dispatch through the shared limiter when concurrency is 1", async () => {
+  const limiter = inspectableLimiter(1);
+  let observedMax = 0;
+
+  await runOnce({
+    byteClient: { fetchBytes: vi.fn() },
+    concurrency: 1,
+    requestSpacingMs: 0,
+    checkpointStore: fakeCheckpointStore(),
+    createLimiter: () => limiter.limit,
+    discoverReplays: async ({ sourceUrl }: { sourceUrl: URL }) =>
+      discoveryReport({
+        candidates: [
+          replayCandidate("801", "replay-1.ocap"),
+          replayCandidate("802", "replay-2.ocap"),
+          replayCandidate("803", "replay-3.ocap"),
+        ],
+        sourceUrl: sourceUrl.toString(),
+      }),
+    maxPages: 1,
+    now: createClock([startedAt, finishedAt]),
+    runId: "run-serial",
+    sourceClient: { fetchText: vi.fn() },
+    sourceUrl: new URL("https://example.test/replays"),
+    async stageRawReplay() {
+      return { stagingId: "staging", status: "staged" };
+    },
+    stagingRepository: { stage: vi.fn() },
+    storage: { storeRawReplay: vi.fn() },
+    async storeRawReplay({ candidate: entry }) {
+      await new Promise((resolve) => {
+        setTimeout(resolve, 1);
+      });
+      observedMax = Math.max(observedMax, limiter.maxInFlight());
+
+      return { ...rawStored(), sourceFilename: entry.identity.filename };
+    },
+  });
+
+  // A concurrency-1 shared limiter never lets two candidates run at once.
+  expect(observedMax).toBe(1);
+});
+
+test("processPage rethrows a programmer-error rejection from storeRawReplay", async () => {
+  const programmerError = new Error("storage adapter exploded");
+
+  await expect(
+    runOnce({
+      byteClient: { fetchBytes: vi.fn() },
+      concurrency: testConcurrency,
+      requestSpacingMs: 0,
+      checkpointStore: fakeCheckpointStore(),
+      discoverReplays: async ({ sourceUrl }: { sourceUrl: URL }) =>
+        discoveryReport({
+          candidates: [replayCandidate("901", "replay-throw.ocap")],
+          sourceUrl: sourceUrl.toString(),
+        }),
+      maxPages: 1,
+      now: createClock([startedAt, finishedAt]),
+      runId: "run-rethrow",
+      sourceClient: { fetchText: vi.fn() },
+      sourceUrl: new URL("https://example.test/replays"),
+      stageRawReplay: vi.fn(),
+      stagingRepository: { stage: vi.fn() },
+      storage: { storeRawReplay: vi.fn() },
+      storeRawReplay: async () => {
+        throw programmerError;
+      },
+    }),
+  ).rejects.toBe(programmerError);
+});
+
+test("derivePagesPerMinute returns 0 for an empty page window", () => {
+  expect(derivePagesPerMinute([])).toBe(0);
+});
