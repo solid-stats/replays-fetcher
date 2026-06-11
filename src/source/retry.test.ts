@@ -443,3 +443,67 @@ test("withRetry should emit one onRetry event per retry round before sleeping", 
     phase: "detail",
   });
 });
+
+const httpTooManyRequestsStatus = 429;
+
+test("withRetry should carry httpStatus from a rate-limited classification onto the event", async () => {
+  const events: RetryAttemptEvent[] = [];
+  const read = vi.fn(async () => {
+    throw new Error("rate limited");
+  });
+  const sleep = vi.fn(noopSleep);
+
+  await expect(
+    withRetry({
+      attempts: 1,
+      classify: () => ({
+        cfChallenge: false,
+        httpStatus: httpTooManyRequestsStatus,
+        kind: "rate_limited",
+      }),
+      onRetry: (event) => events.push(event),
+      phase: "list",
+      random: () => 0,
+      read,
+      signal: neverSignal(),
+      sleep,
+      url: baseRetryUrl,
+    }),
+  ).rejects.toBeInstanceOf(Error);
+
+  expect(events).toHaveLength(1);
+  expect(events[0]).toMatchObject({
+    attempt: 1,
+    httpStatus: httpTooManyRequestsStatus,
+  });
+});
+
+test("withRetry should omit httpStatus from the event for a network-only classification", async () => {
+  const events: RetryAttemptEvent[] = [];
+  const read = vi.fn(async () => {
+    throw new Error("transient");
+  });
+  const sleep = vi.fn(noopSleep);
+
+  await expect(
+    withRetry({
+      attempts: 1,
+      classify: () => ({
+        cfChallenge: false,
+        causeCode: "ECONNRESET",
+        kind: "transient",
+      }),
+      onRetry: (event) => events.push(event),
+      phase: "bytes",
+      random: () => 0,
+      read,
+      signal: neverSignal(),
+      sleep,
+      url: baseRetryUrl,
+    }),
+  ).rejects.toBeInstanceOf(Error);
+
+  expect(events).toHaveLength(1);
+  expect(events[0]).toHaveProperty("causeCode", "ECONNRESET");
+  expect(events[0]).not.toHaveProperty("httpStatus");
+});
