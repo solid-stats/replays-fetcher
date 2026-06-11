@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 ## Current Position
 
 Phase: 10 (Dynamic Source Range and Rate Limiting) — EXECUTING
-Plan: 4 of 5
-Status: Ready to execute
-Last activity: 2026-06-10 -- Completed 10-03-PLAN.md (p-limit createLimiter seam + pure AIMD ThrottleController)
+Plan: 4 of 5 complete — Wave 3 (10-05) next
+Status: Executing — Waves 1-2 done (10-01..10-04); 371 tests green, no hangs
+Last activity: 2026-06-11 -- Completed 10-04 (run-once integration: unbounded stop-on-empty, parallel throttled processPage, pacer floor, per-page rate line)
 
 Progress: `[x][x][x][ ][ ][ ]` 3/6 phases complete
 
