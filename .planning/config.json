@@ -36,7 +36,7 @@
     "text_mode": false,
     "research_before_questions": true,
     "discuss_mode": "assumptions",
-    "skip_discuss": false,
+    "skip_discuss": true,
     "use_worktrees": true,
     "subagent_timeout": 1200000,
     "inline_plan_threshold": 2,
