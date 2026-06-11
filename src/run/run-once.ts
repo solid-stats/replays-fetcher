@@ -586,15 +586,18 @@ async function assembleResult(
   }
 
   const summary = buildRunSummary({
+    candidateCount: context.discoveryReport.candidates.length,
     discoveredLastPage,
     discoveryReport: context.discoveryReport,
     finishedAt: input.now().toISOString(),
     lastCompletedPage: context.lastCompletedPage,
+    pageTimestampsMs: context.pageTimestampsMs,
     rawStorage: context.rawStorage,
     runId: input.runId,
     staging: context.staging,
     startedAt: context.startedAt,
     status,
+    ...discoveredRangeOption(context.lastCompletedPage),
     ...resumeInvocationOption(status),
   });
 
@@ -636,6 +639,23 @@ function resumeInvocationOption(status: RunSummary["status"]): {
   }
 
   return { resumeInvocation: RESUME_INVOCATION };
+}
+
+/**
+ * RANGE-05: the discovered source range spans page 1 to the last completed page,
+ * present only when at least one page completed (additive spread; omitted
+ * otherwise so the summary shape stays exact-optional safe).
+ */
+function discoveredRangeOption(lastCompletedPage: number): {
+  discoveredRange?: { readonly firstPage: number; readonly lastPage: number };
+} {
+  if (lastCompletedPage < FIRST_PAGE) {
+    return {};
+  }
+
+  return {
+    discoveredRange: { firstPage: FIRST_PAGE, lastPage: lastCompletedPage },
+  };
 }
 
 async function writeFinalCheckpoint(

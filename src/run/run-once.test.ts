@@ -1539,3 +1539,46 @@ test("processPage rethrows a programmer-error rejection from storeRawReplay", as
 test("derivePagesPerMinute returns 0 for an empty page window", () => {
   expect(derivePagesPerMinute([])).toBe(0);
 });
+
+test("runOnce should surface discovered range and rate metrics, no eta without an upper bound", async () => {
+  const result = await runOnce({
+    byteClient: { fetchBytes: vi.fn() },
+    checkpointStore: fakeCheckpointStore(),
+    concurrency: testConcurrency,
+    discoverReplays: async ({ sourceUrl }: { sourceUrl: URL }) => {
+      // Pages 1-2 carry a candidate; page 3 is the terminating empty page.
+      if (sourceUrl.searchParams.get("p") === "3") {
+        return discoveryReport({ candidates: [] });
+      }
+
+      return discoveryReport();
+    },
+    maxPages: 3,
+    requestSpacingMs: 0,
+    now: createClock([
+      startedAt,
+      "2026-05-09T13:40:01.000Z",
+      "2026-05-09T13:40:02.000Z",
+      finishedAt,
+    ]),
+    runId: "run-metrics",
+    sourceClient: { fetchText: vi.fn() },
+    sourceUrl: new URL("https://example.test/replays"),
+    async stageRawReplay() {
+      return { stagingId: "staging", status: "staged" };
+    },
+    stagingRepository: { stage: vi.fn() },
+    storage: { storeRawReplay: vi.fn() },
+    async storeRawReplay() {
+      return rawStored();
+    },
+  });
+
+  expect(result.summary.discoveredRange).toStrictEqual({
+    firstPage: 1,
+    lastPage: twoPages,
+  });
+  expect(typeof result.summary.pagesPerMinute).toBe("number");
+  expect(result.summary.pagesPerMinute).toBeGreaterThan(0);
+  expect(result.summary).not.toHaveProperty("etaSeconds");
+});
