@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Full-Corpus Ingest Resilience
 status: executing
-stopped_at: Phase 11 context gathered (assumptions mode)
-last_updated: "2026-06-11T14:19:53.441Z"
+stopped_at: Completed 11-01-PLAN.md
+last_updated: "2026-06-11T14:31:49.384Z"
 last_activity: 2026-06-11 -- Phase 11 execution started
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 22
-  completed_plans: 17
+  completed_plans: 18
   percent: 67
 ---
 
@@ -26,8 +26,8 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 ## Current Position
 
 Phase: 11 (progress-events-and-compact-evidence) — EXECUTING
-Plan: 1 of 5
-Status: Executing Phase 11
+Plan: 2 of 5
+Status: Ready to execute
 Last activity: 2026-06-11 -- Phase 11 execution started
 
 Progress: `[x][x][x][x][ ][ ]` 4/6 phases complete
@@ -109,6 +109,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: 10-02: createPacer is a pure remaining-floor seam (sleeps spacingMs - elapsed, never spacingMs + backoff); now/sleep injected, lastRequestAt NaN-seeded so the first call never sleeps.
 - [Phase ?]: 10-03: createLimiter is a thin p-limit seam (default import, no .js) returning a limiter with a runtime-settable .concurrency — the AIMD lever (RANGE-02).
 - [Phase ?]: 10-03: createThrottleController is a pure AIMD machine over page-count windows (RATE_LIMITED_WINDOW=2, CLEAN_WINDOW=3): MD halve floor-1 + pacing-floor bump, AI +1 cap-max; reduces concurrency + pacing floor ONLY, no backoff (Pitfall 2). nowMs is a method parameter recorded as lastSignalAtMs evidence, never the decision boundary (RANGE-03).
+- [Phase 11]: Evidence is write-once per runId: plain unconditional PutObject, no read/CAS/merge (D-10)
+- [Phase 11]: Evidence store serializes the RunSummary as handed; no-leak guarantee owned by summary assembly (D-08/D-12)
 
 ### Roadmap Evolution
 
@@ -186,9 +188,10 @@ Execute Phase 10 (Dynamic Source Range and Rate Limiting) with `/gsd:execute-pha
 | Phase 10-dynamic-source-range-and-rate-limiting P10-01 | 9min | 2 tasks | 6 files |
 | Phase 10-dynamic-source-range-and-rate-limiting P02 | 6min | 2 tasks | 2 files |
 | Phase 10-dynamic-source-range-and-rate-limiting P03 | ~8min | 3 tasks | 6 files |
+| Phase 11 P01 | 18min | 3 tasks | 13 files |
 
 ## Session
 
-**Last session:** 2026-06-11T13:27:38.771Z
-**Stopped at:** Phase 11 context gathered (assumptions mode)
+**Last session:** 2026-06-11T14:31:49.296Z
+**Stopped at:** Completed 11-01-PLAN.md
 **Resume file:** .planning/phases/11-progress-events-and-compact-evidence/11-CONTEXT.md

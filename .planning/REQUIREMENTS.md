@@ -62,7 +62,7 @@ Goal: operators can follow a run while it is running and inspect details only wh
 
 - [ ] **PROG-01**: The run emits compact per-page/batch progress events as `pino` NDJSON (child logger keyed by `runId`): `run_start`, `page_complete` (with page counts + rates), `retry` (warn), `page_failed`/`source_unavailable` (error), and `run_complete`/`run_partial` — one line per page, greppable.
 - [ ] **PROG-02**: The final stdout summary is reduced to run id, timestamps, source url, discovered range, aggregate counts, failure categories, and `status`. The heavy per-candidate `candidates`/`rawStorage`/`staging` arrays are removed from the stdout projection.
-- [ ] **PROG-03**: Detailed per-candidate evidence is written only to an opt-in durable artifact — an S3 object (`runs/<runId>/evidence.json`) when explicitly enabled, with a local file as a dev-only convenience — never to stdout by default.
+- [x] **PROG-03**: Detailed per-candidate evidence is written only to an opt-in durable artifact — an S3 object (`runs/<runId>/evidence.json`) when explicitly enabled, with a local file as a dev-only convenience — never to stdout by default.
 - [ ] **PROG-04**: Progress events, the summary, and the evidence artifact preserve current secret-safety and boundary-safety: pino `redact` for sensitive fields, no raw bytes/HTML, a synchronous/awaited flush before exit so final lines are not dropped, and no S3/PostgreSQL writes beyond the existing raw + staging + checkpoint + opt-in-artifact surfaces.
 
 ### Source Contract Guards (GUARD)
