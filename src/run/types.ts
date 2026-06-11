@@ -45,12 +45,19 @@ export interface RunSummaryCounts {
 
 export interface RunSummary {
   readonly candidates: readonly ReplayCandidate[];
+  readonly candidatesPerMinute?: number;
   readonly counts: RunSummaryCounts;
   readonly diagnostics: readonly DiscoveryDiagnostic[];
+  readonly discoveredRange?: {
+    readonly firstPage: number;
+    readonly lastPage: number;
+  };
+  readonly etaSeconds?: number;
   readonly failureCategories: readonly RunFailureCategory[];
   readonly finishedAt: string;
   readonly mode: "run-once";
   readonly ok: boolean;
+  readonly pagesPerMinute?: number;
   readonly rawStorage: readonly StoreRawReplayResult[];
   readonly resumeInvocation?: string;
   readonly runId: string;

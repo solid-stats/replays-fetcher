@@ -18,17 +18,35 @@ import type { IngestStagingResult } from "../staging/types.js";
 import type { StoreRawReplayResult } from "../storage/store-raw-replay.js";
 
 interface BuildRunSummaryInput {
+  readonly candidateCount?: number;
   readonly discoveredLastPage?: number;
+  readonly discoveredRange?: {
+    readonly firstPage: number;
+    readonly lastPage: number;
+  };
   readonly discoveryReport: DiscoveryReport;
   readonly finishedAt: string;
   readonly lastCompletedPage?: number;
+  readonly pageTimestampsMs?: readonly number[];
   readonly rawStorage: readonly StoreRawReplayResult[];
   readonly resumeInvocation?: string;
   readonly runId: string;
   readonly staging: readonly IngestStagingResult[];
   readonly startedAt: string;
   readonly status?: RunStatus;
+  readonly upperBoundLastPage?: number;
 }
+
+interface RunRate {
+  readonly candidatesPerMinute: number;
+  readonly pagesPerMinute: number;
+}
+
+const MS_PER_MINUTE = 60_000;
+const SECONDS_PER_MINUTE = 60;
+const FIRST_TIMESTAMP_INDEX = 0;
+const LAST_TIMESTAMP_INDEX = -1;
+const NO_PAGES = 0;
 
 interface DeriveRunStatusInput {
   readonly discoveredLastPage: number;
@@ -81,10 +99,13 @@ export function buildRunSummary(input: BuildRunSummaryInput): RunSummary {
   const sourceFailure = deriveSourceFailure(input.discoveryReport);
 
   if (sourceFailure === undefined) {
-    return withRunStatus(summary, input);
+    return withRunMetrics(withRunStatus(summary, input), input);
   }
 
-  return withRunStatus({ ...summary, sourceFailure }, input);
+  return withRunMetrics(
+    withRunStatus({ ...summary, sourceFailure }, input),
+    input,
+  );
 }
 
 /**
@@ -108,6 +129,87 @@ function withRunStatus(
   }
 
   return next;
+}
+
+/**
+ * Conditionally spreads the discovered source range and the rolling per-minute
+ * rate / ETA metrics (RANGE-05) using the same additive pattern as
+ * `withRunStatus` — each optional field is omitted (never assigned `undefined`)
+ * so the pre-Phase-10 stdout contract is byte-identical when no metric inputs
+ * are supplied (exactOptionalPropertyTypes-safe).
+ */
+function withRunMetrics(
+  summary: RunSummary,
+  input: BuildRunSummaryInput,
+): RunSummary {
+  let next = summary;
+
+  if (input.discoveredRange !== undefined) {
+    next = { ...next, discoveredRange: input.discoveredRange };
+  }
+
+  const timestamps = input.pageTimestampsMs;
+  if (timestamps === undefined || timestamps.length === NO_PAGES) {
+    return next;
+  }
+
+  const rate = deriveRunRate(timestamps, input.candidateCount ?? NO_PAGES);
+  next = {
+    ...next,
+    candidatesPerMinute: rate.candidatesPerMinute,
+    pagesPerMinute: rate.pagesPerMinute,
+  };
+
+  const etaSeconds = deriveEtaSeconds(input, rate.pagesPerMinute);
+  if (etaSeconds !== undefined) {
+    next = { ...next, etaSeconds };
+  }
+
+  return next;
+}
+
+/**
+ * Rolling rate from the injected-clock page-completion timestamps: pages and
+ * candidates per minute over the elapsed window. The window is floored at
+ * `Number.EPSILON` minutes so a single-page (zero-elapsed) run divides cleanly
+ * instead of producing Infinity/NaN.
+ */
+function deriveRunRate(
+  pageTimestampsMs: readonly number[],
+  candidateCount: number,
+): RunRate {
+  /* v8 ignore start -- withRunMetrics only calls this with a non-empty array, so .at() never falls back. */
+  const first = pageTimestampsMs.at(FIRST_TIMESTAMP_INDEX) ?? NO_PAGES;
+  const last = pageTimestampsMs.at(LAST_TIMESTAMP_INDEX) ?? NO_PAGES;
+  /* v8 ignore stop */
+  const minutes = Math.max((last - first) / MS_PER_MINUTE, Number.EPSILON);
+
+  return {
+    candidatesPerMinute: candidateCount / minutes,
+    pagesPerMinute: pageTimestampsMs.length / minutes,
+  };
+}
+
+/**
+ * ETA in seconds — an estimate present ONLY when a parsed last-page upper bound
+ * is known and the rate is positive; otherwise undefined so the caller omits the
+ * field. Remaining pages divided by the rolling pages/min, expressed in seconds.
+ */
+function deriveEtaSeconds(
+  input: BuildRunSummaryInput,
+  pagesPerMinute: number,
+): number | undefined {
+  if (
+    input.upperBoundLastPage === undefined ||
+    input.lastCompletedPage === undefined ||
+    pagesPerMinute <= NO_PAGES
+  ) {
+    return undefined;
+  }
+
+  const remainingPages = input.upperBoundLastPage - input.lastCompletedPage;
+
+  return (remainingPages / pagesPerMinute) * SECONDS_PER_MINUTE;
 }
 
 const NO_PAGE_COMPLETED = 0;

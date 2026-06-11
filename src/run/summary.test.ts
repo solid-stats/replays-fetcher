@@ -522,3 +522,99 @@ test("buildConfigInvalidRunSummary should produce a failed run-once summary", ()
   });
   expect(runExitCode(summary)).toBe(2);
 });
+
+const oneMinuteMs = 60_000;
+
+test("buildRunSummary should derive pages/min and candidates/min from page timestamps", () => {
+  const summary = buildRunSummary({
+    candidateCount: 4,
+    discoveryReport: discoveryReport(),
+    finishedAt,
+    pageTimestampsMs: [0, oneMinuteMs],
+    rawStorage: [],
+    runId,
+    staging: [],
+    startedAt,
+  });
+
+  expect(summary.pagesPerMinute).toBe(2);
+  expect(summary.candidatesPerMinute).toBe(4);
+});
+
+test("buildRunSummary should expose the discovered range when supplied", () => {
+  const summary = buildRunSummary({
+    discoveredRange: { firstPage: 1, lastPage: 3 },
+    discoveryReport: discoveryReport(),
+    finishedAt,
+    rawStorage: [],
+    runId,
+    staging: [],
+    startedAt,
+  });
+
+  expect(summary.discoveredRange).toStrictEqual({ firstPage: 1, lastPage: 3 });
+});
+
+test("buildRunSummary should omit etaSeconds when no upper bound is known", () => {
+  const summary = buildRunSummary({
+    candidateCount: 4,
+    discoveryReport: discoveryReport(),
+    finishedAt,
+    pageTimestampsMs: [0, oneMinuteMs],
+    rawStorage: [],
+    runId,
+    staging: [],
+    startedAt,
+  });
+
+  expect(summary).not.toHaveProperty("etaSeconds");
+});
+
+test("buildRunSummary should estimate etaSeconds when an upper bound is supplied", () => {
+  const summary = buildRunSummary({
+    candidateCount: 4,
+    discoveryReport: discoveryReport(),
+    finishedAt,
+    lastCompletedPage: 4,
+    pageTimestampsMs: [0, oneMinuteMs],
+    rawStorage: [],
+    runId,
+    staging: [],
+    startedAt,
+    upperBoundLastPage: 10,
+  });
+
+  // pagesPerMinute = 2; remaining = 10 - 4 = 6; eta = (6 / 2) * 60 = 180s.
+  expect(summary.etaSeconds).toBe(Number("180"));
+});
+
+test("buildRunSummary should add no metric keys when no metric inputs are supplied", () => {
+  const summary = buildRunSummary({
+    discoveryReport: discoveryReport(),
+    finishedAt,
+    rawStorage: [],
+    runId,
+    staging: [],
+    startedAt,
+  });
+
+  expect(summary).not.toHaveProperty("pagesPerMinute");
+  expect(summary).not.toHaveProperty("candidatesPerMinute");
+  expect(summary).not.toHaveProperty("etaSeconds");
+  expect(summary).not.toHaveProperty("discoveredRange");
+});
+
+test("buildRunSummary should default candidatesPerMinute to zero without a candidate count", () => {
+  const summary = buildRunSummary({
+    discoveryReport: discoveryReport(),
+    finishedAt,
+    pageTimestampsMs: [0, oneMinuteMs],
+    rawStorage: [],
+    runId,
+    staging: [],
+    startedAt,
+  });
+
+  expect(summary.candidatesPerMinute).toBe(0);
+  expect(summary.pagesPerMinute).toBe(2);
+});
