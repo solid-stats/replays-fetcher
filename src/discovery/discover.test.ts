@@ -646,7 +646,7 @@ test("discoverReplaysDryRun should derive raw JSON URLs for filenames without ex
   );
 });
 
-test("discoverReplaysDryRun should apply default pacing between source requests", async () => {
+test("discoverReplaysDryRun should not apply a blanket delay by default (run-once owns pacing)", async () => {
   const sleeps: number[] = [];
   const responses = new Map([
     [
@@ -685,10 +685,61 @@ test("discoverReplaysDryRun should apply default pacing between source requests"
     sourceUrl: new URL("https://example.test/replays"),
   });
 
+  // The blanket 2000ms cadence is retired: run-once's createPacer floor is now
+  // the single pacing source, so discovery applies no inter-request delay unless
+  // a caller explicitly opts in via requestDelayMs.
   expect(
     report.candidates.map((candidate) => candidate.identity.filename),
   ).toStrictEqual(["first.json", "second.json"]);
-  expect(sleeps).toStrictEqual(["2000", "2000"].map(Number));
+  expect(sleeps).toStrictEqual([]);
+});
+
+test("discoverReplaysDryRun should apply an opt-in requestDelayMs between requests when set", async () => {
+  const sleeps: number[] = [];
+  const responses = new Map([
+    [
+      "https://example.test/replays",
+      `
+        <table class="common-table">
+          <tbody>
+            <tr><td><a href="/replays/100">first</a></td><td>Altis</td><td>1</td></tr>
+            <tr><td><a href="/replays/101">second</a></td><td>Altis</td><td>1</td></tr>
+          </tbody>
+        </table>
+      `,
+    ],
+    [
+      "https://example.test/replays/100",
+      `<html><body data-ocap="first.json"></body></html>`,
+    ],
+    [
+      "https://example.test/replays/101",
+      `<html><body data-ocap="second.json"></body></html>`,
+    ],
+  ]);
+  const sourceClient: SourceClient = {
+    async fetchText(url) {
+      return responses.get(url.toString()) ?? "";
+    },
+  };
+
+  const report = await discoverReplaysDryRun({
+    requestDelayMs: Number("500"),
+    sleep(milliseconds: number) {
+      sleeps.push(milliseconds);
+
+      return Promise.resolve();
+    },
+    sourceClient,
+    sourceUrl: new URL("https://example.test/replays"),
+  });
+
+  // Opt-in pacing still works (the injectable sleep seam is preserved): three
+  // requests (1 list + 2 detail) → two inter-request gaps at the requested delay.
+  expect(
+    report.candidates.map((candidate) => candidate.identity.filename),
+  ).toStrictEqual(["first.json", "second.json"]);
+  expect(sleeps).toStrictEqual([Number("500"), Number("500")]);
 });
 
 test("discoverReplaysDryRun should return an empty report for non-fixture non-table text", async () => {
@@ -1001,6 +1052,7 @@ test("discoverReplaysDryRun should keep one outer pacing delay per request after
     onRetry: () => {
       /* retry threading must not perturb pacing */
     },
+    requestDelayMs: Number("2000"),
     sleep: (milliseconds) => {
       sleeps.push(milliseconds);
 
@@ -1013,7 +1065,8 @@ test("discoverReplaysDryRun should keep one outer pacing delay per request after
   expect(
     report.candidates.map((candidate) => candidate.identity.filename),
   ).toStrictEqual(["first.json", "second.json"]);
-  // Three requests (1 list + 2 detail) → two inter-request pacing gaps.
-  // requestCount increments once per request, NOT per retry round (Pitfall 5).
+  // With the opt-in requestDelayMs set, three requests (1 list + 2 detail) →
+  // two inter-request pacing gaps. requestCount increments once per request,
+  // NOT per retry round (Pitfall 5: no double-count).
   expect(sleeps).toStrictEqual(["2000", "2000"].map(Number));
 });

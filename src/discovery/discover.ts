@@ -85,7 +85,11 @@ interface CandidateRegistryEntry {
   readonly serialized: string;
 }
 
-const defaultRequestDelayMs = 2000;
+// The blanket per-request delay is retired as the NORMAL pacing source: the
+// run-once `createPacer` floor (RANGE-04) is now the single pacing knob. A
+// `requestDelayMs` is opt-in only; defaulted to zero so discovery applies no
+// blanket delay unless a caller explicitly requests one.
+const defaultRequestDelayMs = 0;
 
 export async function discoverReplaysDryRun(
   options: DiscoverReplaysDryRunOptions,
