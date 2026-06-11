@@ -383,7 +383,7 @@ function cmdVerifyKeyLinks(cwd, planFilePath, raw) {
         };
         const sourceContent = (0, shell_command_projection_cjs_1.platformReadSync)(node_path_1.default.join(cwd, link['from'] || ''));
         if (!sourceContent) {
-            check['detail'] = 'Source file not found';
+            check['detail'] = 'Source file not found (from: must be a relative file path; describe components/endpoints in via:)';
         }
         else if (link['pattern']) {
             try {

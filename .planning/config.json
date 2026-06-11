@@ -35,7 +35,7 @@
     "ui_safety_gate": true,
     "text_mode": false,
     "research_before_questions": true,
-    "discuss_mode": "discuss",
+    "discuss_mode": "assumptions",
     "skip_discuss": false,
     "use_worktrees": true,
     "subagent_timeout": 1200000,
