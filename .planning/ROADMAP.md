@@ -24,7 +24,7 @@
 - [x] **Phase 7: v2 Foundations** - Typed error base and structured pino logger factory; cross-cutting prerequisites for all v2 phases. (completed 2026-06-07)
 - [x] **Phase 8: Source Failure Diagnostics and Retry** - Rich failure evidence with transient/permanent classification and bounded exponential-backoff retry. (completed 2026-06-08)
 - [x] **Phase 9: Checkpoint and Resume** - S3 checkpoint per source with conditional-write guards; resume from last completed page; run/resume status in existing staging evidence. (completed 2026-06-09)
-- [ ] **Phase 10: Dynamic Source Range and Rate Limiting** - Stop-on-empty page discovery, bounded concurrent detail/byte fan-out, adaptive throttling on 429/403, configurable pacing, and per-page ETA.
+- [x] **Phase 10: Dynamic Source Range and Rate Limiting** - Stop-on-empty page discovery, bounded concurrent detail/byte fan-out, adaptive throttling on 429/403, configurable pacing, and per-page ETA. (completed 2026-06-11)
 - [ ] **Phase 11: Progress Events and Compact Evidence** - Per-page pino NDJSON progress events, slim final summary, and opt-in S3 evidence artifact.
 - [ ] **Phase 12: Source Contract Guards** - Deterministic fixtures proving the JSON-endpoint vs HTML-detail split, plus a no-write `contract-check` command that distinguishes contract drift from transient unavailability.
 
@@ -142,7 +142,7 @@
 
 **Wave 3** *(blocked on Wave 2)*
 
-- [ ] 10-05-PLAN.md — `RunSummary` discovered range + pages/min + candidates/min + labelled-estimate ETA (additive-spread, exactOptional-safe); cli wires concurrency + spacing into `runOnce` (RANGE-05)
+- [x] 10-05-PLAN.md — `RunSummary` discovered range + pages/min + candidates/min + labelled-estimate ETA (additive-spread, exactOptional-safe); cli wires concurrency + spacing into `runOnce` (RANGE-05)
 
 ---
 
@@ -189,7 +189,7 @@
 | 7. v2 Foundations | v2.0 | 3/3 | Complete    | 2026-06-07 |
 | 8. Source Failure Diagnostics and Retry | v2.0 | 4/4 | Complete    | 2026-06-08 |
 | 9. Checkpoint and Resume | v2.0 | 5/5 | Complete   | 2026-06-09 |
-| 10. Dynamic Source Range and Rate Limiting | v2.0 | 4/5 | In Progress|  |
+| 10. Dynamic Source Range and Rate Limiting | v2.0 | 5/5 | Complete   | 2026-06-11 |
 | 11. Progress Events and Compact Evidence | v2.0 | 0/TBD | Not started | - |
 | 12. Source Contract Guards | v2.0 | 0/TBD | Not started | - |
 
