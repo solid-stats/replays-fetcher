@@ -130,5 +130,19 @@
     "commit_docs": true,
     "search_gitignored": false,
     "sub_repos": []
+  },
+  "effort": {
+    "agent_overrides": {
+      "gsd-phase-researcher": "xhigh",
+      "gsd-project-researcher": "xhigh",
+      "gsd-code-reviewer": "max",
+      "gsd-verifier": "xhigh"
+    },
+    "default": "high",
+    "routing_tier_defaults": {
+      "light": "low",
+      "standard": "medium",
+      "heavy": "xhigh"
+    }
   }
 }
