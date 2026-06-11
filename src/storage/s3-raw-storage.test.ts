@@ -280,6 +280,7 @@ test("createS3RawReplayStorageFromConfig should create a configured storage adap
     accessKeyId: "access-key",
     bucket,
     checkpointPrefix: "checkpoints",
+    evidencePrefix: "runs",
     endpoint: "https://s3.example.test",
     forcePathStyle: true,
     region: "us-east-1",

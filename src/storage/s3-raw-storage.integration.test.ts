@@ -66,6 +66,7 @@ test("S3 raw storage should store, skip, and pass read-only connectivity against
     accessKeyId: "solid",
     bucket,
     checkpointPrefix: "checkpoints",
+    evidencePrefix: "runs",
     endpoint,
     forcePathStyle: true,
     region: "us-east-1",

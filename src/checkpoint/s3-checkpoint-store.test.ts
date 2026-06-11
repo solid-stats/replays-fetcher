@@ -182,6 +182,7 @@ test("createS3CheckpointStoreFromConfig builds a configured store", () => {
     accessKeyId: "access-key",
     bucket: checkpointBucket,
     checkpointPrefix,
+    evidencePrefix: "runs",
     endpoint: "https://s3.example.test",
     forcePathStyle: true,
     region: "us-east-1",

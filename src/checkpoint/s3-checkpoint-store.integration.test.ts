@@ -53,6 +53,7 @@ test("S3 checkpoint store creates, conditionally updates, and merges on a real 4
     accessKeyId: "solid",
     bucket,
     checkpointPrefix: prefix,
+    evidencePrefix: "runs",
     endpoint,
     forcePathStyle: true,
     region: "us-east-1",
