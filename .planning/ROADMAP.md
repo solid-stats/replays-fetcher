@@ -158,7 +158,24 @@
   3. When the `--emit-evidence` flag is set, a detailed evidence artifact (`runs/<runId>/evidence.json`) is written to S3; no detailed per-candidate arrays appear on stdout regardless of flag; a `--evidence-file <path>` convenience is available for local/dev runs only.
   4. Progress events, the summary, and the evidence artifact contain no secrets (pino `redact` applied to sensitive fields), no raw replay bytes, and no HTML bodies; pino output is flushed synchronously before process exit so final lines are not dropped; no S3 or PostgreSQL writes are introduced beyond raw objects, staging rows, checkpoint, and the opt-in evidence artifact.
 
-**Plans**: TBD
+**Plans**: 5 plans
+
+**Wave 1** *(parallel — disjoint files)*
+
+- [ ] 11-01-PLAN.md — Opt-in S3 evidence store (write-once, no CAS) + `toEvidenceObjectKey` runId sanitization + `s3.evidencePrefix` Zod knob (PROG-03)
+- [ ] 11-02-PLAN.md — Additive `httpStatus` on the retry event + pure `toCompactSummary`/`CompactRunSummary` projection (PROG-01/02)
+
+**Wave 2** *(blocked on Wave 1; owns `run-once.ts`)*
+
+- [ ] 11-03-PLAN.md — `run_start`/`page_complete`/`page_failed`/`source_unavailable`/`run_complete`/`run_partial` NDJSON taxonomy + opt-in evidence write (log-and-continue) (PROG-01/03)
+
+**Wave 3** *(blocked on Wave 2; owns `cli.ts` + docs)*
+
+- [ ] 11-04-PLAN.md — `--emit-evidence`/`--evidence-file` flags + evidence-store DI + compact stdout projection + awaited flush + integration-contract/README/.env updates (PROG-01/02/03/04)
+
+**Wave 4** *(blocked on Wave 3)*
+
+- [ ] 11-05-PLAN.md — Cross-surface no-secret/body/HTML leak test (events + compact summary + evidence) + full `pnpm run verify` gate (PROG-04)
 
 ---
 
@@ -190,7 +207,7 @@
 | 8. Source Failure Diagnostics and Retry | v2.0 | 4/4 | Complete    | 2026-06-08 |
 | 9. Checkpoint and Resume | v2.0 | 5/5 | Complete   | 2026-06-09 |
 | 10. Dynamic Source Range and Rate Limiting | v2.0 | 5/5 | Complete   | 2026-06-11 |
-| 11. Progress Events and Compact Evidence | v2.0 | 0/TBD | Not started | - |
+| 11. Progress Events and Compact Evidence | v2.0 | 0/5 | Not started | - |
 | 12. Source Contract Guards | v2.0 | 0/TBD | Not started | - |
 
 ## Next Milestone
