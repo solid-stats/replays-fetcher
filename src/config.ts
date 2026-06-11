@@ -87,6 +87,7 @@ const configSchema = sourceConfigSchema.extend({
     secretAccessKey: z.string().min(1),
     forcePathStyle: booleanFromEnvironment,
     checkpointPrefix: z.string().min(1).default("checkpoints"),
+    evidencePrefix: z.string().min(1).default("runs"),
   }),
   staging: z.object({
     databaseUrl: z.url(),
@@ -135,6 +136,7 @@ export function loadConfig(source: ConfigSource = process.env): AppConfig {
       secretAccessKey: source["S3_SECRET_ACCESS_KEY"],
       forcePathStyle: source["S3_FORCE_PATH_STYLE"],
       checkpointPrefix: source["S3_CHECKPOINT_PREFIX"],
+      evidencePrefix: source["S3_EVIDENCE_PREFIX"],
     },
     staging: {
       databaseUrl: source["DATABASE_URL"],

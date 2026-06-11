@@ -338,6 +338,35 @@ test("redactConfig should keep the non-secret checkpoint prefix visible", () => 
   expect(redacted.s3.checkpointPrefix).toBe("cp");
 });
 
+test("loadConfig should default the evidence prefix to runs", () => {
+  const config = loadConfig(validEnvironment);
+
+  expect(config.s3.evidencePrefix).toBe("runs");
+});
+
+test("loadConfig should honor an S3_EVIDENCE_PREFIX override", () => {
+  const config = loadConfig({
+    ...validEnvironment,
+    S3_EVIDENCE_PREFIX: "evidence",
+  });
+
+  expect(config.s3.evidencePrefix).toBe("evidence");
+});
+
+test("loadConfig should reject an empty evidence prefix", () => {
+  expect(() =>
+    loadConfig({ ...validEnvironment, S3_EVIDENCE_PREFIX: "" }),
+  ).toThrow(ConfigError);
+});
+
+test("redactConfig should keep the non-secret evidence prefix visible", () => {
+  const redacted = redactConfig(
+    loadConfig({ ...validEnvironment, S3_EVIDENCE_PREFIX: "evidence" }),
+  );
+
+  expect(redacted.s3.evidencePrefix).toBe("evidence");
+});
+
 test("redactConfig should redact full S3 credentials when configuration is logged", () => {
   const redacted = redactConfig(
     loadConfig({
