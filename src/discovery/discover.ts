@@ -687,7 +687,7 @@ function toPageUrl(sourceUrl: URL, page: number): URL {
   return pageUrl;
 }
 
-function toRawReplayUrl(filename: string, detailUrl: URL): string {
+export function toRawReplayUrl(filename: string, detailUrl: URL): string {
   let rawFilename = filename;
 
   if (!rawFilename.endsWith(".json")) {
