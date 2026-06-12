@@ -69,11 +69,19 @@ docker run --rm fetcher-tsdown-spike --help
    externalized-dep resolution + command execution. The containerized run is one command, left for the
    host shell (Dockerfile.spike is ready).
 
-## Open / Handoff
+## Container run — DONE ✓ (host, 2026-06-13)
 
-- ⏳ **Container run** — execute the two `docker …` commands above on the host (sandbox lacked daemon
-  access). Expected: image builds; `--help` prints the command surface; exit 0. This only adds the
-  clean-image guarantee on top of the already-proven host execution.
+Ran on the host once docker group membership was picked up (a full GUI re-login / reboot is
+required — a new terminal tab inherits stale groups; `sg docker -c '…'` works without it):
+
+- `docker build -f Dockerfile.spike -t fetcher-tsdown-spike .` → image built on `node:25-alpine`
+  with `pnpm install --prod --frozen-lockfile`; single `cli.mjs` copied in.
+- `docker run --rm fetcher-tsdown-spike --help` → printed the full command surface
+  (check / discover / run-once / contract-check), exit 0.
+
+→ Confirms the clean-image guarantee: the tsdown bundle loads its full module graph in a fresh
+production image with the externalized deps resolved from `pnpm install --prod` — no
+`MODULE_NOT_FOUND`. OQ-2 fully closed.
 
 ## Signal for the Build
 

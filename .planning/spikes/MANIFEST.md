@@ -28,5 +28,5 @@ Design decisions that emerged and are non-negotiable for the real `@solidstats/c
 |---|------|------|-----------|---------|------|
 | 001 | oxlint-preset-port | standard | vocalclub rules → Oxlint preset; coverage (OQ-1b) + type-aware CI-readiness (OQ-1c) on real src | ✅ VALIDATED | oxlint, tsgolint, type-aware, oq-1b, oq-1c |
 | 002 | oxfmt-format-diff | standard | Oxfmt vs current Prettier on real files — style delta acceptable before reformatting 3 repos | ✅ VALIDATED | oxfmt, formatting |
-| 003 | tsdown-docker-smoke | standard | tsdown build of CLI; deps externalized + bundle executes (OQ-2); container run = 1 handoff cmd | ✅ VALIDATED | tsdown, docker, build, oq-2 |
+| 003 | tsdown-docker-smoke | standard | tsdown build of CLI; deps externalized + bundle executes in clean Docker image (OQ-2 fully closed) | ✅ VALIDATED | tsdown, docker, build, oq-2 |
 | 004 | depcruise-knip-import-gap | standard | Oxlint import-rule gap covered by tsc + dependency-cruiser + knip (no ESLint residual); only import/order remains | ✅ VALIDATED | dependency-cruiser, knip, import, oq-1b |
