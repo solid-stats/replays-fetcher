@@ -26,7 +26,7 @@
 - [x] **Phase 9: Checkpoint and Resume** - S3 checkpoint per source with conditional-write guards; resume from last completed page; run/resume status in existing staging evidence. (completed 2026-06-09)
 - [x] **Phase 10: Dynamic Source Range and Rate Limiting** - Stop-on-empty page discovery, bounded concurrent detail/byte fan-out, adaptive throttling on 429/403, configurable pacing, and per-page ETA. (completed 2026-06-11)
 - [x] **Phase 11: Progress Events and Compact Evidence** - Per-page pino NDJSON progress events, slim final summary, and opt-in S3 evidence artifact. (completed 2026-06-12)
-- [ ] **Phase 12: Source Contract Guards** - Deterministic fixtures proving the JSON-endpoint vs HTML-detail split, plus a no-write `contract-check` command that distinguishes contract drift from transient unavailability.
+- [x] **Phase 12: Source Contract Guards** - Deterministic fixtures proving the JSON-endpoint vs HTML-detail split, plus a no-write `contract-check` command that distinguishes contract drift from transient unavailability. (completed 2026-06-12)
 
 ## Phase Details
 
@@ -208,7 +208,7 @@
 | 9. Checkpoint and Resume | v2.0 | 5/5 | Complete   | 2026-06-09 |
 | 10. Dynamic Source Range and Rate Limiting | v2.0 | 5/5 | Complete   | 2026-06-11 |
 | 11. Progress Events and Compact Evidence | v2.0 | 5/5 | Complete   | 2026-06-12 |
-| 12. Source Contract Guards | v2.0 | 1/2 | In Progress|  |
+| 12. Source Contract Guards | v2.0 | 2/2 | Complete   | 2026-06-12 |
 
 ## Next Milestone
 
