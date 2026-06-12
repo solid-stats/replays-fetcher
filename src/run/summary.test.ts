@@ -618,3 +618,88 @@ test("buildRunSummary should default candidatesPerMinute to zero without a candi
   expect(summary.candidatesPerMinute).toBe(0);
   expect(summary.pagesPerMinute).toBe(2);
 });
+
+// ---------------------------------------------------------------------------
+// toCompactSummary — Task 2
+// ---------------------------------------------------------------------------
+
+import { toCompactSummary } from "./summary.js";
+import type { CompactRunSummary } from "./types.js";
+
+function fullRunSummary(): RunSummary {
+  return buildRunSummary({
+    discoveredRange: { firstPage: 1, lastPage: 3 },
+    discoveryReport: discoveryReport({
+      diagnostics: [
+        {
+          attempts: 2,
+          causeCode: "ETIMEDOUT",
+          causeMessage: "timed out",
+          code: "source_transient",
+          httpStatus: 503,
+          message: "Source request failed",
+          page: 1,
+          phase: "list",
+          severity: "error",
+          sourceUrl: "https://example.test/replays",
+        },
+      ],
+      ok: false,
+    }),
+    finishedAt,
+    rawStorage: [raw("stored")],
+    resumeInvocation,
+    runId,
+    staging: [{ stagingId: "staging-1", status: "staged" }],
+    startedAt,
+    status: "resumable",
+  });
+}
+
+test("toCompactSummary should strip the four heavy array keys", () => {
+  const compact = toCompactSummary(fullRunSummary());
+
+  expect(compact).not.toHaveProperty("candidates");
+  expect(compact).not.toHaveProperty("rawStorage");
+  expect(compact).not.toHaveProperty("staging");
+  expect(compact).not.toHaveProperty("diagnostics");
+});
+
+test("toCompactSummary should keep required scalar fields and present optionals", () => {
+  const compact: CompactRunSummary = toCompactSummary(fullRunSummary());
+
+  expect(compact.counts).toBeDefined();
+  expect(compact.failureCategories).toBeDefined();
+  expect(compact.finishedAt).toBe(finishedAt);
+  expect(compact.mode).toBe("run-once");
+  expect(compact.ok).toBe(false);
+  expect(compact.runId).toBe(runId);
+  expect(compact.startedAt).toBe(startedAt);
+
+  // Optional fields present in this summary
+  expect(compact.sourceUrl).toBe("https://example.test/replays");
+  expect(compact.discoveredRange).toStrictEqual({ firstPage: 1, lastPage: 3 });
+  expect(compact.status).toBe("resumable");
+  expect(compact.sourceFailure).toBeDefined();
+  expect(compact.resumeInvocation).toBe(resumeInvocation);
+});
+
+test("toCompactSummary should omit absent optional keys (Object.hasOwn === false)", () => {
+  const minimal = buildRunSummary({
+    discoveryReport: discoveryReport(),
+    finishedAt,
+    rawStorage: [],
+    runId,
+    staging: [],
+    startedAt,
+  });
+
+  const compact = toCompactSummary(minimal);
+
+  // None of the five optionals were provided — must be absent (not undefined)
+  expect(Object.hasOwn(compact, "status")).toBe(false);
+  expect(Object.hasOwn(compact, "sourceFailure")).toBe(false);
+  expect(Object.hasOwn(compact, "resumeInvocation")).toBe(false);
+  expect(Object.hasOwn(compact, "discoveredRange")).toBe(false);
+  expect(Object.hasOwn(compact, "sourceUrl")).toBe(false);
+});
