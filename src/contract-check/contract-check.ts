@@ -146,11 +146,11 @@ export async function runContractCheck(
 
   // rows.length > 0 is asserted above by the empty-list early-return.
   const firstRowOrUndefined = rows[0];
-  /* v8 ignore next 3 -- rows.length > 0 guard above makes this unreachable. */
+  /* v8 ignore next 3 -- @preserve rows.length > 0 guard above makes this unreachable. */
   if (firstRowOrUndefined === undefined) {
     return { ok: true, sample: { listPageUrl }, warnings };
   }
-  const firstRow = firstRowOrUndefined;;
+  const firstRow = firstRowOrUndefined;
 
   if (firstRow.source.url === undefined || firstRow.source.externalId === undefined) {
     warnings.push({
