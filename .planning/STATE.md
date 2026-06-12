@@ -32,13 +32,9 @@ Last activity: 2026-06-12 -- Phase 12 complete
 
 Progress: `[x][x][x][x][x][x]` 6/6 phases complete
 
-## Known Pre-Existing Debt (blocks aggregate `pnpm run verify`)
+## Verify Gate: GREEN ✅
 
-Surfaced during Phase 12 (Docker available, full verify run). NOT introduced by phase 12 — all blamed to commit `f5a6450c` (2026-06-12 14:03, Phase 11):
-- `prettier --check` fails on `src/run/run-once.ts`, `src/run/run-once.test.ts`, `src/run/no-leak.test.ts`, `pnpm-lock.yaml`.
-- `eslint` fails on `src/run/run-once.ts`, `src/run/run-once.test.ts`, `src/run/summary.test.ts` (~35 errors: import-x/order, duplicate imports).
-- 100% coverage gate misses `cli.ts:200,486-487` and `run-once.ts:360,722`.
-Phase 12's own files are prettier/eslint clean; contract-check.ts is 100% covered; typecheck, unit (434), integration (Docker, 4/4), and build all pass.
+`pnpm run verify` exits 0 (Docker available): format → lint → typecheck → unit (444 tests / 35 files) → integration (testcontainers) → coverage (100% statements/branches/functions/lines) → build. The pre-existing phase-11 lint/format/coverage debt in `src/run/*`, `cli.ts`, and `pnpm-lock.yaml` (blamed to `f5a6450c`) was cleared during Phase 12 close (commits `2a03f75`, `7aa54b0`, `78775b3`) at the user's request.
 
 ## Accumulated Context
 
