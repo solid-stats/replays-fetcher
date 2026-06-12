@@ -2033,3 +2033,111 @@ test("contract-check source should not include mutation surfaces", async () => {
     expect(sourceText).not.toContain(token);
   }
 });
+
+// ─── Coverage: default writeEvidenceFile seam (cli.ts:200) ───────────────────
+
+test("buildCli run-once default writeEvidenceFile seam writes the body to the given path", async () => {
+  stubValidEnvironment();
+  const writes: string[] = [];
+  vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+    writes.push(String(chunk));
+    return true;
+  });
+
+  // We do NOT override writeEvidenceFile — the CLI's default seam
+  // (`(path, body) => writeFile(path, body, "utf8")`) is captured and invoked.
+  // Container object so TypeScript sees a stable reference without a bare `let`.
+  const capturedSeam: {
+    readonly fn: (path: string, body: string) => Promise<void>;
+  } = {
+    fn: async () => {
+      throw new Error("writeEvidenceFile seam was not captured");
+    },
+  };
+
+  await buildCli({
+    createPostgresStagingRepositoryFromDatabaseUrl: () => ({ stage: vi.fn() }),
+    createReplayByteClient: () => ({ fetchBytes: vi.fn() }),
+    createS3CheckpointStoreFromConfig: () => ({
+      read: vi.fn(),
+      write: vi.fn(),
+    }),
+    createS3RawReplayStorageFromConfig: () => ({ storeRawReplay: vi.fn() }),
+    createSourceClient: () => ({ fetchText: vi.fn() }),
+    now: () => new Date("2026-05-09T12:00:00.000Z"),
+    runOnce: vi.fn(
+      async (input: {
+        readonly writeEvidenceFile?: (
+          path: string,
+          body: string,
+        ) => Promise<void>;
+        readonly runId: string;
+      }) => {
+        if (input.writeEvidenceFile !== undefined) {
+          // Reassign the container's fn via Object.assign to satisfy readonly + init rules.
+          Object.assign(capturedSeam, { fn: input.writeEvidenceFile });
+        }
+        return createMinimalRunOnceResult(
+          createRunSummary({ runId: input.runId }),
+        );
+      },
+    ),
+  }).parseAsync(["node", "replays-fetcher", "run-once"]);
+
+  // Exercise the default seam against the real filesystem (tmp path).
+  const temporaryPath = `/tmp/cli-seam-test-${String(Date.now())}.json`;
+  const evidenceBody = JSON.stringify({ seam: "test" });
+  await capturedSeam.fn(temporaryPath, evidenceBody);
+
+  const written = await readFile(temporaryPath, "utf8");
+  expect(written).toBe(evidenceBody);
+
+  const { unlink } = await import("node:fs/promises");
+  await unlink(temporaryPath);
+});
+
+// ─── Coverage: flushLogger error-reject branch (cli.ts:486-487) ──────────────
+
+test("buildCli run-once flushLogger rejects when log.flush calls back with an error", async () => {
+  stubValidEnvironment();
+  const flushError = new Error("simulated pino flush error");
+  const writes: string[] = [];
+  vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+    writes.push(String(chunk));
+    return true;
+  });
+
+  const mockLogger = createLogger({
+    destination: new Writable({
+      write(_chunk, _enc, callback) {
+        callback();
+      },
+    }),
+  });
+  // Override flush to call back with an error (exercises the reject branch)
+  mockLogger.flush = (callback?: (error?: Error) => void) => {
+    if (callback !== undefined) {
+      callback(flushError);
+    }
+  };
+
+  await expect(
+    buildCli({
+      createLogger: () => mockLogger,
+      createPostgresStagingRepositoryFromDatabaseUrl: () => ({
+        stage: vi.fn(),
+      }),
+      createReplayByteClient: () => ({ fetchBytes: vi.fn() }),
+      createS3CheckpointStoreFromConfig: () => ({
+        read: vi.fn(),
+        write: vi.fn(),
+      }),
+      createS3RawReplayStorageFromConfig: () => ({ storeRawReplay: vi.fn() }),
+      createSourceClient: () => ({ fetchText: vi.fn() }),
+      now: () => new Date("2026-05-09T12:00:00.000Z"),
+      runOnce: vi.fn(async (input: { readonly runId: string }) =>
+        createMinimalRunOnceResult(createRunSummary({ runId: input.runId })),
+      ),
+    }).parseAsync(["node", "replays-fetcher", "run-once"]),
+  ).rejects.toBe(flushError);
+});
