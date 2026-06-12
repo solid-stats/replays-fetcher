@@ -1,0 +1,6 @@
+{ "plugins": ["typescript"], "rules": {
+  "typescript/require-await":"error",
+  "typescript/no-floating-promises":"error",
+  "typescript/no-unsafe-assignment":"error",
+  "typescript/strict-boolean-expressions":"error",
+  "typescript/restrict-plus-operands":"error" } }

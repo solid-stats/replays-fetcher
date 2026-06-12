@@ -1,0 +1,25 @@
+
+  error not-to-unresolvable: src/cli.ts → ./storage/store-raw-replay.js
+  error not-to-unresolvable: src/cli.ts → ./storage/s3-raw-storage.js
+  error not-to-unresolvable: src/cli.ts → ./storage/replay-byte-client.js
+  error not-to-unresolvable: src/cli.ts → ./staging/types.js
+  error not-to-unresolvable: src/cli.ts → ./staging/stage-raw-replay.js
+  error not-to-unresolvable: src/cli.ts → ./staging/postgres-staging-repository.js
+  error not-to-unresolvable: src/cli.ts → ./source/retry.js
+  error not-to-unresolvable: src/cli.ts → ./run/summary.js
+  error not-to-unresolvable: src/cli.ts → ./run/run-once.js
+  error not-to-unresolvable: src/cli.ts → ./logging/create-logger.js
+  error not-to-unresolvable: src/cli.ts → ./evidence/s3-evidence-store.js
+  error not-to-unresolvable: src/cli.ts → ./discovery/types.js
+  error not-to-unresolvable: src/cli.ts → ./discovery/source-client.js
+  error not-to-unresolvable: src/cli.ts → ./discovery/discover.js
+  error not-to-unresolvable: src/cli.ts → ./contract-check/contract-check.js
+  error not-to-unresolvable: src/cli.ts → ./config.js
+  error not-to-unresolvable: src/cli.ts → ./checkpoint/s3-checkpoint-store.js
+  error not-to-unresolvable: src/cli.ts → ./check/source-connectivity.js
+  error not-to-unresolvable: src/cli.ts → ./check/s3-connectivity.js
+  error not-to-unresolvable: src/cli.ts → ./check/postgres-connectivity.js
+  error not-to-unresolvable: src/cli.ts → ./check/connectivity.js
+
+x 21 dependency violations (21 errors, 0 warnings). 26 modules, 25 dependencies cruised.
+

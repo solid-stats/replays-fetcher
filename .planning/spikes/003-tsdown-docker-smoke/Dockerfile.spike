@@ -1,0 +1,17 @@
+# Spike 003 — smoke-run the tsdown-built single-file CLI bundle in a clean
+# production image. Proves the externalized deps resolve at runtime (OQ-2).
+# Build context = repo root:  docker build -f .planning/spikes/003-tsdown-docker-smoke/Dockerfile.spike .
+FROM node:25-alpine AS base
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN npm install -g pnpm@11.0.9
+WORKDIR /app
+
+FROM base AS production
+ENV NODE_ENV=production
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN pnpm install --prod --frozen-lockfile
+# the ONLY app artifact is the single tsdown bundle (vs tsc's dist/ tree)
+COPY .planning/spikes/003-tsdown-docker-smoke/dist/cli.mjs ./cli.mjs
+ENTRYPOINT ["node", "cli.mjs"]
+CMD ["--help"]

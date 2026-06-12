@@ -1,0 +1,28 @@
+Unused files (2)
+src/index.ts      
+src/run/no-leak.ts
+Unused exports (1)
+toSourceSlug  function  src/checkpoint/object-key.ts:52:17
+Unused exported types (17)
+ConnectivityCheckStatus        type       src/check/connectivity.ts:1:13            
+ConnectivityFailureCategory    type       src/check/connectivity.ts:3:13            
+CheckpointStatus               type       src/checkpoint/checkpoint.ts:27:13        
+CheckpointPageCounts           type       src/checkpoint/checkpoint.ts:76:13        
+ContractCheckWarningCode       type       src/contract-check/contract-check.ts:32:13
+ContractCheckWarning           interface  src/contract-check/contract-check.ts:37:18
+ContractCheckSample            interface  src/contract-check/contract-check.ts:42:18
+DiscoveryMode                  type       src/discovery/types.ts:3:13               
+DiagnosticSeverity             type       src/discovery/types.ts:5:13               
+S3EvidenceSender               interface  src/evidence/s3-evidence-store.ts:27:18   
+IngestStagingStatus            type       src/staging/types.ts:3:13                 
+StagingOutcomeStatus           type       src/staging/types.ts:5:13                 
+ByteFetchOptions               interface  src/storage/replay-byte-client.ts:46:18   
+RawReplayFetchFailureEvidence  interface  src/storage/store-raw-replay.ts:12:18     
+RawReplayStorageStatus         type       src/storage/types.ts:3:13                 
+RawReplayObjectIdentity        interface  src/storage/types.ts:9:18                 
+RawReplaySourceEvidence        interface  src/storage/types.ts:15:18                
+Configuration hints (4)
+**/*.test.ts                .planning/spikes/004-depcruise-knip-import-gap/knip.jsonc  Remove from ignore            
+**/*.integration.test.ts    .planning/spikes/004-depcruise-knip-import-gap/knip.jsonc  Remove from ignore            
+**/*.fixtures.ts            .planning/spikes/004-depcruise-knip-import-gap/knip.jsonc  Remove from ignore            
+src/cli.ts                  .planning/spikes/004-depcruise-knip-import-gap/knip.jsonc  Remove redundant entry pattern

@@ -1,0 +1,8 @@
+{ "plugins": ["typescript"], "rules": {
+  "typescript/no-floating-promises":"error",
+  "typescript/no-unsafe-member-access":"error",
+  "typescript/no-unsafe-assignment":"error",
+  "typescript/strict-boolean-expressions":"error",
+  "typescript/restrict-plus-operands":"error",
+  "typescript/no-misused-promises":"error",
+  "typescript/await-thenable":"error" } }

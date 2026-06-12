@@ -1,0 +1,66 @@
+Failed to parse oxlint configuration file.
+
+  x Rule 'better-regex' not found in plugin 'unicorn'
+
+  x Rule 'consistent-destructuring' not found in plugin 'unicorn'
+
+  x Rule 'consistent-this' not found in plugin 'eslint'
+
+  x Rule 'expiring-todo-comments' not found in plugin 'unicorn'
+
+  x Rule 'member-ordering' not found in plugin 'typescript'
+
+  x Rule 'naming-convention' not found in plugin 'typescript'
+
+  x Rule 'no-array-push-push' not found in plugin 'unicorn'
+
+  x Rule 'no-deprecated' not found in plugin 'import'
+
+  x Rule 'no-extraneous-dependencies' not found in plugin 'import'
+
+  x Rule 'no-for-loop' not found in plugin 'unicorn'
+
+  x Rule 'no-import-module-exports' not found in plugin 'import'
+
+  x Rule 'no-keyword-prefix' not found in plugin 'unicorn'
+
+  x Rule 'no-named-default' not found in plugin 'unicorn'
+
+  x Rule 'no-octal' not found in plugin 'eslint'
+
+  x Rule 'no-octal-escape' not found in plugin 'eslint'
+
+  x Rule 'no-relative-packages' not found in plugin 'import'
+
+  x Rule 'no-undef-init' not found in plugin 'eslint'
+
+  x Rule 'no-unnecessary-polyfills' not found in plugin 'unicorn'
+
+  x Rule 'no-unreachable-loop' not found in plugin 'eslint'
+
+  x Rule 'no-unresolved' not found in plugin 'import'
+
+  x Rule 'no-unused-modules' not found in plugin 'import'
+
+  x Rule 'no-unused-properties' not found in plugin 'unicorn'
+
+  x Rule 'no-useless-path-segments' not found in plugin 'import'
+
+  x Rule 'order' not found in plugin 'import'
+
+  x Rule 'prefer-destructuring' not found in plugin 'typescript'
+
+  x Rule 'prefer-export-from' not found in plugin 'unicorn'
+
+  x Rule 'prefer-json-parse-buffer' not found in plugin 'unicorn'
+
+  x Rule 'prefer-switch' not found in plugin 'unicorn'
+
+  x Rule 'prevent-abbreviations' not found in plugin 'unicorn'
+
+  x Rule 'require-atomic-updates' not found in plugin 'eslint'
+
+  x Rule 'string-content' not found in plugin 'unicorn'
+
+  x Rule 'template-indent' not found in plugin 'unicorn'
+
