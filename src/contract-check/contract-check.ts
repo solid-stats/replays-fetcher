@@ -27,14 +27,15 @@ import {
 
 import type { SourceClient } from "../discovery/types.js";
 
-// ---------------------------------------------------------------------------
-// Public types
-// ---------------------------------------------------------------------------
-
 export type ContractCheckReason = "contract_broken" | "source_unreachable";
 
+export type ContractCheckWarningCode =
+  | "empty_list_page"
+  | "missing_external_id"
+  | "missing_filename";
+
 export interface ContractCheckWarning {
-  readonly code: string;
+  readonly code: ContractCheckWarningCode;
   readonly message: string;
 }
 
@@ -61,7 +62,6 @@ export type ContractCheckResult =
 export interface RunContractCheckOptions {
   readonly sourceClient: SourceClient;
   readonly sourceUrl: URL;
-  readonly generatedAt?: string;
 }
 
 type FetchFailureResult = Extract<ContractCheckResult, { ok: false }>;

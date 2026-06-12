@@ -2020,6 +2020,7 @@ const contractCheckMutationTokens = [
   ["PostgresStaging", "Repository"].join(""),
   ["createPostgresStaging", "RepositoryFromDatabaseUrl"].join(""),
   ["createS3RawReplay", "StorageFromConfig"].join(""),
+  ["with", "Retry"].join(""),
 ] as const;
 
 test("contract-check source should not include mutation surfaces", async () => {

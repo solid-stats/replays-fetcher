@@ -58,9 +58,8 @@ const happyResponses = new Map<string, string>([
   [RAW_URL, RAW_JSON],
 ]);
 describe("runContractCheck — GUARD-01 fixture coverage", () => {
-  test("happy path returns ok:true, no warnings, full sample (generatedAt is harmless)", async () => {
+  test("happy path returns ok:true, no warnings, full sample", async () => {
     const result = await runContractCheck({
-      generatedAt: "2026-06-12T00:00:00.000Z",
       sourceClient: stringClient(happyResponses),
       sourceUrl: SOURCE_URL,
     });
