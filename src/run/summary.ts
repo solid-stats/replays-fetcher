@@ -1,5 +1,6 @@
 /* eslint-disable max-lines -- run summary keeps the builders, status derivation, exit-code mapping, and counting helpers co-located so the stdout summary contract reads as one unit. */
 import type {
+  CompactRunSummary,
   RunConfigFailureSummary,
   RunExitCode,
   RunFailureCategory,
@@ -106,6 +107,47 @@ export function buildRunSummary(input: BuildRunSummaryInput): RunSummary {
     withRunStatus({ ...summary, sourceFailure }, input),
     input,
   );
+}
+
+/**
+ * Strips the four heavy arrays (candidates, rawStorage, staging, diagnostics)
+ * and the derived rate/ETA metrics from a RunSummary for compact stdout
+ * logging (PROG-02). Each of the five optional fields is spread additively —
+ * absent optionals are omitted entirely, never assigned undefined
+ * (exactOptionalPropertyTypes-safe, D-07/Pitfall 5).
+ */
+export function toCompactSummary(summary: RunSummary): CompactRunSummary {
+  let compact: CompactRunSummary = {
+    counts: summary.counts,
+    failureCategories: summary.failureCategories,
+    finishedAt: summary.finishedAt,
+    mode: summary.mode,
+    ok: summary.ok,
+    runId: summary.runId,
+    startedAt: summary.startedAt,
+  };
+
+  if (summary.sourceUrl !== undefined) {
+    compact = { ...compact, sourceUrl: summary.sourceUrl };
+  }
+
+  if (summary.discoveredRange !== undefined) {
+    compact = { ...compact, discoveredRange: summary.discoveredRange };
+  }
+
+  if (summary.status !== undefined) {
+    compact = { ...compact, status: summary.status };
+  }
+
+  if (summary.sourceFailure !== undefined) {
+    compact = { ...compact, sourceFailure: summary.sourceFailure };
+  }
+
+  if (summary.resumeInvocation !== undefined) {
+    compact = { ...compact, resumeInvocation: summary.resumeInvocation };
+  }
+
+  return compact;
 }
 
 /**

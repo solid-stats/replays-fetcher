@@ -685,18 +685,38 @@ test("toCompactSummary should keep required scalar fields and present optionals"
 });
 
 test("toCompactSummary should omit absent optional keys (Object.hasOwn === false)", () => {
-  const minimal = buildRunSummary({
-    discoveryReport: discoveryReport(),
+  // Construct a RunSummary with the five optional keys genuinely absent (not
+  // merely undefined) to exercise each conditional-spread branch in
+  // toCompactSummary. We bypass buildRunSummary because it always assigns
+  // sourceUrl from the report — this tests the projection contract directly.
+  const noOptionals: RunSummary = {
+    candidates: [],
+    counts: {
+      conflict: 0,
+      diagnostics: 0,
+      discovered: 0,
+      duplicate: 0,
+      failed: 0,
+      fetched: 0,
+      skipped: 0,
+      staged: 0,
+      stored: 0,
+    },
+    diagnostics: [],
+    failureCategories: [],
     finishedAt,
+    mode: "run-once",
+    ok: true,
     rawStorage: [],
     runId,
     staging: [],
     startedAt,
-  });
+  };
 
-  const compact = toCompactSummary(minimal);
+  const compact = toCompactSummary(noOptionals);
 
-  // None of the five optionals were provided — must be absent (not undefined)
+  // None of the five optionals are present on the input — projection must
+  // omit them entirely (Object.hasOwn === false), never assign undefined.
   expect(Object.hasOwn(compact, "status")).toBe(false);
   expect(Object.hasOwn(compact, "sourceFailure")).toBe(false);
   expect(Object.hasOwn(compact, "resumeInvocation")).toBe(false);

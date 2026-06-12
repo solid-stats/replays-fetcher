@@ -68,6 +68,31 @@ export interface RunSummary {
   readonly status?: RunStatus;
 }
 
+/**
+ * Compact projection of RunSummary for stdout logging (PROG-02). Strips the
+ * four heavy arrays (candidates, rawStorage, staging, diagnostics) and the
+ * derived rate/ETA metrics; keeps the scalar run identity, counts,
+ * failure taxonomy, and the five optional contextual fields. Absent optionals
+ * are omitted entirely — never assigned undefined (exactOptionalPropertyTypes).
+ */
+export interface CompactRunSummary {
+  readonly counts: RunSummaryCounts;
+  readonly failureCategories: readonly RunFailureCategory[];
+  readonly finishedAt: string;
+  readonly mode: "run-once";
+  readonly ok: boolean;
+  readonly runId: string;
+  readonly startedAt: string;
+  readonly discoveredRange?: {
+    readonly firstPage: number;
+    readonly lastPage: number;
+  };
+  readonly resumeInvocation?: string;
+  readonly sourceFailure?: RunSourceFailure;
+  readonly sourceUrl?: string;
+  readonly status?: RunStatus;
+}
+
 export interface RunConfigFailureSummary {
   readonly counts: RunSummaryCounts;
   readonly failureCategories: readonly ["config_invalid"];
