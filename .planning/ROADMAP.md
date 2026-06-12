@@ -171,7 +171,7 @@
 
 **Wave 3** *(blocked on Wave 2; owns `cli.ts` + docs)*
 
-- [ ] 11-04-PLAN.md — `--emit-evidence`/`--evidence-file` flags + evidence-store DI + compact stdout projection + awaited flush + integration-contract/README/.env updates (PROG-01/02/03/04)
+- [x] 11-04-PLAN.md — `--emit-evidence`/`--evidence-file` flags + evidence-store DI + compact stdout projection + awaited flush + integration-contract/README/.env updates (PROG-01/02/03/04)
 
 **Wave 4** *(blocked on Wave 3)*
 
@@ -207,7 +207,7 @@
 | 8. Source Failure Diagnostics and Retry | v2.0 | 4/4 | Complete    | 2026-06-08 |
 | 9. Checkpoint and Resume | v2.0 | 5/5 | Complete   | 2026-06-09 |
 | 10. Dynamic Source Range and Rate Limiting | v2.0 | 5/5 | Complete   | 2026-06-11 |
-| 11. Progress Events and Compact Evidence | v2.0 | 3/5 | In Progress|  |
+| 11. Progress Events and Compact Evidence | v2.0 | 4/5 | In Progress|  |
 | 12. Source Contract Guards | v2.0 | 0/TBD | Not started | - |
 
 ## Next Milestone
