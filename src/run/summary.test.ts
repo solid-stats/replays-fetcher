@@ -5,10 +5,10 @@ import {
   buildConfigInvalidRunSummary,
   buildRunSummary,
   deriveRunStatus,
-  runExitCode,
+  runExitCode, toCompactSummary 
 } from "./summary.js";
 
-import type { RunStatus, RunSummary } from "./types.js";
+import type { RunStatus, RunSummary, CompactRunSummary  } from "./types.js";
 import type { DiscoveryReport, ReplayCandidate } from "../discovery/types.js";
 import type { StoreRawReplayResult } from "../storage/store-raw-replay.js";
 
@@ -623,8 +623,6 @@ test("buildRunSummary should default candidatesPerMinute to zero without a candi
 // toCompactSummary — Task 2
 // ---------------------------------------------------------------------------
 
-import { toCompactSummary } from "./summary.js";
-import type { CompactRunSummary } from "./types.js";
 
 function fullRunSummary(): RunSummary {
   return buildRunSummary({

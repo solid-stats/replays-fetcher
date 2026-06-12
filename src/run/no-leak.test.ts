@@ -233,8 +233,7 @@ test("runOnce should not leak secrets, userinfo, or HTML into events, compact su
   const [firstCommand] = evidenceCommands;
   let evidencePutBody = "";
   if (firstCommand !== undefined) {
-    evidencePutBody =
-      (firstCommand.input as { Body?: string }).Body ?? "";
+    evidencePutBody = (firstCommand.input as { Body?: string }).Body ?? "";
   }
 
   const allSurfaces = [

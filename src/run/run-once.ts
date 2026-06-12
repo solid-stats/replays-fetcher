@@ -16,13 +16,13 @@ import {
 import type { RunExitCode, RunSourceFailure, RunSummary } from "./types.js";
 import type { Checkpoint, CheckpointPage } from "../checkpoint/checkpoint.js";
 import type { S3CheckpointStore } from "../checkpoint/s3-checkpoint-store.js";
-import type { S3EvidenceStore } from "../evidence/s3-evidence-store.js";
 import type {
   DiscoveryDiagnostic,
   DiscoveryReport,
   ReplayCandidate,
   SourceClient,
 } from "../discovery/types.js";
+import type { S3EvidenceStore } from "../evidence/s3-evidence-store.js";
 import type { RetryAttemptEvent } from "../source/retry.js";
 import type { StagingRepository } from "../staging/stage-raw-replay.js";
 import type { IngestStagingResult } from "../staging/types.js";
@@ -111,7 +111,10 @@ export async function runOnce(input: RunOnceInput): Promise<RunOnceResult> {
   const slug = sanitizeSourceUrl(input.sourceUrl);
   // D-03/D-04: emit run_start (info) at the top of the run. The slug is already
   // userinfo-stripped (WR-02). The message is static — no data interpolated.
-  input.log?.info?.({ event: "run_start", runId: input.runId, sourceUrl: slug }, "run start");
+  input.log?.info?.(
+    { event: "run_start", runId: input.runId, sourceUrl: slug },
+    "run start",
+  );
   const discoveryReport = emptyDiscoveryReport(slug);
   const rawStorage: StoreRawReplayResult[] = [];
   const staging: IngestStagingResult[] = [];
@@ -361,7 +364,9 @@ function emitPageFailureEvent(
   }
 
   const eventName =
-    failure.classification === "permanent" ? "source_unavailable" : "page_failed";
+    failure.classification === "permanent"
+      ? "source_unavailable"
+      : "page_failed";
   input.log?.error?.(
     { event: eventName, page, ...failure },
     eventName === "source_unavailable" ? "source unavailable" : "page failed",
@@ -667,12 +672,22 @@ async function assembleResult(
   // identifiers-only; the message is static.
   if (status === "complete") {
     input.log?.info?.(
-      { event: "run_complete", runId: input.runId, status, counts: summary.counts },
+      {
+        event: "run_complete",
+        runId: input.runId,
+        status,
+        counts: summary.counts,
+      },
       "run complete",
     );
   } else {
     input.log?.warn?.(
-      { event: "run_partial", runId: input.runId, status, counts: summary.counts },
+      {
+        event: "run_partial",
+        runId: input.runId,
+        status,
+        counts: summary.counts,
+      },
       "run partial",
     );
   }
@@ -717,7 +732,10 @@ async function writeEvidence(
     input.writeEvidenceFile !== undefined
   ) {
     try {
-      await input.writeEvidenceFile(input.evidenceFile, JSON.stringify(summary));
+      await input.writeEvidenceFile(
+        input.evidenceFile,
+        JSON.stringify(summary),
+      );
     } catch {
       input.log?.warn?.(
         { event: "evidence_write_failed", runId: input.runId },

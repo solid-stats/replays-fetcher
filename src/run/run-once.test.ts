@@ -1118,11 +1118,16 @@ test("runOnce runs past the old single-page bound and stops complete on the firs
     discovered.push(String(page));
 
     if (page > lastContentPage) {
-      return discoveryReport({ candidates: [], sourceUrl: sourceUrl.toString() });
+      return discoveryReport({
+        candidates: [],
+        sourceUrl: sourceUrl.toString(),
+      });
     }
 
     return discoveryReport({
-      candidates: [replayCandidate(String(page), `replay-${String(page)}.ocap`)],
+      candidates: [
+        replayCandidate(String(page), `replay-${String(page)}.ocap`),
+      ],
       sourceUrl: sourceUrl.toString(),
     });
   });
@@ -1270,14 +1275,20 @@ test("runOnce shrinks the shared limiter on a rate-limited page and grows it on 
     "clean",
     "rate_limited",
   ]);
-  expect(limiter.assignments).toStrictEqual([grownConcurrency, shrunkConcurrency]);
+  expect(limiter.assignments).toStrictEqual([
+    grownConcurrency,
+    shrunkConcurrency,
+  ]);
 });
 
 test("runOnce awaits the pacer floor once before each list page", async () => {
   const pacer = spyPacer();
   const discover = vi.fn(async ({ sourceUrl }: { sourceUrl: URL }) => {
     if (sourceUrl.searchParams.get("p") === pageTwo) {
-      return discoveryReport({ candidates: [], sourceUrl: sourceUrl.toString() });
+      return discoveryReport({
+        candidates: [],
+        sourceUrl: sourceUrl.toString(),
+      });
     }
 
     return discoveryReport({
@@ -1316,7 +1327,10 @@ test("runOnce emits page_complete with event discriminator, counts + rates for e
   const info = vi.fn();
   const discover = vi.fn(async ({ sourceUrl }: { sourceUrl: URL }) => {
     if (sourceUrl.searchParams.get("p") === pageTwo) {
-      return discoveryReport({ candidates: [], sourceUrl: sourceUrl.toString() });
+      return discoveryReport({
+        candidates: [],
+        sourceUrl: sourceUrl.toString(),
+      });
     }
 
     return discoveryReport({
@@ -1610,11 +1624,11 @@ test("runOnce emits run_start (info) at top of run with runId and static message
     (call) => (call[0] as Record<string, unknown>)["event"] === "run_start",
   );
   expect(runStartCalls).toHaveLength(1);
-  const [payload, msg] = runStartCalls[0] as [Record<string, unknown>, string];
+  const [payload, message] = runStartCalls[0] as [Record<string, unknown>, string];
   expect(payload["runId"]).toBe("run-start-test");
   expect(typeof payload["sourceUrl"]).toBe("string");
   // Static message
-  expect(msg).toBe("run start");
+  expect(message).toBe("run start");
 });
 
 test("runOnce emits run_complete (info) on a successful full run", async () => {
@@ -1642,11 +1656,11 @@ test("runOnce emits run_complete (info) on a successful full run", async () => {
     (call) => (call[0] as Record<string, unknown>)["event"] === "run_complete",
   );
   expect(completeCalls).toHaveLength(1);
-  const [payload, msg] = completeCalls[0] as [Record<string, unknown>, string];
+  const [payload, message] = completeCalls[0] as [Record<string, unknown>, string];
   expect(payload["status"]).toBe("complete");
   expect(payload["runId"]).toBe("run-complete-event");
   expect(payload["counts"]).toBeDefined();
-  expect(msg).toBe("run complete");
+  expect(message).toBe("run complete");
 });
 
 test("runOnce emits run_partial (warn) when the run stops on a !ok page", async () => {
@@ -1684,15 +1698,15 @@ test("runOnce emits run_partial (warn) when the run stops on a !ok page", async 
     (call) => (call[0] as Record<string, unknown>)["event"] === "run_partial",
   );
   expect(partialCalls).toHaveLength(1);
-  const [payload, msg] = partialCalls[0] as [Record<string, unknown>, string];
+  const [payload, message] = partialCalls[0] as [Record<string, unknown>, string];
   expect(payload["event"]).toBe("run_partial");
   expect(payload["runId"]).toBe("run-partial-event");
   expect(payload["counts"]).toBeDefined();
-  expect(msg).toBe("run partial");
+  expect(message).toBe("run partial");
 });
 
 test("runOnce emits source_unavailable or page_failed (error) on the !ok break path with identifiers-only fields", async () => {
-  const errorFn = vi.fn();
+  const errorFunction = vi.fn();
 
   await runOnce({
     byteClient: { fetchBytes: vi.fn() },
@@ -1711,7 +1725,7 @@ test("runOnce emits source_unavailable or page_failed (error) on the !ok break p
         ],
         ok: false,
       }),
-    log: { info: vi.fn(), warn: vi.fn(), error: errorFn } as never,
+    log: { info: vi.fn(), warn: vi.fn(), error: errorFunction } as never,
     now: createClock([startedAt, finishedAt]),
     runId: "run-failure-event",
     sourceClient: { fetchText: vi.fn() },
@@ -1723,13 +1737,13 @@ test("runOnce emits source_unavailable or page_failed (error) on the !ok break p
   });
 
   // Either source_unavailable or page_failed depending on classification
-  const failureCalls = errorFn.mock.calls.filter((call) => {
-    const evt = (call[0] as Record<string, unknown>)["event"];
-    return evt === "source_unavailable" || evt === "page_failed";
+  const failureCalls = errorFunction.mock.calls.filter((call) => {
+    const event = (call[0] as Record<string, unknown>)["event"];
+    return event === "source_unavailable" || event === "page_failed";
   });
   expect(failureCalls).toHaveLength(1);
   const [payload] = failureCalls[0] as [Record<string, unknown>, string];
-  expect(typeof (payload as Record<string, unknown>)["event"]).toBe("string");
+  expect(typeof (payload)["event"]).toBe("string");
   // classification field from deriveSourceFailure
   expect(payload["classification"]).toBeDefined();
 });
@@ -1745,11 +1759,19 @@ test("runOnce emits exactly one page_complete per completed page in a multi-page
     checkpointStore: fakeCheckpointStore(),
     discoverReplays: async ({ sourceUrl }: { sourceUrl: URL }) => {
       if (sourceUrl.searchParams.get("p") === "3") {
-        return discoveryReport({ candidates: [], sourceUrl: sourceUrl.toString() });
+        return discoveryReport({
+          candidates: [],
+          sourceUrl: sourceUrl.toString(),
+        });
       }
 
       return discoveryReport({
-        candidates: [replayCandidate(sourceUrl.searchParams.get("p") ?? "1", "replay.ocap")],
+        candidates: [
+          replayCandidate(
+            sourceUrl.searchParams.get("p") ?? "1",
+            "replay.ocap",
+          ),
+        ],
         sourceUrl: sourceUrl.toString(),
       });
     },
@@ -1790,7 +1812,7 @@ test("runOnce emits exactly one page_complete per completed page in a multi-page
 test("runOnce event messages are static — no source URL userinfo or candidate bodies interpolated", async () => {
   const info = vi.fn();
   const warn = vi.fn();
-  const errorFn = vi.fn();
+  const errorFunction = vi.fn();
   const secret = "s3cr3t-pass";
 
   await runOnce({
@@ -1799,7 +1821,7 @@ test("runOnce event messages are static — no source URL userinfo or candidate 
     requestSpacingMs: 0,
     checkpointStore: fakeCheckpointStore(),
     discoverReplays: async () => discoveryReport({ candidates: [] }),
-    log: { info, warn, error: errorFn } as never,
+    log: { info, warn, error: errorFunction } as never,
     now: createClock([startedAt, finishedAt]),
     runId: "run-no-leak-events",
     sourceClient: { fetchText: vi.fn() },
@@ -1813,11 +1835,11 @@ test("runOnce event messages are static — no source URL userinfo or candidate 
   const allMessages = [
     ...info.mock.calls.map((c) => c[1] as string),
     ...warn.mock.calls.map((c) => c[1] as string),
-    ...errorFn.mock.calls.map((c) => c[1] as string),
+    ...errorFunction.mock.calls.map((c) => c[1] as string),
   ];
-  for (const msg of allMessages) {
-    expect(msg).not.toContain(secret);
-    expect(msg).not.toContain("operator:");
+  for (const message of allMessages) {
+    expect(message).not.toContain(secret);
+    expect(message).not.toContain("operator:");
   }
 
   // The sourceUrl in the run_start payload must be the userinfo-stripped slug
@@ -1832,7 +1854,10 @@ test("runOnce event messages are static — no source URL userinfo or candidate 
 
 // ─── Task 2: opt-in evidence write (RED) ─────────────────────────────────────
 
-import type { EvidenceWriteInput, S3EvidenceStore } from "../evidence/s3-evidence-store.js";
+import type {
+  EvidenceWriteInput,
+  S3EvidenceStore,
+} from "../evidence/s3-evidence-store.js";
 
 test("runOnce calls evidenceStore.write with full RunSummary when emitEvidence is true", async () => {
   const writes: EvidenceWriteInput[] = [];
@@ -1897,8 +1922,11 @@ test("runOnce does NOT call evidenceStore.write when emitEvidence is false or un
 });
 
 test("runOnce calls writeEvidenceFile with full RunSummary JSON when evidenceFile is set", async () => {
-  const written: Array<{ path: string; body: string }> = [];
-  const writeEvidenceFile = async (path: string, body: string): Promise<void> => {
+  const written: { path: string; body: string }[] = [];
+  const writeEvidenceFile = async (
+    path: string,
+    body: string,
+  ): Promise<void> => {
     written.push({ path, body });
   };
 
@@ -1933,7 +1961,9 @@ test("runOnce logs warn and keeps exit code unchanged when evidenceStore.write r
   const warn = vi.fn();
   const writeError = new Error("S3 evidence write failed");
   const evidenceStore: S3EvidenceStore = {
-    write: async () => { throw writeError; },
+    write: async () => {
+      throw writeError;
+    },
   };
 
   const result = await runOnce({
@@ -1957,7 +1987,10 @@ test("runOnce logs warn and keeps exit code unchanged when evidenceStore.write r
 
   // evidence failure must log at warn
   expect(warn).toHaveBeenCalledWith(
-    expect.objectContaining({ event: "evidence_write_failed", runId: "run-evidence-fail" }),
+    expect.objectContaining({
+      event: "evidence_write_failed",
+      runId: "run-evidence-fail",
+    }),
     expect.any(String),
   );
   // exit code is unchanged — same as without evidence (complete run exits 0)
@@ -1965,8 +1998,8 @@ test("runOnce logs warn and keeps exit code unchanged when evidenceStore.write r
 });
 
 test("runOnce S3 and file evidence writes are independent — both/either/neither", async () => {
-  const storeWrite = vi.fn(async () => Promise.resolve());
-  const fileWrite = vi.fn(async () => Promise.resolve());
+  const storeWrite = vi.fn(async () => {});
+  const fileWrite = vi.fn(async () => {});
   const evidenceStore: S3EvidenceStore = { write: storeWrite };
 
   // both enabled
