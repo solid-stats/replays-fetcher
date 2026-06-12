@@ -2,7 +2,7 @@
 phase: 12
 slug: source-contract-guards
 status: draft
-nyquist_compliant: false
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-06-12
 ---
@@ -38,10 +38,10 @@ created: 2026-06-12
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| TBD (planner fills) | — | — | GUARD-01 | — | Deterministic fixture parse coverage | unit | `pnpm run test` | ❌ W0 | ⬜ pending |
-| TBD (planner fills) | — | — | GUARD-02 | — | `toRawReplayUrl` → JSON data endpoint; HTML-as-bytes regression fails | unit | `pnpm run test` | ❌ W0 | ⬜ pending |
-| TBD (planner fills) | — | — | GUARD-03 | — | `contract-check` exits non-zero on broken contract; DIAG-classified | unit | `pnpm run test` | ❌ W0 | ⬜ pending |
-| TBD (planner fills) | — | — | GUARD-04 | — | No `S3RawReplayStorage`/staging factory, no `storeRawReplay`/`stageRawReplay` | unit | `pnpm run test` | ❌ W0 | ⬜ pending |
+| 12-01-03 | 01 | 1 | GUARD-01 | — | Deterministic fixture parse coverage (list/detail/json/missing/duplicate/changed/timestamp) | unit | `pnpm run test` | ❌ W0 | ⬜ pending |
+| 12-01-01, 12-01-03 | 01 | 1 | GUARD-02 | — | `toRawReplayUrl` → `/data/<filename>.json` JSON endpoint; HTML-as-bytes swap regression fails | unit | `pnpm run test` | ❌ W0 | ⬜ pending |
+| 12-02-02 | 02 | 2 | GUARD-03 | — | `contract-check` exits 2 on broken contract; DIAG-classified contract_broken vs source_unreachable; negatives → warnings | unit | `pnpm run test` | ❌ W0 | ⬜ pending |
+| 12-01-03, 12-02-02 | 01, 02 | 1, 2 | GUARD-04 | — | No `S3RawReplayStorage`/staging factory, no `storeRawReplay`/`stageRawReplay` (source-side static + CLI spy) | unit | `pnpm run test` | ❌ W0 | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
