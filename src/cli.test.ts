@@ -1868,3 +1868,154 @@ test("buildRetryWarnEmitter emits event:\"retry\" discriminator with static \"re
   // Static message
   expect(String(retryPayload?.["msg"])).toBe("retry");
 });
+
+// ─── GUARD-03: contract-check CLI exit-code behaviour ───────────────────────
+
+test("buildCli contract-check should call runContractCheck and write JSON result on ok:true", async () => {
+  vi.stubEnv("REPLAY_SOURCE_URL", "https://example.test/replays");
+  const writes: string[] = [];
+  vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+    writes.push(String(chunk));
+    return true;
+  });
+  const mockRunContractCheck = vi.fn(async () => ({
+    ok: true as const,
+    sample: {
+      detailUrl: "https://example.test/replays/100",
+      listPageUrl: "https://example.test/replays",
+      rawUrl: "https://example.test/data/mission.ocap.json",
+    },
+    warnings: [],
+  }));
+
+  await buildCli({
+    createSourceClient: () => ({ fetchText: vi.fn() }),
+    runContractCheck: mockRunContractCheck,
+  }).parseAsync(["node", "replays-fetcher", "contract-check"]);
+
+  expect(mockRunContractCheck).toHaveBeenCalledOnce();
+  expect(JSON.parse(writes.join(""))).toMatchObject({ ok: true });
+  expect(process.exitCode).toBeUndefined();
+});
+
+test("buildCli contract-check should set exit code 2 when contract is broken", async () => {
+  vi.stubEnv("REPLAY_SOURCE_URL", "https://example.test/replays");
+  const writes: string[] = [];
+  vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+    writes.push(String(chunk));
+    return true;
+  });
+
+  await buildCli({
+    createSourceClient: () => ({ fetchText: vi.fn() }),
+    runContractCheck: async () => ({
+      message: "Raw URL returned HTML, not JSON",
+      ok: false as const,
+      reason: "contract_broken" as const,
+      warnings: [],
+    }),
+  }).parseAsync(["node", "replays-fetcher", "contract-check"]);
+
+  expect(JSON.parse(writes.join(""))).toMatchObject({
+    ok: false,
+    reason: "contract_broken",
+  });
+  expect(process.exitCode).toBe(2);
+});
+
+test("buildCli contract-check should set exit code 2 when source is unreachable", async () => {
+  vi.stubEnv("REPLAY_SOURCE_URL", "https://example.test/replays");
+  const writes: string[] = [];
+  vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+    writes.push(String(chunk));
+    return true;
+  });
+
+  await buildCli({
+    createSourceClient: () => ({ fetchText: vi.fn() }),
+    runContractCheck: async () => ({
+      message: "Connection refused",
+      ok: false as const,
+      reason: "source_unreachable" as const,
+      warnings: [],
+    }),
+  }).parseAsync(["node", "replays-fetcher", "contract-check"]);
+
+  expect(JSON.parse(writes.join(""))).toMatchObject({
+    ok: false,
+    reason: "source_unreachable",
+  });
+  expect(process.exitCode).toBe(2);
+});
+
+test("buildCli contract-check should set exit code 2 and not call probe when config is invalid", async () => {
+  // REPLAY_SOURCE_URL deliberately not stubbed — config will be invalid
+  const writes: string[] = [];
+  vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+    writes.push(String(chunk));
+    return true;
+  });
+  const mockRunContractCheck = vi.fn();
+
+  await buildCli({
+    createSourceClient: () => ({ fetchText: vi.fn() }),
+    runContractCheck: mockRunContractCheck,
+  }).parseAsync(["node", "replays-fetcher", "contract-check"]);
+
+  expect(JSON.parse(writes.join(""))).toMatchObject({ ok: false });
+  expect(process.exitCode).toBe(2);
+  expect(mockRunContractCheck).not.toHaveBeenCalled();
+});
+
+// ─── GUARD-04: contract-check must not instantiate S3 or staging factories ──
+
+test("buildCli contract-check should not instantiate S3 or staging factories", async () => {
+  vi.stubEnv("REPLAY_SOURCE_URL", "https://example.test/replays");
+  const createStorage = vi.fn();
+  const createStaging = vi.fn();
+  vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+  await buildCli({
+    createPostgresStagingRepositoryFromDatabaseUrl: createStaging,
+    createS3RawReplayStorageFromConfig: createStorage,
+    createSourceClient: () => ({ fetchText: vi.fn() }),
+    runContractCheck: async () => ({
+      ok: true as const,
+      sample: {
+        detailUrl: "https://example.test/replays/100",
+        listPageUrl: "https://example.test/replays",
+        rawUrl: "https://example.test/data/mission.ocap.json",
+      },
+      warnings: [],
+    }),
+  }).parseAsync(["node", "replays-fetcher", "contract-check"]);
+
+  expect(createStorage).not.toHaveBeenCalled();
+  expect(createStaging).not.toHaveBeenCalled();
+});
+
+const contractCheckSourceFiles = [
+  "src/contract-check/contract-check.ts",
+] as const;
+
+const contractCheckMutationTokens = [
+  ["S3", "Client"].join(""),
+  ["Pool", "("].join(""),
+  ["store", "RawReplay"].join(""),
+  ["stage", "RawReplay"].join(""),
+  ["S3RawReplay", "Storage"].join(""),
+  ["PostgresStaging", "Repository"].join(""),
+  ["createPostgresStaging", "RepositoryFromDatabaseUrl"].join(""),
+  ["createS3RawReplay", "StorageFromConfig"].join(""),
+] as const;
+
+test("contract-check source should not include mutation surfaces", async () => {
+  const sourceTexts = await Promise.all(
+    contractCheckSourceFiles.map((filePath) => readProjectFile(filePath)),
+  );
+  const sourceText = sourceTexts.join("\n");
+
+  for (const token of contractCheckMutationTokens) {
+    expect(sourceText).not.toContain(token);
+  }
+});
