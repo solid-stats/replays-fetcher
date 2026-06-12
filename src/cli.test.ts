@@ -1443,3 +1443,127 @@ test("unit tests should remain colocated beside source files", async () => {
     expect(projectFiles).toContain(testFile.replace(/\.test\.ts$/u, ".ts"));
   }
 });
+
+// ─── Task 3: buildRetryWarnEmitter event:"retry" discriminator (RED) ─────────
+
+test("buildRetryWarnEmitter emits event:\"retry\" discriminator with static \"retry\" message", async () => {
+  // Wire through a real runOnce call with a retry so we exercise the full
+  // onRetry -> buildRetryWarnEmitter path, capturing the warn call.
+  const warnCalls: Array<[unknown, string]> = [];
+  const log = createLogger({
+    level: "warn",
+    destination: new Writable({
+      write(chunk, _enc, cb) {
+        const line = JSON.parse(String(chunk)) as Record<string, unknown>;
+        warnCalls.push([line, String(line["msg"] ?? "")]);
+        cb();
+      },
+    }),
+  }).child({ runId: "run-retry-discriminator" });
+
+  // Build a minimal CLI that fires onRetry with httpStatus
+  const retryEvent = {
+    attempt: 1,
+    causeCode: "rate_limited" as const,
+    delayMs: 0,
+    httpStatus: 429,
+    phase: "list" as const,
+  };
+
+  // Invoke buildRetryWarnEmitter indirectly: use runOnce with a discoverReplays
+  // that calls onRetry once then returns ok.
+  await buildCli({
+    createLogger: () => log as never,
+    loadConfig: () =>
+      ({
+        sourceUrl: "https://example.test/replays",
+        sourceRetryAttempts: 2,
+        sourceConcurrency: 1,
+        sourceRequestSpacingMs: 0,
+        sourceMaxPages: undefined,
+        s3: {
+          accessKeyId: "k",
+          secretAccessKey: "s",
+          bucket: "b",
+          endpoint: "https://s3.test",
+          region: "us-east-1",
+          forcePathStyle: true,
+          checkpointPrefix: "checkpoints",
+          evidencePrefix: "runs",
+        },
+        staging: { databaseUrl: "postgres://localhost/test" },
+      }) as never,
+    createRunId: () => "run-retry-discriminator",
+    createS3CheckpointStoreFromConfig: () =>
+      ({
+        read: async () => ({}),
+        write: async () => ({}),
+      }) as never,
+    createS3RawReplayStorageFromConfig: () => ({ storeRawReplay: vi.fn() }) as never,
+    createReplayByteClient: () => ({ fetchBytes: vi.fn() }) as never,
+    createSourceClient: () => ({ fetchText: vi.fn() }) as never,
+    createPostgresStagingRepositoryFromDatabaseUrl: () =>
+      ({ stage: vi.fn() }) as never,
+    discoverReplaysDryRun: async ({ onRetry }: { onRetry?: (e: typeof retryEvent) => void }) => {
+      onRetry?.(retryEvent);
+      return {
+        candidates: [],
+        counts: { candidates: 0, diagnostics: 0, discovered: 0 },
+        diagnostics: [],
+        generatedAt: new Date().toISOString(),
+        mode: "dry-run" as const,
+        ok: true,
+        sourceUrl: "https://example.test/replays",
+      };
+    },
+    runOnce: async (input) => {
+      // fire onRetry directly from run-once input to simulate retry
+      input.onRetry?.(retryEvent);
+      return {
+        exitCode: 0 as never,
+        summary: {
+          candidates: [],
+          counts: {
+            conflict: 0,
+            diagnostics: 0,
+            discovered: 0,
+            duplicate: 0,
+            failed: 0,
+            fetched: 0,
+            skipped: 0,
+            staged: 0,
+            stored: 0,
+          },
+          diagnostics: [],
+          failureCategories: [],
+          finishedAt: new Date().toISOString(),
+          mode: "run-once" as const,
+          ok: true,
+          rawStorage: [],
+          runId: "run-retry-discriminator",
+          startedAt: new Date().toISOString(),
+          staging: [],
+          sourceUrl: "https://example.test/replays",
+          status: "complete" as const,
+        },
+      };
+    },
+    stageRawReplay: vi.fn(),
+    storeRawReplay: vi.fn(),
+    now: () => new Date("2026-05-09T13:40:00.000Z"),
+  })
+    .parseAsync(["node", "replays-fetcher", "run-once"]);
+
+  // Find the retry warn line
+  const retryLines = warnCalls.filter(
+    ([payload]) => (payload as Record<string, unknown>)["event"] === "retry",
+  );
+  expect(retryLines.length).toBeGreaterThan(0);
+  const [retryPayload] = retryLines[0] as [Record<string, unknown>, string];
+  expect(retryPayload["event"]).toBe("retry");
+  expect(retryPayload["attempt"]).toBe(1);
+  expect(retryPayload["httpStatus"]).toBe(429);
+  expect(retryPayload["causeCode"]).toBe("rate_limited");
+  // Static message
+  expect(String(retryPayload["msg"])).toBe("retry");
+});
