@@ -24,6 +24,7 @@ import {
   type AppConfig,
   type SourceConfig,
 } from "./config.js";
+import { runContractCheck } from "./contract-check/contract-check.js";
 import { discoverReplaysDryRun } from "./discovery/discover.js";
 import { createSourceClient } from "./discovery/source-client.js";
 import {
@@ -108,6 +109,7 @@ interface BuildCliDependencies {
   ) => PostgresStagingRepository;
   readonly createSourceClient?: (config: SourceConfig) => SourceClient;
   readonly discoverReplaysDryRun?: typeof discoverReplaysDryRun;
+  readonly runContractCheck?: typeof runContractCheck;
   readonly loadConfig?: () => AppConfig;
   readonly loadSourceConfig?: () => SourceConfig;
   readonly now?: () => Date;
@@ -166,6 +168,7 @@ export function buildCli(dependencies: BuildCliDependencies = {}): Command {
   registerCheckCommand(program, cliDependencies);
   registerDiscoverCommand(program, cliDependencies);
   registerRunOnceCommand(program, cliDependencies);
+  registerContractCheckCommand(program, cliDependencies);
 
   return program;
 }
@@ -188,6 +191,7 @@ function resolveDependencies(
     createSourceClient,
     discoverReplaysDryRun,
     loadConfig,
+    runContractCheck,
     loadSourceConfig,
     now: () => new Date(),
     runOnce,
@@ -256,6 +260,38 @@ function registerCheckCommand(
         }
 
         throw error;
+      }
+    });
+}
+
+function registerContractCheckCommand(
+  program: Command,
+  dependencies: Required<BuildCliDependencies>,
+): void {
+  program
+    .command("contract-check")
+    .description(
+      "Verify the live source contract: list page, first detail, and its raw JSON endpoint — no S3/PostgreSQL writes.",
+    )
+    .action(async () => {
+      const configResult = loadDryRunSourceConfig(dependencies);
+
+      if (!configResult.ok) {
+        writeJson({ issues: configResult.issues, ok: false, reason: "config_error" });
+        process.exitCode = 2;
+        return;
+      }
+
+      const sourceClient = dependencies.createSourceClient(configResult.config);
+      const result = await dependencies.runContractCheck({
+        sourceClient,
+        sourceUrl: new URL(configResult.config.sourceUrl),
+      });
+
+      writeJson(result);
+
+      if (!result.ok) {
+        process.exitCode = 2;
       }
     });
 }
