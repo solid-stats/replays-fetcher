@@ -16,6 +16,7 @@ import {
 import type { RunExitCode, RunSourceFailure, RunSummary } from "./types.js";
 import type { Checkpoint, CheckpointPage } from "../checkpoint/checkpoint.js";
 import type { S3CheckpointStore } from "../checkpoint/s3-checkpoint-store.js";
+import type { S3EvidenceStore } from "../evidence/s3-evidence-store.js";
 import type {
   DiscoveryDiagnostic,
   DiscoveryReport,
@@ -72,6 +73,13 @@ interface RunOnceInput {
     readonly candidate: ReplayCandidate;
     readonly storage: S3RawReplayStorage;
   }) => Promise<StoreRawReplayResult>;
+  // D-12/D-13: opt-in evidence write seams (independent, log-and-continue).
+  // `emitEvidence` gates the S3 store write; `evidenceFile`+`writeEvidenceFile`
+  // gate the dev-only local-disk write. Both default to off.
+  readonly emitEvidence?: boolean;
+  readonly evidenceStore?: S3EvidenceStore;
+  readonly evidenceFile?: string;
+  readonly writeEvidenceFile?: (path: string, body: string) => Promise<void>;
 }
 
 export interface RunOnceResult {
@@ -669,10 +677,54 @@ async function assembleResult(
     );
   }
 
+  // D-12/D-13: opt-in evidence writes (independent, log-and-continue).
+  // Each write is gated independently so both/either/neither may be active.
+  await writeEvidence(input, summary);
+
   return {
     exitCode: runExitCode(summary),
     summary,
   };
+}
+
+/**
+ * D-12/D-13: Opt-in evidence writes — S3 store and dev-only local file —
+ * executed as independent log-and-continue side effects after the full
+ * RunSummary is assembled. Neither write ever fails the run or changes the
+ * exit code: a rejection is caught, logged at warn with an
+ * `evidence_write_failed` discriminator, and swallowed (mirrors
+ * `writeFinalCheckpoint`). The two writes are not mutually exclusive.
+ */
+async function writeEvidence(
+  input: RunOnceInput,
+  summary: RunSummary,
+): Promise<void> {
+  // S3 evidence store write (gated by emitEvidence === true)
+  if (input.emitEvidence === true && input.evidenceStore !== undefined) {
+    try {
+      await input.evidenceStore.write({ runId: input.runId, summary });
+    } catch {
+      input.log?.warn?.(
+        { event: "evidence_write_failed", runId: input.runId },
+        "evidence write failed; continuing run",
+      );
+    }
+  }
+
+  // Dev-only local file write (gated by evidenceFile + writeEvidenceFile both set)
+  if (
+    input.evidenceFile !== undefined &&
+    input.writeEvidenceFile !== undefined
+  ) {
+    try {
+      await input.writeEvidenceFile(input.evidenceFile, JSON.stringify(summary));
+    } catch {
+      input.log?.warn?.(
+        { event: "evidence_write_failed", runId: input.runId },
+        "evidence file write failed; continuing run",
+      );
+    }
+  }
 }
 
 /**
