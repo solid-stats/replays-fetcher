@@ -50,29 +50,29 @@ Goal: a restarted full run resumes from the first incomplete page instead of pag
 Goal: full-run scope is discovered and paced instead of hardcoded, and meets the ~1–2h target politely.
 
 - [x] **RANGE-01**: The full-run range is discovered at runtime — keep fetching until a list page yields zero replay rows (stop-on-empty), with an optional parsed last-page used only as an ETA upper bound. Reliance on hardcoded `REPLAY_SOURCE_MAX_PAGES` for normal full runs is removed; it remains only as an optional cap/safety valve for partial runs and tests.
-- [ ] **RANGE-02**: Source reads use bounded, operator-configurable concurrency — the per-page detail/byte fan-out is parallelized (e.g. `p-limit`) while list pages stay sequential to preserve checkpoint page ordering. The default is tuned to the ~1–2h full-corpus target while staying polite to the Cloudflare-fronted source.
-- [ ] **RANGE-03**: Adaptive throttling reduces effective concurrency and/or extends pacing after repeated `429`/`403` signals, then is bounded so a source hiccup cannot fan out simultaneous retry storms.
+- [x] **RANGE-02**: Source reads use bounded, operator-configurable concurrency — the per-page detail/byte fan-out is parallelized (e.g. `p-limit`) while list pages stay sequential to preserve checkpoint page ordering. The default is tuned to the ~1–2h full-corpus target while staying polite to the Cloudflare-fronted source.
+- [x] **RANGE-03**: Adaptive throttling reduces effective concurrency and/or extends pacing after repeated `429`/`403` signals, then is bounded so a source hiccup cannot fan out simultaneous retry storms.
 - [x] **RANGE-04**: Operator-configurable pacing is retained but applied as a floor between list pages / minimum spacing within the limiter — not a blanket per-request 2s delay. Concurrency and delay are bounded, Zod-validated config (`min`/`max` ranges).
-- [ ] **RANGE-05**: The run records and reports pages-per-minute, candidates-per-minute, and estimated remaining time (labelled an estimate until the empty-page stop), and the discovered source range appears in the summary.
-- [ ] **RANGE-06**: Transient-vs-permanent classification (DIAG-02) runs before the stop-on-empty check, so a transient failure is never mistaken for end-of-corpus (no silent truncation). Per-page results are gathered (`Promise.allSettled`) before the page is marked complete and checkpointed; never checkpoint mid-page.
+- [x] **RANGE-05**: The run records and reports pages-per-minute, candidates-per-minute, and estimated remaining time (labelled an estimate until the empty-page stop), and the discovered source range appears in the summary.
+- [x] **RANGE-06**: Transient-vs-permanent classification (DIAG-02) runs before the stop-on-empty check, so a transient failure is never mistaken for end-of-corpus (no silent truncation). Per-page results are gathered (`Promise.allSettled`) before the page is marked complete and checkpointed; never checkpoint mid-page.
 
 ### Progress Events & Compact Evidence (PROG)
 
 Goal: operators can follow a run while it is running and inspect details only when needed.
 
-- [ ] **PROG-01**: The run emits compact per-page/batch progress events as `pino` NDJSON (child logger keyed by `runId`): `run_start`, `page_complete` (with page counts + rates), `retry` (warn), `page_failed`/`source_unavailable` (error), and `run_complete`/`run_partial` — one line per page, greppable.
-- [ ] **PROG-02**: The final stdout summary is reduced to run id, timestamps, source url, discovered range, aggregate counts, failure categories, and `status`. The heavy per-candidate `candidates`/`rawStorage`/`staging` arrays are removed from the stdout projection.
+- [x] **PROG-01**: The run emits compact per-page/batch progress events as `pino` NDJSON (child logger keyed by `runId`): `run_start`, `page_complete` (with page counts + rates), `retry` (warn), `page_failed`/`source_unavailable` (error), and `run_complete`/`run_partial` — one line per page, greppable.
+- [x] **PROG-02**: The final stdout summary is reduced to run id, timestamps, source url, discovered range, aggregate counts, failure categories, and `status`. The heavy per-candidate `candidates`/`rawStorage`/`staging` arrays are removed from the stdout projection.
 - [x] **PROG-03**: Detailed per-candidate evidence is written only to an opt-in durable artifact — an S3 object (`runs/<runId>/evidence.json`) when explicitly enabled, with a local file as a dev-only convenience — never to stdout by default.
-- [ ] **PROG-04**: Progress events, the summary, and the evidence artifact preserve current secret-safety and boundary-safety: pino `redact` for sensitive fields, no raw bytes/HTML, a synchronous/awaited flush before exit so final lines are not dropped, and no S3/PostgreSQL writes beyond the existing raw + staging + checkpoint + opt-in-artifact surfaces.
+- [x] **PROG-04**: Progress events, the summary, and the evidence artifact preserve current secret-safety and boundary-safety: pino `redact` for sensitive fields, no raw bytes/HTML, a synchronous/awaited flush before exit so final lines are not dropped, and no S3/PostgreSQL writes beyond the existing raw + staging + checkpoint + opt-in-artifact surfaces.
 
 ### Source Contract Guards (GUARD)
 
 Goal: regressions in source parsing do not silently poison a full run.
 
-- [ ] **GUARD-01**: Deterministic fixtures cover list page, detail page, raw JSON data endpoint, missing external id, missing filename, duplicate filename, changed metadata, and timestamp derivation.
-- [ ] **GUARD-02**: A unit-level golden fixture proves raw replay bytes are fetched from the JSON data endpoint (valid JSON, non-HTML) and that fetching the HTML detail URL as bytes is wrong — so a regression swapping the two fails a unit test, not only the live check.
-- [ ] **GUARD-03**: A new no-write `contract-check` CLI command validates the live source contract against a bounded sample (page 1 + first detail + its JSON endpoint), asserting the parse contract while writing **neither S3 nor PostgreSQL**. It reuses DIAG classification to distinguish "contract broken" (actionable, exit non-zero) from "source transiently unreachable" (retryable signal). Negative cases on live data surface as warnings, not hard failures.
-- [ ] **GUARD-04**: Tests prove `contract-check` instantiates no S3 raw-storage or staging-repository factories and calls no `storeRawReplay`/`stageRawReplay` paths — mirroring the v1 dry-run no-mutation guards.
+- [x] **GUARD-01**: Deterministic fixtures cover list page, detail page, raw JSON data endpoint, missing external id, missing filename, duplicate filename, changed metadata, and timestamp derivation.
+- [x] **GUARD-02**: A unit-level golden fixture proves raw replay bytes are fetched from the JSON data endpoint (valid JSON, non-HTML) and that fetching the HTML detail URL as bytes is wrong — so a regression swapping the two fails a unit test, not only the live check.
+- [x] **GUARD-03**: A new no-write `contract-check` CLI command validates the live source contract against a bounded sample (page 1 + first detail + its JSON endpoint), asserting the parse contract while writing **neither S3 nor PostgreSQL**. It reuses DIAG classification to distinguish "contract broken" (actionable, exit non-zero) from "source transiently unreachable" (retryable signal). Negative cases on live data surface as warnings, not hard failures.
+- [x] **GUARD-04**: Tests prove `contract-check` instantiates no S3 raw-storage or staging-repository factories and calls no `storeRawReplay`/`stageRawReplay` paths — mirroring the v1 dry-run no-mutation guards.
 
 ## Future Requirements
 
