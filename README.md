@@ -134,7 +134,12 @@ Run one scheduled ingest cycle:
 pnpm exec tsx src/cli.ts run-once
 ```
 
-`run-once` is the v1 command intended for cron, container schedules, or an external scheduler. It executes exactly one bounded discovery -> raw storage -> staging cycle, emits one structured JSON summary to stdout, and exits.
+`run-once` is the v1 command intended for cron, container schedules, or an external scheduler. It executes exactly one bounded discovery -> raw storage -> staging cycle and exits.
+
+**Output streams:**
+
+- **stdout** — exactly one compact JSON document (`CompactRunSummary`). The scheduler or `server-2` operator should parse this. Use `jq` to extract fields.
+- **stderr** — per-page lifecycle NDJSON progress events (pino). Each line is a JSON object with a stable `event` discriminator (`run_start`, `page_complete`, `retry`, `page_failed`, `source_unavailable`, `run_complete`, `run_partial`). Greppable without affecting stdout.
 
 Exit codes:
 
@@ -143,19 +148,31 @@ Exit codes:
 
 Unexpected programmer errors still throw instead of being hidden as operational failures.
 
-Run summary fields:
+Compact stdout document fields:
 
 - `runId` - unique ID for the one-shot run.
 - `mode` - `run-once`.
 - `startedAt` and `finishedAt` - ISO timestamps.
 - `ok` - whether the run had no failure categories.
 - `sourceUrl` - configured source URL when discovery reached source execution.
+- `discoveredRange` - first and last completed page when at least one page completed.
 - `counts` - totals for `discovered`, `fetched`, `stored`, `staged`, `duplicate`, `conflict`, `failed`, `skipped`, and `diagnostics`.
 - `failureCategories` - stable failure category values for operators and schedulers.
-- `diagnostics` - source discovery warnings or errors.
-- `rawStorage` - per-candidate raw object evidence without raw replay bytes.
-- `staging` - per-candidate staging outcome evidence.
-- `candidates` - normalized discovery candidates.
+- `status` - `complete`, `resumable`, `partial`, or `failed` when present.
+- `resumeInvocation` - the resume command string when the run is resumable.
+
+The per-candidate `candidates`, `rawStorage`, `staging`, and `diagnostics` arrays are **not on stdout**. To persist full per-run evidence, use the opt-in flags below.
+
+**Opt-in evidence flags:**
+
+- `--emit-evidence` — writes the full run evidence as `runs/<runId>/evidence.json` in the configured S3 bucket. Controlled by `S3_EVIDENCE_PREFIX` (default `runs`). Write failures are logged at warn and do not change the exit code. Bulk pruning of `runs/` is delegated to infra-owned S3 lifecycle rules.
+- `--evidence-file <path>` — also writes the full run evidence as a JSON file to `<path>` on local disk. Dev/debug convenience only. The operator owns the path and its cleanup.
+
+Both flags are independent and non-exclusive. Neither is set by default.
+
+**Other flags:**
+
+- `--resume` — resume from the last completed page using the source checkpoint.
 
 Failure categories:
 
@@ -168,9 +185,9 @@ Failure categories:
 - `staging_conflict`
 - `not_stageable`
 
-Run summaries must not include S3 secrets, database credentials, SSH command secrets, raw replay bytes, parser artifacts, or canonical `server-2` business records.
+Run output must not include S3 secrets, database credentials, SSH command secrets, raw replay bytes, parser artifacts, or canonical `server-2` business records.
 
-The `check` command JSON and the single `run-once` JSON summary are the structured operational log surfaces for this service. They must not include S3 secrets, database credentials, SSH command secrets, raw replay bytes, parser artifacts, canonical replay records, parse jobs, parser results, identity records, stats rows, roles, requests, or moderation data.
+The `check` command JSON and the single `run-once` compact stdout document are the structured operational log surfaces for this service. They must not include S3 secrets, database credentials, SSH command secrets, raw replay bytes, parser artifacts, canonical replay records, parse jobs, parser results, identity records, stats rows, roles, requests, or moderation data.
 
 Top-level report fields:
 
@@ -195,6 +212,8 @@ The `check` command requires these environment variables:
 Optional:
 
 - `S3_FORCE_PATH_STYLE` defaults to `true`.
+- `S3_CHECKPOINT_PREFIX` sets the S3 key prefix for run checkpoint objects. Defaults to `checkpoints`. Checkpoint objects are written at `<prefix>/<slug>.json`.
+- `S3_EVIDENCE_PREFIX` sets the S3 key prefix for opt-in evidence artifacts written by `--emit-evidence`. Defaults to `runs`. Evidence objects are written at `<prefix>/<runId>/evidence.json`. Bulk retention management is delegated to infra-owned S3 lifecycle rules.
 - `REPLAY_SOURCE_TRANSPORT` defaults to `direct`; set to `ssh` to fetch source pages through an operator-managed SSH host.
 - `REPLAY_SOURCE_SSH_HOST` is required when `REPLAY_SOURCE_TRANSPORT=ssh`.
 - `REPLAY_SOURCE_SSH_COMMAND` defaults to `curl -fsSL --max-time 30`.

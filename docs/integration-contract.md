@@ -52,19 +52,49 @@ The fetcher does not create canonical `replays`, does not create `parse_jobs`, d
 
 `run-once` is the v1 scheduled operation entrypoint. It performs one bounded discovery -> raw storage -> staging cycle and then exits. It is suitable for cron, container schedules, or an external scheduler.
 
-The command writes exactly one JSON run summary to stdout. It uses exit code `0` for successful cycles and `2` for expected operational failures such as invalid config, unavailable source, failed fetches, storage failures or conflicts, staging failures or conflicts, and non-stageable raw results.
+### Output streams (D-01)
 
-Run summaries include:
+`run-once` uses two output streams with strictly separate roles:
+
+- **stdout** carries exactly **one compact JSON document** (a `CompactRunSummary`) per run. This is the machine-readable result the caller, scheduler, or `server-2` operator should parse. The compact document contains run ID, mode, start and finish timestamps, source URL, discovered range, aggregate counts, failure categories, status, and the resume invocation when resumable. It does **not** contain the per-candidate `candidates`, `rawStorage`, `staging`, or `diagnostics` arrays.
+- **stderr** carries the per-page lifecycle **progress NDJSON event stream** emitted by pino. Each line is a self-contained JSON object with a stable `event` discriminator: `run_start`, `page_complete`, `retry`, `page_failed`, `source_unavailable`, `run_complete`, or `run_partial`. This stream is greppable and human-readable without affecting the machine-parseable stdout document.
+
+The command uses exit code `0` for successful cycles and `2` for expected operational failures such as invalid config, unavailable source, failed fetches, storage failures or conflicts, staging failures or conflicts, and non-stageable raw results.
+
+### Compact stdout document
+
+The stdout `CompactRunSummary` includes:
 
 - run ID, mode, start timestamp, and finish timestamp.
 - source URL when discovery execution occurs.
-- counts for discovered, fetched, stored, staged, duplicate, conflict, failed, skipped, and diagnostics.
-- discovery diagnostics.
-- raw storage evidence with checksum, object key, byte size, fetch timestamp, and raw storage status.
-- staging evidence with staged, already-staged, conflict, failed, or not-stageable status.
+- discovered page range when at least one page completed.
+- aggregate counts for discovered, fetched, stored, staged, duplicate, conflict, failed, skipped, and diagnostics.
 - failure categories: `config_invalid`, `source_unavailable`, `fetch_failed`, `storage_failed`, `storage_conflict`, `staging_failed`, `staging_conflict`, and `not_stageable`.
+- run status: `complete`, `resumable`, `partial`, or `failed` when present.
+- resume invocation string when the run is resumable.
 
-Run summaries must not include S3 secrets, database credentials, SSH secrets, raw replay bytes, parser artifacts, canonical replay records, parse jobs, parser results, identity records, stats rows, roles, requests, or moderation data.
+The compact document does **not** include the per-candidate arrays (`candidates`, `rawStorage`, `staging`, `diagnostics`), raw replay bytes, parser artifacts, or S3 and database secrets.
+
+### stderr NDJSON progress events
+
+Per-page lifecycle events are emitted as pino NDJSON to **stderr**. Each event carries a stable `event` discriminator and identifiers-only structured payload (never bytes, HTML, or secrets). Events:
+
+- `run_start` (info) — emitted once at the start of the run.
+- `page_complete` (info) — emitted after each completed source page, with page counts and rolling rate.
+- `retry` (warn) — emitted on each retry attempt, with `attempt`, `httpStatus`, `causeCode`, `delayMs`, and `phase`.
+- `page_failed` (error) — emitted when a source page returns a transient or rate-limited error.
+- `source_unavailable` (error) — emitted when a permanent source-level failure breaks the loop.
+- `run_complete` (info) — emitted when every discovered page finished successfully.
+- `run_partial` (warn) — emitted for any non-complete run status.
+
+### Opt-in evidence artifact (PROG-03)
+
+The heavy per-candidate evidence (`candidates`, `rawStorage`, `staging`, `diagnostics` arrays) is NOT on stdout. When durable per-run evidence is needed, use:
+
+- `--emit-evidence` — writes the full `RunSummary` as `runs/<runId>/evidence.json` in the configured S3 bucket (prefix controlled by `S3_EVIDENCE_PREFIX`, default `runs`). This is a write-once unconditional PUT; write failures are logged at warn and never change the exit code.
+- `--evidence-file <path>` — additionally writes the full `RunSummary` as a JSON file to `<path>` on local disk (dev/debug only). The operator owns the path and its cleanup.
+
+Both flags are independent and non-exclusive. Neither is set by default. The evidence document is identifiers-only (no S3 credentials, database credentials, raw replay bytes, or parser artifacts). Bulk pruning of `runs/` objects is delegated to **infra-owned S3 lifecycle rules**; the fetcher does not own evidence retention.
 
 `replays-fetcher check` emits the same class of structured operational JSON. Its successful output includes concrete `sourceConnectivity`, `s3Connectivity`, and `stagingConnectivity` statuses, not `not-implemented` placeholders. Check output and run summaries must not include S3 secrets, database credentials, SSH command secrets, raw replay bytes, parser artifacts, canonical replay records, parse jobs, parser results, identity records, stats rows, roles, requests, or moderation data.
 
