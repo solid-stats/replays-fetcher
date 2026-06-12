@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Full-Corpus Ingest Resilience
-status: executing
-stopped_at: Completed Phase 12 (source-contract-guards) — verified passed 4/4, code review resolved
-last_updated: "2026-06-12T09:30:00.000Z"
-last_activity: 2026-06-12 -- Phase 12 complete (all 6 v2.0 phases done; milestone ready for audit)
+status: Awaiting next milestone
+stopped_at: Completed 11-01-PLAN.md
+last_updated: "2026-06-12T09:56:50.385Z"
+last_activity: 2026-06-12 — Milestone v2.0 completed and archived
 progress:
   total_phases: 6
   completed_phases: 6
@@ -25,12 +25,10 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 
 ## Current Position
 
-Phase: 12 (source-contract-guards) — COMPLETE (verified passed 4/4, code review 3 findings resolved)
-Plan: 2 of 2 complete
-Status: All v2.0 phases complete
-Last activity: 2026-06-12 -- Phase 12 complete
-
-Progress: `[x][x][x][x][x][x]` 6/6 phases complete
+Phase: Milestone v2.0 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-06-12 — Milestone v2.0 completed and archived
 
 ## Verify Gate: GREEN ✅
 
@@ -170,8 +168,7 @@ Execute Phase 12 (Source Contract Guards) with `/gsd:execute-phase 12` — the f
 
 ## Operator Next Steps
 
-- Run `/gsd:execute-phase 12` to plan and execute the final milestone phase (contract-check guards reusing the DIAG classifier).
-- Note: Phase 11's `pnpm run verify` integration + 100% V8 coverage stages are deferred to CI (Docker unavailable locally); run them in CI before milestone close.
+- Start the next milestone with /gsd-new-milestone
 
 ## Performance Metrics
 

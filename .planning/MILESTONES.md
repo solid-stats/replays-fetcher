@@ -1,5 +1,36 @@
 # Milestones
 
+## v2.0 Full-Corpus Ingest Resilience (Shipped: 2026-06-12)
+
+**Phases completed:** 6 phases, 24 plans, 41 tasks
+
+**Key accomplishments:**
+
+- Generic abstract `AppError<Code extends string = string>` base class preserving native ES2022 `cause`, deriving `name` via `new.target.name`, exposing `code`/`isOperational`/`details`, and deliberately omitting `httpStatus` (CLI exit-code-2 semantics).
+- Synchronous pino `createLogger` factory with secret redaction mirroring `redactConfig` (plus wildcard hardening), an injectable destination stream, and `child({ runId })` support — the emission substrate for DIAG/RESUME/PROG.
+- SourceFetchError and ReplayByteFetchError re-parented onto AppError with narrow code unions intact, and createLogger wired into the CLI DI map with a per-run child({ runId }) logger — zero behavioral change, summary stdout contract byte-for-byte unchanged.
+- Shared tri-state failure classifier (AggregateError unwrap + Cloudflare detection + no-body-leak), full-jitter backoff with Retry-After parsing, a generic bounded retry wrapper with injected sleep/random/now and threaded AbortSignal, and an operator-configurable sourceRetryAttempts config field — the dependency root for Phase 8.
+- List/detail source reads (direct HTTP + SSH) now route through the shared tri-state classifier and bounded full-jitter retry, detect status-200 Cloudflare challenges, and throw SourceFetchError with identifiers-only enriched diagnostics that never leak the response body.
+- Replay byte reads (direct HTTP + SSH) now route through the same shared tri-state classifier and bounded full-jitter retry as the list/detail path, with an additively widened `ReplayByteFetchError` union (closing Phase 7 WR-03) and identifiers-only enriched diagnostics that never leak the response bytes.
+- The Plan 01-03 retry/classifier primitives are now operator-visible end-to-end: discover threads attempts/onRetry/page/phase into every source read under the existing pacing, each retry round emits one pino warn on stderr via the runId child logger, source-failure diagnostics carry enriched identifiers-only evidence, and the run summary surfaces the final attempts + classification — all with the stdout JSON summary contract byte-for-byte intact.
+- Identifiers-only checkpoint state shape with Zod safe-parse degradation (corrupt/hostile checkpoint -> undefined -> page-1 start, never throws), a pure resume cursor and pure 412-merge function, and the first concrete `AppError` subclass (`checkpoint-conflict`) — the frozen pure-logic contract that Plans 04 (S3 store) and 05 (run-once wiring) build against.
+- Stamps a snake_case `run_id` additively into the existing `promotion_evidence` jsonb (no schema change) and adds an operator-configurable S3 checkpoint prefix to config, proven persistent by a real-Postgres integration assertion.
+- deriveRunStatus maps the page-loop outcome to complete/partial/failed/resumable and threads an additive RunSummary.status + resumeInvocation with partial/resumable/failed mapping to exit code 2
+- 1. [Rule 1 - Bug] Pre-existing lint failures in the untracked draft store/test
+- Wired the checkpoint store, resume cursor, run-status, and run_id-staging into the live run: run-once reads the checkpoint at start (resume at lastCompletedPage+1, degrade to page-1 on missing/corrupt), writes the checkpoint after each completed page (never mid-page; transient error -> log+continue), stamps the run identity into promotion_evidence.run_id, and emits status/resumeInvocation; cli adds the --resume flag, the checkpoint-store DI, and threads one runId into both the checkpoint and staging.
+- Zod-bounded `REPLAY_SOURCE_CONCURRENCY` (8/1/32) and `REPLAY_SOURCE_REQUEST_SPACING_MS` (250/0/5000) knobs plus an optional `REPLAY_SOURCE_MAX_PAGES` safety-valve cap, all validated before any S3/PostgreSQL mutation.
+- `createPacer` — a pure, injectable-clock paced-floor seam that sleeps only the remaining `spacingMs - elapsed` between requests, never compounding with `withRetry` backoff (RANGE-04, Pitfall 2), at 100% V8 coverage.
+- `p-limit@^7.3.0` with a `createLimiter` seam (runtime-settable `.concurrency` — the AIMD lever) plus a pure, deterministic `createThrottleController` AIMD state machine (MD halve floor-1 + pacing-floor bump on a rate-limited page window, AI +1 cap-max on a clean window, no added backoff), both at 100% V8 coverage.
+- 10 — Dynamic Source Range and Rate Limiting
+- 10 — Dynamic Source Range and Rate Limiting
+- Built the opt-in write-once S3 evidence store (`runs/<safeRunId>/evidence.json`) that durably persists the full per-run `RunSummary` via a plain unconditional PutObject — the durable surface PROG-02 will strip from stdout — plus the `s3.evidencePrefix` config knob and a runId-sanitizing object-key builder, all mirroring the Phase 9 checkpoint store minus every CAS mechanism.
+- httpStatus threaded onto RetryAttemptEvent from FailureClassification; CompactRunSummary type and toCompactSummary pure projection strip four heavy arrays for compact stdout logging
+- run-once emits a stable, greppable lifecycle event taxonomy on the injected pino logger, opt-in evidence is written log-and-continue without touching the exit code, and the retry warn line gains its `event:"retry"` discriminator with a static `"retry"` message.
+- run-once now prints exactly one compact JSON document (toCompactSummary) to stdout — even with `--emit-evidence` — while progress NDJSON stays on stderr; the new `--emit-evidence`/`--evidence-file` flags drive the opt-in durable artifact, the root logger is flushed via an awaited Promise before the exit code is set, and the integration contract / README / .env.example document the split.
+- A single end-to-end test drives a run-once cycle with deliberately secret-bearing config (S3 keys, DB url, SSH command) and a `https://leak-user:leak-pass@host/replays` sourceUrl, then asserts that no secret, `leak-user`/`leak-pass`, or `<html` marker reaches any lifecycle NDJSON event line, the compact stdout summary, or the evidence artifact body — and that the sourceUrl on those surfaces is userinfo-stripped.
+
+---
+
 ## v1.0 Initial Ingest Service (Shipped: 2026-05-10)
 
 **Delivered:** A narrow TypeScript scheduled ingest service that discovers OCAP replay candidates, stores raw replay objects, writes staging evidence for `server-2`, and keeps parser/backend business ownership out of the fetcher.
