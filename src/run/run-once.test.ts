@@ -1829,3 +1829,191 @@ test("runOnce event messages are static — no source URL userinfo or candidate 
   expect(String(startPayload["sourceUrl"])).not.toContain(secret);
   expect(String(startPayload["sourceUrl"])).not.toContain("operator:");
 });
+
+// ─── Task 2: opt-in evidence write (RED) ─────────────────────────────────────
+
+import type { EvidenceWriteInput, S3EvidenceStore } from "../evidence/s3-evidence-store.js";
+
+test("runOnce calls evidenceStore.write with full RunSummary when emitEvidence is true", async () => {
+  const writes: EvidenceWriteInput[] = [];
+  const evidenceStore: S3EvidenceStore = {
+    write(input: EvidenceWriteInput): Promise<void> {
+      writes.push(input);
+      return Promise.resolve();
+    },
+  };
+
+  const result = await runOnce({
+    byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
+    checkpointStore: fakeCheckpointStore(),
+    discoverReplays: async () => discoveryReport({ candidates: [] }),
+    emitEvidence: true,
+    evidenceStore,
+    now: createClock([startedAt, finishedAt]),
+    runId: "run-evidence-write",
+    sourceClient: { fetchText: vi.fn() },
+    sourceUrl: new URL("https://example.test/replays"),
+    stageRawReplay: vi.fn(),
+    stagingRepository: { stage: vi.fn() },
+    storage: { storeRawReplay: vi.fn() },
+    storeRawReplay: vi.fn(),
+  });
+
+  expect(writes).toHaveLength(1);
+  expect(writes[0]?.runId).toBe("run-evidence-write");
+  // Full RunSummary — must include the four arrays
+  expect(writes[0]?.summary).toBe(result.summary);
+  expect(writes[0]?.summary.candidates).toBeDefined();
+  expect(writes[0]?.summary.rawStorage).toBeDefined();
+  expect(writes[0]?.summary.staging).toBeDefined();
+  expect(writes[0]?.summary.diagnostics).toBeDefined();
+});
+
+test("runOnce does NOT call evidenceStore.write when emitEvidence is false or unset", async () => {
+  const write = vi.fn();
+  const evidenceStore: S3EvidenceStore = { write };
+
+  await runOnce({
+    byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
+    checkpointStore: fakeCheckpointStore(),
+    discoverReplays: async () => discoveryReport({ candidates: [] }),
+    evidenceStore,
+    // emitEvidence deliberately omitted
+    now: createClock([startedAt, finishedAt]),
+    runId: "run-evidence-skip",
+    sourceClient: { fetchText: vi.fn() },
+    sourceUrl: new URL("https://example.test/replays"),
+    stageRawReplay: vi.fn(),
+    stagingRepository: { stage: vi.fn() },
+    storage: { storeRawReplay: vi.fn() },
+    storeRawReplay: vi.fn(),
+  });
+
+  expect(write).not.toHaveBeenCalled();
+});
+
+test("runOnce calls writeEvidenceFile with full RunSummary JSON when evidenceFile is set", async () => {
+  const written: Array<{ path: string; body: string }> = [];
+  const writeEvidenceFile = async (path: string, body: string): Promise<void> => {
+    written.push({ path, body });
+  };
+
+  const result = await runOnce({
+    byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
+    checkpointStore: fakeCheckpointStore(),
+    discoverReplays: async () => discoveryReport({ candidates: [] }),
+    evidenceFile: "/tmp/evidence.json",
+    writeEvidenceFile,
+    now: createClock([startedAt, finishedAt]),
+    runId: "run-evidence-file",
+    sourceClient: { fetchText: vi.fn() },
+    sourceUrl: new URL("https://example.test/replays"),
+    stageRawReplay: vi.fn(),
+    stagingRepository: { stage: vi.fn() },
+    storage: { storeRawReplay: vi.fn() },
+    storeRawReplay: vi.fn(),
+  });
+
+  expect(written).toHaveLength(1);
+  expect(written[0]?.path).toBe("/tmp/evidence.json");
+  expect(JSON.parse(written[0]?.body ?? "{}")).toMatchObject({
+    runId: "run-evidence-file",
+    candidates: expect.any(Array) as unknown,
+  });
+  expect(written[0]?.body).toContain(result.summary.runId);
+});
+
+test("runOnce logs warn and keeps exit code unchanged when evidenceStore.write rejects", async () => {
+  const warn = vi.fn();
+  const writeError = new Error("S3 evidence write failed");
+  const evidenceStore: S3EvidenceStore = {
+    write: async () => { throw writeError; },
+  };
+
+  const result = await runOnce({
+    byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
+    checkpointStore: fakeCheckpointStore(),
+    discoverReplays: async () => discoveryReport({ candidates: [] }),
+    emitEvidence: true,
+    evidenceStore,
+    log: { info: vi.fn(), warn } as never,
+    now: createClock([startedAt, finishedAt]),
+    runId: "run-evidence-fail",
+    sourceClient: { fetchText: vi.fn() },
+    sourceUrl: new URL("https://example.test/replays"),
+    stageRawReplay: vi.fn(),
+    stagingRepository: { stage: vi.fn() },
+    storage: { storeRawReplay: vi.fn() },
+    storeRawReplay: vi.fn(),
+  });
+
+  // evidence failure must log at warn
+  expect(warn).toHaveBeenCalledWith(
+    expect.objectContaining({ event: "evidence_write_failed", runId: "run-evidence-fail" }),
+    expect.any(String),
+  );
+  // exit code is unchanged — same as without evidence (complete run exits 0)
+  expect(result.exitCode).toBe(0);
+});
+
+test("runOnce S3 and file evidence writes are independent — both/either/neither", async () => {
+  const storeWrite = vi.fn(async () => Promise.resolve());
+  const fileWrite = vi.fn(async () => Promise.resolve());
+  const evidenceStore: S3EvidenceStore = { write: storeWrite };
+
+  // both enabled
+  await runOnce({
+    byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
+    checkpointStore: fakeCheckpointStore(),
+    discoverReplays: async () => discoveryReport({ candidates: [] }),
+    emitEvidence: true,
+    evidenceStore,
+    evidenceFile: "/tmp/e.json",
+    writeEvidenceFile: fileWrite,
+    now: createClock([startedAt, finishedAt]),
+    runId: "run-both",
+    sourceClient: { fetchText: vi.fn() },
+    sourceUrl: new URL("https://example.test/replays"),
+    stageRawReplay: vi.fn(),
+    stagingRepository: { stage: vi.fn() },
+    storage: { storeRawReplay: vi.fn() },
+    storeRawReplay: vi.fn(),
+  });
+
+  expect(storeWrite).toHaveBeenCalledOnce();
+  expect(fileWrite).toHaveBeenCalledOnce();
+
+  // neither enabled — neither called
+  storeWrite.mockClear();
+  fileWrite.mockClear();
+
+  await runOnce({
+    byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
+    checkpointStore: fakeCheckpointStore(),
+    discoverReplays: async () => discoveryReport({ candidates: [] }),
+    // no emitEvidence, no evidenceFile
+    now: createClock([startedAt, finishedAt]),
+    runId: "run-neither",
+    sourceClient: { fetchText: vi.fn() },
+    sourceUrl: new URL("https://example.test/replays"),
+    stageRawReplay: vi.fn(),
+    stagingRepository: { stage: vi.fn() },
+    storage: { storeRawReplay: vi.fn() },
+    storeRawReplay: vi.fn(),
+  });
+
+  expect(storeWrite).not.toHaveBeenCalled();
+  expect(fileWrite).not.toHaveBeenCalled();
+});
