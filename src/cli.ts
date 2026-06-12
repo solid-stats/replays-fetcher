@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /* eslint-disable max-lines -- CLI command handlers are kept together for command-surface readability. */
 import { randomUUID } from "node:crypto";
+import { writeFile } from "node:fs/promises";
 
 import { Command } from "commander";
 
@@ -26,11 +27,19 @@ import {
 import { discoverReplaysDryRun } from "./discovery/discover.js";
 import { createSourceClient } from "./discovery/source-client.js";
 import {
+  createS3EvidenceStoreFromConfig,
+  type S3EvidenceStore,
+} from "./evidence/s3-evidence-store.js";
+import {
   createLogger,
   type CreateLoggerOptions,
 } from "./logging/create-logger.js";
 import { runOnce } from "./run/run-once.js";
-import { buildConfigInvalidRunSummary, runExitCode } from "./run/summary.js";
+import {
+  buildConfigInvalidRunSummary,
+  runExitCode,
+  toCompactSummary,
+} from "./run/summary.js";
 import {
   createPostgresStagingRepositoryFromDatabaseUrl,
   type PostgresStagingRepository,
@@ -87,6 +96,9 @@ interface BuildCliDependencies {
     config: AppConfig["s3"],
   ) => S3CheckpointStore;
   readonly createS3ConnectivitySenderFromConfig?: typeof createS3ConnectivitySenderFromConfig;
+  readonly createS3EvidenceStoreFromConfig?: (
+    config: AppConfig["s3"],
+  ) => S3EvidenceStore;
   readonly createReplayByteClient?: (config: SourceConfig) => ReplayByteClient;
   readonly createS3RawReplayStorageFromConfig?: (
     config: AppConfig["s3"],
@@ -102,6 +114,7 @@ interface BuildCliDependencies {
   readonly runOnce?: typeof runOnce;
   readonly stageRawReplay?: typeof stageRawReplay;
   readonly storeRawReplay?: typeof storeRawReplay;
+  readonly writeEvidenceFile?: (path: string, body: string) => Promise<void>;
 }
 
 interface DiscoverOptions {
@@ -111,6 +124,8 @@ interface DiscoverOptions {
 }
 
 interface RunOnceOptions {
+  readonly emitEvidence?: boolean;
+  readonly evidenceFile?: string;
   readonly resume?: boolean;
 }
 
@@ -167,6 +182,7 @@ function resolveDependencies(
     createReplayByteClient,
     createS3CheckpointStoreFromConfig,
     createS3ConnectivitySenderFromConfig,
+    createS3EvidenceStoreFromConfig,
     createPostgresStagingRepositoryFromDatabaseUrl,
     createS3RawReplayStorageFromConfig,
     createSourceClient,
@@ -177,6 +193,7 @@ function resolveDependencies(
     runOnce,
     stageRawReplay,
     storeRawReplay,
+    writeEvidenceFile: (path, body) => writeFile(path, body, "utf8"),
     ...dependencies,
   };
 }
@@ -338,6 +355,14 @@ function registerRunOnceCommand(
       "--resume",
       "resume from the last completed page using the source checkpoint",
     )
+    .option(
+      "--emit-evidence",
+      "write a durable per-candidate evidence artifact to S3",
+    )
+    .option(
+      "--evidence-file <path>",
+      "also write the evidence artifact to a local file (dev only)",
+    )
     .action(async (options: RunOnceOptions) => {
       const startedAt = dependencies.now();
       const runId = dependencies.createRunId(startedAt);
@@ -348,7 +373,6 @@ function registerRunOnceCommand(
       // guaranteed by the logger writing to stderr (createLogger defaults its
       // destination to process.stderr), not by the log level — so emitting at
       // debug or any level cannot interleave with the stdout summary.
-      log.debug({ runId }, "run-once started");
       const configResult = loadStoreRawConfig(dependencies);
 
       if (!configResult.ok) {
@@ -375,6 +399,10 @@ function registerRunOnceCommand(
         checkpointStore: resources.checkpointStore,
         concurrency: configResult.config.sourceConcurrency,
         discoverReplays: dependencies.discoverReplaysDryRun,
+        emitEvidence: options.emitEvidence === true,
+        evidenceStore: dependencies.createS3EvidenceStoreFromConfig(
+          configResult.config.s3,
+        ),
         log,
         now: dependencies.now,
         onRetry: buildRetryWarnEmitter(log),
@@ -382,6 +410,7 @@ function registerRunOnceCommand(
         resume: options.resume === true,
         runId,
         ...maxPagesOption(configResult.config.sourceMaxPages),
+        ...evidenceFileOption(options.evidenceFile),
         sourceClient: resources.sourceClient,
         sourceUrl: new URL(configResult.config.sourceUrl),
         stageRawReplay: dependencies.stageRawReplay,
@@ -390,11 +419,47 @@ function registerRunOnceCommand(
         ),
         storage: resources.storage,
         storeRawReplay: dependencies.storeRawReplay,
+        writeEvidenceFile: dependencies.writeEvidenceFile,
       });
 
-      writeJson(result.summary);
+      // D-02 (PROG-02): stdout carries exactly one compact JSON document.
+      // The full RunSummary (with heavy arrays) is kept in-memory for the
+      // opt-in evidence artifact; the stdout projection strips all arrays.
+      writeJson(toCompactSummary(result.summary));
+      // D-16 (PROG-04): await the pino flush AFTER the stdout write and BEFORE
+      // setting process.exitCode so the final NDJSON lines drain cleanly without
+      // calling process.exit() (streams drain naturally on exit).
+      await flushLogger(rootLogger);
       process.exitCode = result.exitCode;
     });
+}
+
+/**
+ * Wraps pino's callback-based `log.flush(cb)` in a Promise so the cli action
+ * can `await` the flush before setting `process.exitCode` (D-16/PROG-04).
+ * Resolves on success; rejects on error. Never calls `process.exit()`.
+ */
+function flushLogger(log: Logger): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    log.flush((flushError) => {
+      if (flushError !== undefined) {
+        reject(flushError);
+        return;
+      }
+
+      resolve();
+    });
+  });
+}
+
+function evidenceFileOption(evidenceFile: string | undefined): {
+  evidenceFile?: string;
+} {
+  if (evidenceFile === undefined) {
+    return {};
+  }
+
+  return { evidenceFile };
 }
 
 function createRunId(now: Date): string {

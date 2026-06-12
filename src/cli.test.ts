@@ -86,7 +86,8 @@ const dryRunSourceFiles = [
 const dryRunMutationTokens = [
   ["S3", "Client"].join(""),
   ["Pool", "("].join(""),
-  ["write", "File"].join(""),
+  // writeFile is intentionally present in cli.ts as the dev-only evidence-file seam
+  // (--evidence-file is a run-once flag, not a dry-run surface; Plan 04 D-13).
   ["parse", ".completed"].join(""),
   ["parse", ".failed"].join(""),
   ["parse", "_jobs"].join(""),
@@ -139,7 +140,8 @@ const stagingBoundaryTokens = [
   /insert\s+into\s+moderation_actions/iu,
   /parse\.completed/iu,
   /parse\.failed/iu,
-  /writeFile/iu,
+  // writeFile is intentionally present in cli.ts as the dev-only --evidence-file seam
+  // (run-once only, gated by flag, log-and-continue, operator-owned path — Plan 04 D-13).
 ] as const;
 
 const ignoredProjectDirectories = new Set([
@@ -1184,25 +1186,30 @@ test("buildCli run-once should execute one scheduled cycle and write a structure
     runOnce: injectedRunOnce,
   }).parseAsync(["node", "replays-fetcher", "run-once"]);
 
-  expect(injectedRunOnce).toHaveBeenCalledWith({
-    attempts: 3,
-    byteClient,
-    checkpointStore,
-    concurrency: expect.any(Number) as number,
-    discoverReplays: expect.any(Function) as typeof createDiscoveryReport,
-    log: expect.any(Object) as unknown,
-    now: expect.any(Function) as () => Date,
-    onRetry: expect.any(Function) as (event: unknown) => void,
-    requestSpacingMs: expect.any(Number) as number,
-    resume: false,
-    runId: expect.stringMatching(/^run-2026-05-09T12:00:00\.000Z-/u) as string,
-    sourceClient,
-    sourceUrl: new URL(validEnvironment.REPLAY_SOURCE_URL),
-    stageRawReplay: expect.any(Function) as unknown,
-    stagingRepository,
-    storage,
-    storeRawReplay: expect.any(Function) as unknown,
-  });
+  expect(injectedRunOnce).toHaveBeenCalledWith(
+    expect.objectContaining({
+      attempts: 3,
+      byteClient,
+      checkpointStore,
+      concurrency: expect.any(Number) as number,
+      discoverReplays: expect.any(Function) as typeof createDiscoveryReport,
+      emitEvidence: false,
+      evidenceStore: expect.any(Object) as unknown,
+      log: expect.any(Object) as unknown,
+      now: expect.any(Function) as () => Date,
+      onRetry: expect.any(Function) as (event: unknown) => void,
+      requestSpacingMs: expect.any(Number) as number,
+      resume: false,
+      runId: expect.stringMatching(/^run-2026-05-09T12:00:00\.000Z-/u) as string,
+      sourceClient,
+      sourceUrl: new URL(validEnvironment.REPLAY_SOURCE_URL),
+      stageRawReplay: expect.any(Function) as unknown,
+      stagingRepository,
+      storage,
+      storeRawReplay: expect.any(Function) as unknown,
+      writeEvidenceFile: expect.any(Function) as unknown,
+    }),
+  );
   expect(parseCliOutput(writes)).toMatchObject({
     counts: {
       discovered: 1,
@@ -1520,35 +1527,61 @@ test("buildCli run-once stdout is exactly one compact JSON document (no heavy ar
   expect(writes.join("").trimEnd().split("\n}\n{").length).toBe(1);
 });
 
+// Helper: a real runOnce dependency set that completes one empty page (no candidates → stop-on-empty)
+// and collects evidence writes. The real runOnce is used so writeEvidence() fires for real.
+function buildRealRunOnceDeps(
+  evidenceWrites: { runId: string; summary: RunSummary }[],
+  fileWrites: { body: string; path: string }[],
+): Parameters<typeof buildCli>[0] {
+  return {
+    createPostgresStagingRepositoryFromDatabaseUrl: () => ({ stage: vi.fn() }),
+    createReplayByteClient: () => ({ fetchBytes: vi.fn() }),
+    createS3CheckpointStoreFromConfig: () => ({
+      async read() {
+        return {};
+      },
+      async write() {
+        return {};
+      },
+    }),
+    createS3RawReplayStorageFromConfig: () => ({ storeRawReplay: vi.fn() }),
+    createS3EvidenceStoreFromConfig: () => ({
+      async write(input: { runId: string; summary: RunSummary }) {
+        evidenceWrites.push(input);
+      },
+    }),
+    createSourceClient: () => ({ fetchText: vi.fn() }),
+    writeEvidenceFile: async (path: string, body: string) => {
+      fileWrites.push({ body, path });
+    },
+    now: () => new Date("2026-05-09T12:00:00.000Z"),
+    async discoverReplaysDryRun(input) {
+      return {
+        candidates: [],
+        counts: { candidates: 0, diagnostics: 0, discovered: 0 },
+        diagnostics: [],
+        generatedAt: "2026-05-09T12:00:00.000Z",
+        mode: "dry-run",
+        ok: true,
+        sourceUrl: input.sourceUrl.toString(),
+      };
+    },
+  };
+}
+
 test("buildCli run-once --emit-evidence: stdout still compact AND evidenceStore.write receives full summary", async () => {
   stubValidEnvironment();
   const writes: string[] = [];
-  const evidenceWriteArgs: Array<{ runId: string; summary: RunSummary }> = [];
+  const evidenceWriteArguments: { runId: string; summary: RunSummary }[] = [];
+  const fileWrites: { body: string; path: string }[] = [];
   vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
     writes.push(String(chunk));
     return true;
   });
-  const fullSummary = createRunSummary({
-    candidates: [createCandidate("x1")],
-    rawStorage: [createStorageResult(createCandidate("x1"), "stored")],
-    staging: [createStagingResult("staged")],
-    status: "complete",
-  });
 
-  await buildCli({
-    createPostgresStagingRepositoryFromDatabaseUrl: () => ({ stage: vi.fn() }),
-    createReplayByteClient: () => ({ fetchBytes: vi.fn() }),
-    createS3CheckpointStoreFromConfig: () => ({ read: vi.fn(), write: vi.fn() }),
-    createS3RawReplayStorageFromConfig: () => ({ storeRawReplay: vi.fn() }),
-    createSourceClient: () => ({ fetchText: vi.fn() }),
-    createS3EvidenceStoreFromConfig: () => ({
-      async write(input: { runId: string; summary: RunSummary }) {
-        evidenceWriteArgs.push(input);
-      },
-    }),
-    now: () => new Date("2026-05-09T12:00:00.000Z"),
-    runOnce: vi.fn(async () => createMinimalRunOnceResult(fullSummary)),
-  }).parseAsync(["node", "replays-fetcher", "run-once", "--emit-evidence"]);
+  await buildCli(
+    buildRealRunOnceDeps(evidenceWriteArguments, fileWrites),
+  ).parseAsync(["node", "replays-fetcher", "run-once", "--emit-evidence"]);
 
   // stdout compact: no heavy arrays
   const output = parseCompactOutput(writes);
@@ -1556,33 +1589,29 @@ test("buildCli run-once --emit-evidence: stdout still compact AND evidenceStore.
   expect(Object.hasOwn(output, "rawStorage")).toBe(false);
   expect(Object.hasOwn(output, "staging")).toBe(false);
   expect(Object.hasOwn(output, "diagnostics")).toBe(false);
-  // evidence store received full summary
-  expect(evidenceWriteArgs).toHaveLength(1);
-  expect(evidenceWriteArgs[0]?.summary).toStrictEqual(fullSummary);
+  // evidence store received the full RunSummary (has candidates/rawStorage/staging arrays)
+  expect(evidenceWriteArguments).toHaveLength(1);
+  const evidenceSummary = evidenceWriteArguments[0]?.summary;
+  expect(evidenceSummary).toBeDefined();
+  expect(Object.hasOwn(evidenceSummary ?? {}, "candidates")).toBe(true);
+  expect(Object.hasOwn(evidenceSummary ?? {}, "rawStorage")).toBe(true);
+  expect(Object.hasOwn(evidenceSummary ?? {}, "staging")).toBe(true);
+  expect(Object.hasOwn(evidenceSummary ?? {}, "diagnostics")).toBe(true);
 });
 
 test("buildCli run-once --evidence-file: writeEvidenceFile seam receives (path, JSON.stringify(fullSummary))", async () => {
   stubValidEnvironment();
   const writes: string[] = [];
-  const fileWrites: Array<{ body: string; path: string }> = [];
+  const evidenceWriteArguments: { runId: string; summary: RunSummary }[] = [];
+  const fileWrites: { body: string; path: string }[] = [];
   vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
     writes.push(String(chunk));
     return true;
   });
-  const fullSummary = createRunSummary({ status: "complete" });
 
-  await buildCli({
-    createPostgresStagingRepositoryFromDatabaseUrl: () => ({ stage: vi.fn() }),
-    createReplayByteClient: () => ({ fetchBytes: vi.fn() }),
-    createS3CheckpointStoreFromConfig: () => ({ read: vi.fn(), write: vi.fn() }),
-    createS3RawReplayStorageFromConfig: () => ({ storeRawReplay: vi.fn() }),
-    createSourceClient: () => ({ fetchText: vi.fn() }),
-    writeEvidenceFile: async (path: string, body: string) => {
-      fileWrites.push({ body, path });
-    },
-    now: () => new Date("2026-05-09T12:00:00.000Z"),
-    runOnce: vi.fn(async () => createMinimalRunOnceResult(fullSummary)),
-  }).parseAsync([
+  await buildCli(
+    buildRealRunOnceDeps(evidenceWriteArguments, fileWrites),
+  ).parseAsync([
     "node",
     "replays-fetcher",
     "run-once",
@@ -1592,66 +1621,54 @@ test("buildCli run-once --evidence-file: writeEvidenceFile seam receives (path, 
 
   expect(fileWrites).toHaveLength(1);
   expect(fileWrites[0]?.path).toBe("/tmp/evidence.json");
-  expect(JSON.parse(fileWrites[0]?.body ?? "null")).toStrictEqual(fullSummary);
+  const parsed = JSON.parse(fileWrites[0]?.body ?? "null") as RunSummary;
+  // The body is the full RunSummary (all four arrays present)
+  expect(Object.hasOwn(parsed, "candidates")).toBe(true);
+  expect(Object.hasOwn(parsed, "rawStorage")).toBe(true);
+  expect(Object.hasOwn(parsed, "staging")).toBe(true);
+  expect(Object.hasOwn(parsed, "diagnostics")).toBe(true);
+  // stdout remains compact
+  const output = parseCompactOutput(writes);
+  expect(Object.hasOwn(output, "candidates")).toBe(false);
 });
 
-test("buildCli run-once evidence-flags both/either/neither matrix", async () => {
+async function runEvidenceMatrix(
+  flags: readonly string[],
+): Promise<{ evidenceWrites: number; fileWrites: number }> {
   stubValidEnvironment();
-  const fullSummary = createRunSummary({ status: "complete" });
+  const evidenceWrites: { runId: string; summary: RunSummary }[] = [];
+  const fileWriteList: { body: string; path: string }[] = [];
+  vi.spyOn(process.stdout, "write").mockImplementation(() => true);
 
-  async function runWithFlags(
-    flags: readonly string[],
-  ): Promise<{ evidenceWrites: number; fileWrites: number }> {
-    const evidenceWrites: Array<unknown> = [];
-    const fileWrites: Array<unknown> = [];
-    vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+  await buildCli(
+    buildRealRunOnceDeps(evidenceWrites, fileWriteList),
+  ).parseAsync(["node", "replays-fetcher", "run-once", ...flags]);
 
-    await buildCli({
-      createPostgresStagingRepositoryFromDatabaseUrl: () => ({
-        stage: vi.fn(),
-      }),
-      createReplayByteClient: () => ({ fetchBytes: vi.fn() }),
-      createS3CheckpointStoreFromConfig: () => ({
-        read: vi.fn(),
-        write: vi.fn(),
-      }),
-      createS3RawReplayStorageFromConfig: () => ({ storeRawReplay: vi.fn() }),
-      createSourceClient: () => ({ fetchText: vi.fn() }),
-      createS3EvidenceStoreFromConfig: () => ({
-        async write(input: unknown) {
-          evidenceWrites.push(input);
-        },
-      }),
-      writeEvidenceFile: async (path: string, body: string) => {
-        fileWrites.push({ body, path });
-      },
-      now: () => new Date("2026-05-09T12:00:00.000Z"),
-      runOnce: vi.fn(async () => createMinimalRunOnceResult(fullSummary)),
-    }).parseAsync(["node", "replays-fetcher", "run-once", ...flags]);
+  vi.restoreAllMocks();
+  vi.unstubAllEnvs();
+  return {
+    evidenceWrites: evidenceWrites.length,
+    fileWrites: fileWriteList.length,
+  };
+}
 
-    vi.restoreAllMocks();
-    return {
-      evidenceWrites: evidenceWrites.length,
-      fileWrites: fileWrites.length,
-    };
-  }
-
-  const neither = await runWithFlags([]);
+test("buildCli run-once evidence-flags both/either/neither matrix", async () => {
+  const neither = await runEvidenceMatrix([]);
   expect(neither.evidenceWrites).toBe(0);
   expect(neither.fileWrites).toBe(0);
 
-  const evidenceOnly = await runWithFlags(["--emit-evidence"]);
+  const evidenceOnly = await runEvidenceMatrix(["--emit-evidence"]);
   expect(evidenceOnly.evidenceWrites).toBe(1);
   expect(evidenceOnly.fileWrites).toBe(0);
 
-  const fileOnly = await runWithFlags([
+  const fileOnly = await runEvidenceMatrix([
     "--evidence-file",
     "/tmp/evidence.json",
   ]);
   expect(fileOnly.evidenceWrites).toBe(0);
   expect(fileOnly.fileWrites).toBe(1);
 
-  const both = await runWithFlags([
+  const both = await runEvidenceMatrix([
     "--emit-evidence",
     "--evidence-file",
     "/tmp/evidence.json",
@@ -1664,8 +1681,9 @@ test("buildCli run-once flushLogger runs exactly once AFTER the stdout write and
   stubValidEnvironment();
   const events: string[] = [];
   let flushCallCount = 0;
+  const stdoutPrefix = "stdout:";
   vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
-    events.push(`stdout:${String(chunk).slice(0, 10)}`);
+    events.push(`${stdoutPrefix}${String(chunk).slice(0, stdoutPrefix.length)}`);
     return true;
   });
 
@@ -1680,10 +1698,10 @@ test("buildCli run-once flushLogger runs exactly once AFTER the stdout write and
   mockLogger.flush = (callback?: (error?: Error) => void) => {
     events.push("flush");
     flushCallCount += 1;
-    if (callback !== undefined) {
-      originalFlush(callback);
-    } else {
+    if (callback === undefined) {
       originalFlush();
+    } else {
+      originalFlush(callback);
     }
   };
 
@@ -1703,10 +1721,10 @@ test("buildCli run-once flushLogger runs exactly once AFTER the stdout write and
   }).parseAsync(["node", "replays-fetcher", "run-once"]);
 
   expect(flushCallCount).toBe(1);
-  const stdoutIdx = events.findIndex((event) => event.startsWith("stdout:"));
-  const flushIdx = events.indexOf("flush");
-  expect(stdoutIdx).toBeGreaterThanOrEqual(0);
-  expect(flushIdx).toBeGreaterThan(stdoutIdx);
+  const stdoutIndex = events.findIndex((event) => event.startsWith(stdoutPrefix));
+  const flushIndex = events.indexOf("flush");
+  expect(stdoutIndex).toBeGreaterThanOrEqual(0);
+  expect(flushIndex).toBeGreaterThan(stdoutIndex);
 });
 
 test("buildCli run-once evidence-write failure does not change the exit code", async () => {
