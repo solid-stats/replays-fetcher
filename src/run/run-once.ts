@@ -111,52 +111,111 @@ export async function runOnce(input: RunOnceInput): Promise<RunOnceResult> {
   const slug = sanitizeSourceUrl(input.sourceUrl);
   // D-03/D-04: emit run_start (info) at the top of the run. The slug is already
   // userinfo-stripped (WR-02). The message is static — no data interpolated.
-  input.log?.info?.(
+  input.log?.info(
     { event: "run_start", runId: input.runId, sourceUrl: slug },
     "run start",
   );
-  const discoveryReport = emptyDiscoveryReport(slug);
-  const rawStorage: StoreRawReplayResult[] = [];
-  const staging: IngestStagingResult[] = [];
-  // RANGE-01: the loop bound is now an OPTIONAL safety-valve cap. With
-  // `maxPages` unset the loop is unbounded and governed by stop-on-empty (an
-  // `ok` page with zero candidates) or a `!ok` page classification.
+
+  const { limit, pacer, throttle } = buildRunRuntime(input);
+  const loopState = await buildLoopState(input, slug);
+
+  await runPageLoop(
+    input,
+    { limit, pacer, throttle, slug, startedAt },
+    loopState,
+  );
+
+  return assembleResult(input, {
+    discoveryReport: loopState.discoveryReport,
+    etag: loopState.etag,
+    lastCompletedPage: loopState.lastCompletedPage,
+    pageTimestampsMs: loopState.pageTimestampsMs,
+    pages: loopState.pages,
+    rawStorage: loopState.rawStorage,
+    slug,
+    staging: loopState.staging,
+    startedAt,
+  });
+}
+
+interface LoopState {
+  discoveryReport: MutableDiscoveryReport;
+  etag: string | undefined;
+  lastCompletedPage: number;
+  readonly pageTimestampsMs: number[];
+  readonly pages: Record<string, CheckpointPage>;
+  readonly rawStorage: StoreRawReplayResult[];
+  readonly staging: IngestStagingResult[];
+}
+
+async function buildLoopState(
+  input: RunOnceInput,
+  slug: string,
+): Promise<LoopState> {
+  const resumeState = await resolveResumeState(input, slug);
+
+  return {
+    discoveryReport: emptyDiscoveryReport(slug),
+    etag: resumeState.etag,
+    lastCompletedPage: resumeState.startPage - FIRST_PAGE,
+    pageTimestampsMs: [],
+    pages: { ...resumeState.pages },
+    rawStorage: [],
+    staging: [],
+  };
+}
+
+interface PageLoopContext {
+  readonly limit: LimitFunction;
+  readonly pacer: Pacer;
+  readonly slug: string;
+  readonly startedAt: string;
+  readonly throttle: ThrottleController;
+}
+
+/**
+ * RANGE-01..06: Drives the sequential page loop — each iteration awaits the
+ * pacer floor, discovers one page, applies AIMD throttle logic on non-ok pages,
+ * and calls completeOkPage for content pages. Mutates the shared LoopState
+ * in-place (candidates/rawStorage/staging/pages/etag/lastCompletedPage) so
+ * the caller can assemble the final result without returning the whole state.
+ */
+async function runPageLoop(
+  input: RunOnceInput,
+  context: PageLoopContext,
+  state: LoopState,
+): Promise<void> {
+  // RANGE-01: the loop bound is an OPTIONAL safety-valve cap. With `maxPages`
+  // unset the loop is unbounded and governed by stop-on-empty or a `!ok` page.
   const maxPages = input.maxPages ?? Number.POSITIVE_INFINITY;
 
-  // The shared limiter is the single global in-flight governor (RANGE-02); the
-  // AIMD throttle resizes its `.concurrency` on rate-limited/clean pages
-  // (RANGE-03); the pacer enforces the inter-page floor (RANGE-04).
-  const { limit, pacer, throttle } = buildRunRuntime(input);
-  const pageTimestampsMs: number[] = [];
-
-  const resumeState = await resolveResumeState(input, slug);
-  const pages: Record<string, CheckpointPage> = { ...resumeState.pages };
-  let lastCompletedPage = resumeState.startPage - FIRST_PAGE;
-  // The ETag is a moving cursor: each write returns the object's NEW ETag, which
-  // the NEXT write must use for its IfMatch precondition. Reusing the start ETag
-  // for every write would 412 on page 2..N and lose the final `complete` status
-  // through a merge tie-break (CR-01).
-  let { etag } = resumeState;
-
-  for (let page = resumeState.startPage; page <= maxPages; page += 1) {
+  for (
+    let page = state.lastCompletedPage + FIRST_PAGE;
+    page <= maxPages;
+    page += 1
+  ) {
     // RANGE-04 list-page floor: await the pacer's remaining floor BEFORE each
     // sequential list read (never compounded with withRetry backoff).
     // eslint-disable-next-line no-await-in-loop
-    await pacer.awaitFloor();
+    await context.pacer.awaitFloor();
     const pageUrl = toPageUrl(input.sourceUrl, page);
     // Each page is discovered, stored, and staged before moving on so parser work can run in parallel.
     // eslint-disable-next-line no-await-in-loop
     const pageReport = await input.discoverReplays(
       buildDiscoverInput(input, pageUrl),
     );
-    appendDiscoveryReport(discoveryReport, pageReport);
+    appendDiscoveryReport(state.discoveryReport, pageReport);
 
     // RANGE-06: classify BEFORE the stop-on-empty decision so a transient/
     // rate-limited page is never mistaken for end-of-corpus (the 2026-05-11
     // silent-truncation trap). A `!ok` page resolves its status via
     // `deriveRunStatus` (resumable/partial/failed) and stops the loop.
     if (!pageReport.ok) {
-      applyRateLimitThrottle(input, { limit, pageReport, throttle });
+      applyRateLimitThrottle(input, {
+        limit: context.limit,
+        pageReport,
+        throttle: context.throttle,
+      });
       // D-03/D-04: emit source_unavailable (for permanent/source-level failures)
       // or page_failed (for page-scoped failures) at error level. The payload is
       // identifiers-only from deriveSourceFailure — no body or secret is copied.
@@ -173,34 +232,26 @@ export async function runOnce(input: RunOnceInput): Promise<RunOnceResult> {
       break;
     }
 
+    const currentEtag = state.etag;
     // eslint-disable-next-line no-await-in-loop
-    etag = await completeOkPage(input, {
+    const nextEtag = await completeOkPage(input, {
       candidates: pageReport.candidates,
-      etag,
-      limit,
+      etag: currentEtag,
+      limit: context.limit,
       page,
-      pageTimestampsMs,
-      pages,
-      rawStorage,
-      slug,
-      staging,
-      startedAt,
-      throttle,
+      pageTimestampsMs: state.pageTimestampsMs,
+      pages: state.pages,
+      rawStorage: state.rawStorage,
+      slug: context.slug,
+      staging: state.staging,
+      startedAt: context.startedAt,
+      throttle: context.throttle,
     });
-    lastCompletedPage = page;
+    // eslint-disable-next-line require-atomic-updates -- loop is strictly sequential (no concurrent iteration); nextEtag is derived from currentEtag captured before the await.
+    state.etag = nextEtag;
+    // eslint-disable-next-line require-atomic-updates -- loop is strictly sequential; page is the current iteration value, not read from state before the await.
+    state.lastCompletedPage = page;
   }
-
-  return assembleResult(input, {
-    discoveryReport,
-    etag,
-    lastCompletedPage,
-    pageTimestampsMs,
-    pages,
-    rawStorage,
-    slug,
-    staging,
-    startedAt,
-  });
 }
 
 interface RunRuntime {
@@ -270,7 +321,12 @@ async function completeOkPage(
   // `Date.now()`) so the per-page rate and Wave-3 summary metrics are
   // deterministic (Pitfall 7).
   context.pageTimestampsMs.push(input.now().getTime());
-  emitPageRateLine(input, context.page, context.pageTimestampsMs, pageCounts);
+  emitPageRateLine({
+    input,
+    page: context.page,
+    pageTimestampsMs: context.pageTimestampsMs,
+    pageCounts,
+  });
 
   // Checkpoint is written only after the per-candidate fan-out completes — never mid-page.
   context.pages[String(context.page)] = {
@@ -311,6 +367,13 @@ function applyRateLimitThrottle(
   }
 }
 
+interface EmitPageRateLineInput {
+  readonly input: RunOnceInput;
+  readonly page: number;
+  readonly pageTimestampsMs: readonly number[];
+  readonly pageCounts: MutablePageCounts;
+}
+
 /**
  * D-03/D-05: Emits ONE `page_complete` (info) per completed page carrying the
  * page number, the already-computed per-page counts, the rolling pagesPerMinute
@@ -318,24 +381,29 @@ function applyRateLimitThrottle(
  * candidatesPerMinute derived from the same window. The message is static;
  * no bytes/HTML/secret/URL is ever interpolated.
  */
-function emitPageRateLine(
-  input: RunOnceInput,
-  page: number,
+function deriveCandidatesPerMinute(
   pageTimestampsMs: readonly number[],
-  pageCounts: MutablePageCounts,
-): void {
-  const pagesPerMinute = derivePagesPerMinute(pageTimestampsMs);
-  // candidatesPerMinute: same elapsed window, divided by discovered candidates
-  // on this page (pageCounts.discovered).
+  discovered: number,
+): number {
   const first = pageTimestampsMs.at(0);
   const last = pageTimestampsMs.at(LAST_TIMESTAMP_INDEX);
-  const candidatesPerMinute =
-    first === undefined || last === undefined
-      ? 0
-      : pageCounts.discovered /
-        Math.max((last - first) / MS_PER_MINUTE, Number.EPSILON);
+  /* v8 ignore next 3 -- @preserve defensive guard: emitPageRateLine always pushes a timestamp before calling this helper, so pageTimestampsMs is never empty at this call-site. */
+  if (first === undefined || last === undefined) {
+    return 0;
+  }
 
-  input.log?.info?.(
+  return discovered / Math.max((last - first) / MS_PER_MINUTE, Number.EPSILON);
+}
+
+function emitPageRateLine(options: EmitPageRateLineInput): void {
+  const { input, page, pageTimestampsMs, pageCounts } = options;
+  const pagesPerMinute = derivePagesPerMinute(pageTimestampsMs);
+  const candidatesPerMinute = deriveCandidatesPerMinute(
+    pageTimestampsMs,
+    pageCounts.discovered,
+  );
+
+  input.log?.info(
     {
       event: "page_complete",
       page,
@@ -345,6 +413,26 @@ function emitPageRateLine(
     },
     "page complete",
   );
+}
+
+function derivePageFailureEventName(
+  classification: RunSourceFailure["classification"],
+): "page_failed" | "source_unavailable" {
+  if (classification === "permanent") {
+    return "source_unavailable";
+  }
+
+  return "page_failed";
+}
+
+function derivePageFailureMessage(
+  eventName: "page_failed" | "source_unavailable",
+): string {
+  if (eventName === "source_unavailable") {
+    return "source unavailable";
+  }
+
+  return "page failed";
 }
 
 /**
@@ -363,14 +451,9 @@ function emitPageFailureEvent(
     return;
   }
 
-  const eventName =
-    failure.classification === "permanent"
-      ? "source_unavailable"
-      : "page_failed";
-  input.log?.error?.(
-    { event: eventName, page, ...failure },
-    eventName === "source_unavailable" ? "source unavailable" : "page failed",
-  );
+  const eventName = derivePageFailureEventName(failure.classification);
+  const eventMessage = derivePageFailureMessage(eventName);
+  input.log?.error({ event: eventName, page, ...failure }, eventMessage);
 }
 
 /**
@@ -671,7 +754,7 @@ async function assembleResult(
   // page, or run_partial (warn) for any non-complete status. The payload is
   // identifiers-only; the message is static.
   if (status === "complete") {
-    input.log?.info?.(
+    input.log?.info(
       {
         event: "run_complete",
         runId: input.runId,
@@ -681,7 +764,7 @@ async function assembleResult(
       "run complete",
     );
   } else {
-    input.log?.warn?.(
+    input.log?.warn(
       {
         event: "run_partial",
         runId: input.runId,
@@ -719,7 +802,7 @@ async function writeEvidence(
     try {
       await input.evidenceStore.write({ runId: input.runId, summary });
     } catch {
-      input.log?.warn?.(
+      input.log?.warn(
         { event: "evidence_write_failed", runId: input.runId },
         "evidence write failed; continuing run",
       );
@@ -737,7 +820,7 @@ async function writeEvidence(
         JSON.stringify(summary),
       );
     } catch {
-      input.log?.warn?.(
+      input.log?.warn(
         { event: "evidence_write_failed", runId: input.runId },
         "evidence file write failed; continuing run",
       );

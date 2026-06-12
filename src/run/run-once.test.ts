@@ -11,6 +11,10 @@ import type {
   S3CheckpointStore,
 } from "../checkpoint/s3-checkpoint-store.js";
 import type { DiscoveryReport, ReplayCandidate } from "../discovery/types.js";
+import type {
+  EvidenceWriteInput,
+  S3EvidenceStore,
+} from "../evidence/s3-evidence-store.js";
 import type { LimitFunction } from "../source/concurrency.js";
 import type { Pacer } from "../source/pacing.js";
 import type { ThrottleController } from "../source/throttle.js";
@@ -509,7 +513,7 @@ test("runOnce should warn and start at page 1 when the checkpoint is corrupt", a
     // A corrupt checkpoint degrades to {} inside the store (parseCheckpoint -> undefined).
     checkpointStore: fakeCheckpointStore(),
     discoverReplays: discover,
-    log: { warn } as never,
+    log: { info: vi.fn(), warn } as never,
     now: createClock([startedAt, finishedAt]),
     runId: "run-corrupt",
     sourceClient: { fetchText: vi.fn() },
@@ -1624,7 +1628,10 @@ test("runOnce emits run_start (info) at top of run with runId and static message
     (call) => (call[0] as Record<string, unknown>)["event"] === "run_start",
   );
   expect(runStartCalls).toHaveLength(1);
-  const [payload, message] = runStartCalls[0] as [Record<string, unknown>, string];
+  const [payload, message] = runStartCalls[0] as [
+    Record<string, unknown>,
+    string,
+  ];
   expect(payload["runId"]).toBe("run-start-test");
   expect(typeof payload["sourceUrl"]).toBe("string");
   // Static message
@@ -1656,7 +1663,10 @@ test("runOnce emits run_complete (info) on a successful full run", async () => {
     (call) => (call[0] as Record<string, unknown>)["event"] === "run_complete",
   );
   expect(completeCalls).toHaveLength(1);
-  const [payload, message] = completeCalls[0] as [Record<string, unknown>, string];
+  const [payload, message] = completeCalls[0] as [
+    Record<string, unknown>,
+    string,
+  ];
   expect(payload["status"]).toBe("complete");
   expect(payload["runId"]).toBe("run-complete-event");
   expect(payload["counts"]).toBeDefined();
@@ -1683,7 +1693,7 @@ test("runOnce emits run_partial (warn) when the run stops on a !ok page", async 
         ],
         ok: false,
       }),
-    log: { info: vi.fn(), warn } as never,
+    log: { error: vi.fn(), info: vi.fn(), warn } as never,
     now: createClock([startedAt, finishedAt]),
     runId: "run-partial-event",
     sourceClient: { fetchText: vi.fn() },
@@ -1698,7 +1708,10 @@ test("runOnce emits run_partial (warn) when the run stops on a !ok page", async 
     (call) => (call[0] as Record<string, unknown>)["event"] === "run_partial",
   );
   expect(partialCalls).toHaveLength(1);
-  const [payload, message] = partialCalls[0] as [Record<string, unknown>, string];
+  const [payload, message] = partialCalls[0] as [
+    Record<string, unknown>,
+    string,
+  ];
   expect(payload["event"]).toBe("run_partial");
   expect(payload["runId"]).toBe("run-partial-event");
   expect(payload["counts"]).toBeDefined();
@@ -1738,12 +1751,12 @@ test("runOnce emits source_unavailable or page_failed (error) on the !ok break p
 
   // Either source_unavailable or page_failed depending on classification
   const failureCalls = errorFunction.mock.calls.filter((call) => {
-    const event = (call[0] as Record<string, unknown>)["event"];
+    const { event } = call[0] as Record<string, unknown>;
     return event === "source_unavailable" || event === "page_failed";
   });
   expect(failureCalls).toHaveLength(1);
   const [payload] = failureCalls[0] as [Record<string, unknown>, string];
-  expect(typeof (payload)["event"]).toBe("string");
+  expect(typeof payload["event"]).toBe("string");
   // classification field from deriveSourceFailure
   expect(payload["classification"]).toBeDefined();
 });
@@ -1802,10 +1815,10 @@ test("runOnce emits exactly one page_complete per completed page in a multi-page
   expect(pageCompleteCalls).toHaveLength(lastContentPage);
   // Each call carries counts and rates
   for (const call of pageCompleteCalls) {
-    const [p] = call as [Record<string, unknown>];
-    expect(p["counts"]).toBeDefined();
-    expect(typeof p["pagesPerMinute"]).toBe("number");
-    expect(typeof p["candidatesPerMinute"]).toBe("number");
+    const [payload] = call as [Record<string, unknown>];
+    expect(payload["counts"]).toBeDefined();
+    expect(typeof payload["pagesPerMinute"]).toBe("number");
+    expect(typeof payload["candidatesPerMinute"]).toBe("number");
   }
 });
 
@@ -1833,9 +1846,9 @@ test("runOnce event messages are static — no source URL userinfo or candidate 
   });
 
   const allMessages = [
-    ...info.mock.calls.map((c) => c[1] as string),
-    ...warn.mock.calls.map((c) => c[1] as string),
-    ...errorFunction.mock.calls.map((c) => c[1] as string),
+    ...info.mock.calls.map((call) => call[1] as string),
+    ...warn.mock.calls.map((call) => call[1] as string),
+    ...errorFunction.mock.calls.map((call) => call[1] as string),
   ];
   for (const message of allMessages) {
     expect(message).not.toContain(secret);
@@ -1853,11 +1866,6 @@ test("runOnce event messages are static — no source URL userinfo or candidate 
 });
 
 // ─── Task 2: opt-in evidence write (RED) ─────────────────────────────────────
-
-import type {
-  EvidenceWriteInput,
-  S3EvidenceStore,
-} from "../evidence/s3-evidence-store.js";
 
 test("runOnce calls evidenceStore.write with full RunSummary when emitEvidence is true", async () => {
   const writes: EvidenceWriteInput[] = [];
@@ -1998,8 +2006,8 @@ test("runOnce logs warn and keeps exit code unchanged when evidenceStore.write r
 });
 
 test("runOnce S3 and file evidence writes are independent — both/either/neither", async () => {
-  const storeWrite = vi.fn(async () => {});
-  const fileWrite = vi.fn(async () => {});
+  const storeWrite = vi.fn(() => Promise.resolve());
+  const fileWrite = vi.fn(() => Promise.resolve());
   const evidenceStore: S3EvidenceStore = { write: storeWrite };
 
   // both enabled
@@ -2049,4 +2057,78 @@ test("runOnce S3 and file evidence writes are independent — both/either/neithe
 
   expect(storeWrite).not.toHaveBeenCalled();
   expect(fileWrite).not.toHaveBeenCalled();
+});
+
+test("runOnce does not emit an error event when a !ok page has no classifiable diagnostic", async () => {
+  // emitPageFailureEvent early-returns when deriveSourceFailure returns undefined
+  // (a !ok page whose diagnostics carry no error-severity classifiable code).
+  const errorFunction = vi.fn();
+
+  const result = await runOnce({
+    byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
+    checkpointStore: fakeCheckpointStore(),
+    discoverReplays: async () =>
+      discoveryReport({
+        candidates: [],
+        diagnostics: [
+          {
+            code: "malformed_row",
+            message: "Row did not include a replay link",
+            severity: "warning",
+          },
+        ],
+        ok: false,
+      }),
+    log: { error: errorFunction, info: vi.fn(), warn: vi.fn() } as never,
+    now: createClock([startedAt, finishedAt]),
+    runId: "run-no-classifiable-diag",
+    sourceClient: { fetchText: vi.fn() },
+    sourceUrl: new URL("https://example.test/replays"),
+    stageRawReplay: vi.fn(),
+    stagingRepository: { stage: vi.fn() },
+    storage: { storeRawReplay: vi.fn() },
+    storeRawReplay: vi.fn(),
+  });
+
+  // The failure event is silenced — no error log emitted for an unclassifiable page.
+  expect(errorFunction).not.toHaveBeenCalled();
+  // The run is still marked non-complete because the page was !ok.
+  expect(result.summary.ok).toBe(false);
+});
+
+test("runOnce logs warn and keeps exit code unchanged when writeEvidenceFile rejects", async () => {
+  const warn = vi.fn();
+  const fileError = new Error("disk full");
+
+  const result = await runOnce({
+    byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
+    checkpointStore: fakeCheckpointStore(),
+    discoverReplays: async () => discoveryReport({ candidates: [] }),
+    evidenceFile: "/tmp/evidence-fail-test.json",
+    writeEvidenceFile: async () => {
+      throw fileError;
+    },
+    log: { info: vi.fn(), warn } as never,
+    now: createClock([startedAt, finishedAt]),
+    runId: "run-file-evidence-fail",
+    sourceClient: { fetchText: vi.fn() },
+    sourceUrl: new URL("https://example.test/replays"),
+    stageRawReplay: vi.fn(),
+    stagingRepository: { stage: vi.fn() },
+    storage: { storeRawReplay: vi.fn() },
+    storeRawReplay: vi.fn(),
+  });
+
+  expect(warn).toHaveBeenCalledWith(
+    expect.objectContaining({
+      event: "evidence_write_failed",
+      runId: "run-file-evidence-fail",
+    }),
+    expect.any(String),
+  );
+  expect(result.exitCode).toBe(0);
 });
