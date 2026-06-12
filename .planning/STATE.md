@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Full-Corpus Ingest Resilience
 status: executing
-stopped_at: Completed Phase 11 (progress-events-and-compact-evidence) — verified passed, reviewed clean
-last_updated: "2026-06-12T07:40:11.893Z"
-last_activity: 2026-06-12 -- Phase 11 complete (all 5 plans, verification passed 4/4, code review clean)
+stopped_at: Completed 11-01-PLAN.md
+last_updated: "2026-06-12T08:43:41.658Z"
+last_activity: 2026-06-12 -- Phase 12 execution started
 progress:
   total_phases: 6
   completed_phases: 5
-  total_plans: 22
+  total_plans: 24
   completed_plans: 22
   percent: 83
 ---
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-07)
 
 **Core value:** Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
-**Current focus:** Phase 11 complete — next is Phase 12 (Source Contract Guards)
+**Current focus:** Phase 12 — source-contract-guards
 
 ## Current Position
 
-Phase: 11 (progress-events-and-compact-evidence) — COMPLETE (verified passed 4/4, code review clean)
-Plan: 5 of 5 complete
-Status: Phase complete
-Last activity: 2026-06-12 -- Phase 11 complete
+Phase: 12 (source-contract-guards) — EXECUTING
+Plan: 1 of 2
+Status: Executing Phase 12
+Last activity: 2026-06-12 -- Phase 12 execution started
 
 Progress: `[x][x][x][x][x][ ]` 5/6 phases complete
 

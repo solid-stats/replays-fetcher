@@ -208,7 +208,7 @@
 | 9. Checkpoint and Resume | v2.0 | 5/5 | Complete   | 2026-06-09 |
 | 10. Dynamic Source Range and Rate Limiting | v2.0 | 5/5 | Complete   | 2026-06-11 |
 | 11. Progress Events and Compact Evidence | v2.0 | 5/5 | Complete   | 2026-06-12 |
-| 12. Source Contract Guards | v2.0 | 0/TBD | Not started | - |
+| 12. Source Contract Guards | v2.0 | 1/2 | In Progress|  |
 
 ## Next Milestone
 
