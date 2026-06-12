@@ -167,7 +167,7 @@
 
 **Wave 2** *(blocked on Wave 1; owns `run-once.ts`)*
 
-- [ ] 11-03-PLAN.md — `run_start`/`page_complete`/`page_failed`/`source_unavailable`/`run_complete`/`run_partial` NDJSON taxonomy + opt-in evidence write (log-and-continue) (PROG-01/03)
+- [x] 11-03-PLAN.md — `run_start`/`page_complete`/`page_failed`/`source_unavailable`/`run_complete`/`run_partial` NDJSON taxonomy + opt-in evidence write (log-and-continue) (PROG-01/03)
 
 **Wave 3** *(blocked on Wave 2; owns `cli.ts` + docs)*
 
@@ -207,7 +207,7 @@
 | 8. Source Failure Diagnostics and Retry | v2.0 | 4/4 | Complete    | 2026-06-08 |
 | 9. Checkpoint and Resume | v2.0 | 5/5 | Complete   | 2026-06-09 |
 | 10. Dynamic Source Range and Rate Limiting | v2.0 | 5/5 | Complete   | 2026-06-11 |
-| 11. Progress Events and Compact Evidence | v2.0 | 2/5 | In Progress|  |
+| 11. Progress Events and Compact Evidence | v2.0 | 3/5 | In Progress|  |
 | 12. Source Contract Guards | v2.0 | 0/TBD | Not started | - |
 
 ## Next Milestone
