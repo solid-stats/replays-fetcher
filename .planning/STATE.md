@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Full-Corpus Ingest Resilience
 status: executing
-stopped_at: Completed 11-01-PLAN.md
-last_updated: "2026-06-11T14:31:49.384Z"
-last_activity: 2026-06-11 -- Phase 11 execution started
+stopped_at: Completed Phase 11 (progress-events-and-compact-evidence) — verified passed, reviewed clean
+last_updated: "2026-06-12T07:40:11.893Z"
+last_activity: 2026-06-12 -- Phase 11 complete (all 5 plans, verification passed 4/4, code review clean)
 progress:
   total_phases: 6
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 22
-  completed_plans: 18
-  percent: 67
+  completed_plans: 22
+  percent: 83
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-07)
 
 **Core value:** Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
-**Current focus:** Phase 11 — progress-events-and-compact-evidence
+**Current focus:** Phase 11 complete — next is Phase 12 (Source Contract Guards)
 
 ## Current Position
 
-Phase: 11 (progress-events-and-compact-evidence) — EXECUTING
-Plan: 2 of 5
-Status: Ready to execute
-Last activity: 2026-06-11 -- Phase 11 execution started
+Phase: 11 (progress-events-and-compact-evidence) — COMPLETE (verified passed 4/4, code review clean)
+Plan: 5 of 5 complete
+Status: Phase complete
+Last activity: 2026-06-12 -- Phase 11 complete
 
-Progress: `[x][x][x][x][ ][ ]` 4/6 phases complete
+Progress: `[x][x][x][x][x][ ]` 5/6 phases complete
 
 ## Accumulated Context
 
@@ -162,11 +162,12 @@ None.
 
 ## Next Step
 
-Execute Phase 10 (Dynamic Source Range and Rate Limiting) with `/gsd:execute-phase 10`.
+Execute Phase 12 (Source Contract Guards) with `/gsd:execute-phase 12` — the final v2.0 phase.
 
 ## Operator Next Steps
 
-- Run `/gsd:execute-phase 10` to execute the 5 plans across 3 waves (config knobs → pacer/p-limit/AIMD throttle → run-once integration → summary metrics).
+- Run `/gsd:execute-phase 12` to plan and execute the final milestone phase (contract-check guards reusing the DIAG classifier).
+- Note: Phase 11's `pnpm run verify` integration + 100% V8 coverage stages are deferred to CI (Docker unavailable locally); run them in CI before milestone close.
 
 ## Performance Metrics
 
