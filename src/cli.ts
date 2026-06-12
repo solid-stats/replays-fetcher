@@ -277,7 +277,11 @@ function registerContractCheckCommand(
       const configResult = loadDryRunSourceConfig(dependencies);
 
       if (!configResult.ok) {
-        writeJson({ issues: configResult.issues, ok: false, reason: "config_error" });
+        writeJson({
+          issues: configResult.issues,
+          ok: false,
+          reason: "config_error",
+        });
         process.exitCode = 2;
         return;
       }

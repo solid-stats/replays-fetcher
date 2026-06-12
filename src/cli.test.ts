@@ -1200,7 +1200,9 @@ test("buildCli run-once should execute one scheduled cycle and write a structure
       onRetry: expect.any(Function) as (event: unknown) => void,
       requestSpacingMs: expect.any(Number) as number,
       resume: false,
-      runId: expect.stringMatching(/^run-2026-05-09T12:00:00\.000Z-/u) as string,
+      runId: expect.stringMatching(
+        /^run-2026-05-09T12:00:00\.000Z-/u,
+      ) as string,
       sourceClient,
       sourceUrl: new URL(validEnvironment.REPLAY_SOURCE_URL),
       stageRawReplay: expect.any(Function) as unknown,
@@ -1499,7 +1501,10 @@ test("buildCli run-once stdout is exactly one compact JSON document (no heavy ar
   await buildCli({
     createPostgresStagingRepositoryFromDatabaseUrl: () => ({ stage: vi.fn() }),
     createReplayByteClient: () => ({ fetchBytes: vi.fn() }),
-    createS3CheckpointStoreFromConfig: () => ({ read: vi.fn(), write: vi.fn() }),
+    createS3CheckpointStoreFromConfig: () => ({
+      read: vi.fn(),
+      write: vi.fn(),
+    }),
     createS3RawReplayStorageFromConfig: () => ({ storeRawReplay: vi.fn() }),
     createSourceClient: () => ({ fetchText: vi.fn() }),
     now: () => new Date("2026-05-09T12:00:00.000Z"),
@@ -1683,7 +1688,9 @@ test("buildCli run-once flushLogger runs exactly once AFTER the stdout write and
   let flushCallCount = 0;
   const stdoutPrefix = "stdout:";
   vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
-    events.push(`${stdoutPrefix}${String(chunk).slice(0, stdoutPrefix.length)}`);
+    events.push(
+      `${stdoutPrefix}${String(chunk).slice(0, stdoutPrefix.length)}`,
+    );
     return true;
   });
 
@@ -1709,19 +1716,22 @@ test("buildCli run-once flushLogger runs exactly once AFTER the stdout write and
     createLogger: () => mockLogger,
     createPostgresStagingRepositoryFromDatabaseUrl: () => ({ stage: vi.fn() }),
     createReplayByteClient: () => ({ fetchBytes: vi.fn() }),
-    createS3CheckpointStoreFromConfig: () => ({ read: vi.fn(), write: vi.fn() }),
+    createS3CheckpointStoreFromConfig: () => ({
+      read: vi.fn(),
+      write: vi.fn(),
+    }),
     createS3RawReplayStorageFromConfig: () => ({ storeRawReplay: vi.fn() }),
     createSourceClient: () => ({ fetchText: vi.fn() }),
     now: () => new Date("2026-05-09T12:00:00.000Z"),
     runOnce: vi.fn(async () =>
-      createMinimalRunOnceResult(
-        createRunSummary({ status: "complete" }),
-      ),
+      createMinimalRunOnceResult(createRunSummary({ status: "complete" })),
     ),
   }).parseAsync(["node", "replays-fetcher", "run-once"]);
 
   expect(flushCallCount).toBe(1);
-  const stdoutIndex = events.findIndex((event) => event.startsWith(stdoutPrefix));
+  const stdoutIndex = events.findIndex((event) =>
+    event.startsWith(stdoutPrefix),
+  );
   const flushIndex = events.indexOf("flush");
   expect(stdoutIndex).toBeGreaterThanOrEqual(0);
   expect(flushIndex).toBeGreaterThan(stdoutIndex);
@@ -1738,7 +1748,10 @@ test("buildCli run-once evidence-write failure does not change the exit code", a
   await buildCli({
     createPostgresStagingRepositoryFromDatabaseUrl: () => ({ stage: vi.fn() }),
     createReplayByteClient: () => ({ fetchBytes: vi.fn() }),
-    createS3CheckpointStoreFromConfig: () => ({ read: vi.fn(), write: vi.fn() }),
+    createS3CheckpointStoreFromConfig: () => ({
+      read: vi.fn(),
+      write: vi.fn(),
+    }),
     createS3RawReplayStorageFromConfig: () => ({ storeRawReplay: vi.fn() }),
     createSourceClient: () => ({ fetchText: vi.fn() }),
     createS3EvidenceStoreFromConfig: () => ({
@@ -1755,12 +1768,15 @@ test("buildCli run-once evidence-write failure does not change the exit code", a
   }).parseAsync(["node", "replays-fetcher", "run-once", "--emit-evidence"]);
 
   expect(process.exitCode).toBe(0);
-  expect(parseCompactOutput(writes)).toMatchObject({ ok: true, mode: "run-once" });
+  expect(parseCompactOutput(writes)).toMatchObject({
+    ok: true,
+    mode: "run-once",
+  });
 });
 
 // ─── Task 3: buildRetryWarnEmitter event:"retry" discriminator (RED) ─────────
 
-test("buildRetryWarnEmitter emits event:\"retry\" discriminator with static \"retry\" message", async () => {
+test('buildRetryWarnEmitter emits event:"retry" discriminator with static "retry" message', async () => {
   // Wire through a real runOnce call with a retry so we exercise the full
   // onRetry -> buildRetryWarnEmitter path, capturing the warn call.
   const warnCalls: Record<string, unknown>[] = [];
@@ -1807,16 +1823,14 @@ test("buildRetryWarnEmitter emits event:\"retry\" discriminator with static \"re
         staging: { databaseUrl: "postgres://localhost/test" },
       }) as never,
     createRunId: () => "run-retry-discriminator",
-    createS3CheckpointStoreFromConfig: () =>
-      ({
-        read: async () => ({}),
-        write: async () => ({}),
-      }),
+    createS3CheckpointStoreFromConfig: () => ({
+      read: async () => ({}),
+      write: async () => ({}),
+    }),
     createS3RawReplayStorageFromConfig: () => ({ storeRawReplay: vi.fn() }),
     createReplayByteClient: () => ({ fetchBytes: vi.fn() }),
     createSourceClient: () => ({ fetchText: vi.fn() }),
-    createPostgresStagingRepositoryFromDatabaseUrl: () =>
-      ({ stage: vi.fn() }),
+    createPostgresStagingRepositoryFromDatabaseUrl: () => ({ stage: vi.fn() }),
     discoverReplaysDryRun: vi.fn(),
     runOnce: async (input) => {
       // fire onRetry directly from run-once input to simulate retry
@@ -1853,8 +1867,7 @@ test("buildRetryWarnEmitter emits event:\"retry\" discriminator with static \"re
     stageRawReplay: vi.fn(),
     storeRawReplay: vi.fn(),
     now: () => new Date("2026-05-09T13:40:00.000Z"),
-  })
-    .parseAsync(["node", "replays-fetcher", "run-once"]);
+  }).parseAsync(["node", "replays-fetcher", "run-once"]);
 
   // Find the retry warn line
   const retryPayload = warnCalls.find(

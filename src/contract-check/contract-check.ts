@@ -20,7 +20,10 @@ import {
   extractReplayRows,
 } from "../discovery/html.js";
 import { SourceFetchError } from "../discovery/source-client.js";
-import { classifyFailure, type ClassifyInput } from "../source/classify-failure.js";
+import {
+  classifyFailure,
+  type ClassifyInput,
+} from "../source/classify-failure.js";
 
 import type { SourceClient } from "../discovery/types.js";
 
@@ -144,10 +147,6 @@ function makeFetchFailureResult(
     warnings,
   };
 }
-
-// ---------------------------------------------------------------------------
-// Probe internals
-// ---------------------------------------------------------------------------
 
 async function tryFetch(
   context: ProbeContext,

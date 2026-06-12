@@ -6,7 +6,10 @@ import { toRawReplayUrl } from "../discovery/discover.js";
 import { extractReplayRows } from "../discovery/html.js";
 import { SourceFetchError } from "../discovery/source-client.js";
 
-import { runContractCheck, type ContractCheckReason } from "./contract-check.js";
+import {
+  runContractCheck,
+  type ContractCheckReason,
+} from "./contract-check.js";
 
 import type { SourceClient } from "../discovery/types.js";
 
@@ -236,41 +239,33 @@ describe("runContractCheck — source failure classification (no retries)", () =
     },
   );
 
-  test("detail fetch failure is classified and surfaced", async () => {
-    const result = await runContractCheck({
-      sourceClient: throwingClient(
-        DETAIL_URL,
-        new SourceFetchError("source_transient", "detail down"),
-        happyResponses,
-      ),
-      sourceUrl: SOURCE_URL,
-    });
+  test.each([
+    { failingUrl: DETAIL_URL, label: "detail" },
+    { failingUrl: RAW_URL, label: "raw-endpoint" },
+  ])(
+    "$label fetch failure is classified and surfaced",
+    async ({ failingUrl }) => {
+      const result = await runContractCheck({
+        sourceClient: throwingClient(
+          failingUrl,
+          new SourceFetchError("source_transient", "down"),
+          happyResponses,
+        ),
+        sourceUrl: SOURCE_URL,
+      });
 
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.reason).toBe("source_unreachable");
-    }
-  });
-
-  test("raw-endpoint fetch failure is classified and surfaced", async () => {
-    const result = await runContractCheck({
-      sourceClient: throwingClient(
-        RAW_URL,
-        new SourceFetchError("source_transient", "raw down"),
-        happyResponses,
-      ),
-      sourceUrl: SOURCE_URL,
-    });
-
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.reason).toBe("source_unreachable");
-    }
-  });
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.reason).toBe("source_unreachable");
+      }
+    },
+  );
 });
 
 // GUARD-04 (source half): no S3, staging, or retry surface in the probe module.
-const contractCheckSourceFiles = ["src/contract-check/contract-check.ts"] as const;
+const contractCheckSourceFiles = [
+  "src/contract-check/contract-check.ts",
+] as const;
 const contractCheckMutationTokens = [
   ["S3", "Client"].join(""),
   ["Pool", "("].join(""),
