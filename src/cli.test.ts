@@ -704,7 +704,8 @@ test("buildCli dry-run should emit one stderr warn per retry round without distu
     attempt: 1,
     causeCode: "ECONNRESET",
     delayMs: 25,
-    msg: "source read retry",
+    event: "retry",
+    msg: "retry",
     page: 1,
     phase: "list",
     runId: expect.stringMatching(/^run-/u) as string,
@@ -1449,14 +1450,13 @@ test("unit tests should remain colocated beside source files", async () => {
 test("buildRetryWarnEmitter emits event:\"retry\" discriminator with static \"retry\" message", async () => {
   // Wire through a real runOnce call with a retry so we exercise the full
   // onRetry -> buildRetryWarnEmitter path, capturing the warn call.
-  const warnCalls: Array<[unknown, string]> = [];
+  const warnCalls: Record<string, unknown>[] = [];
   const log = createLogger({
     level: "warn",
     destination: new Writable({
-      write(chunk, _enc, cb) {
-        const line = JSON.parse(String(chunk)) as Record<string, unknown>;
-        warnCalls.push([line, String(line["msg"] ?? "")]);
-        cb();
+      write(chunk, _enc, callback) {
+        warnCalls.push(JSON.parse(String(chunk)) as Record<string, unknown>);
+        callback();
       },
     }),
   }).child({ runId: "run-retry-discriminator" });
@@ -1473,7 +1473,7 @@ test("buildRetryWarnEmitter emits event:\"retry\" discriminator with static \"re
   // Invoke buildRetryWarnEmitter indirectly: use runOnce with a discoverReplays
   // that calls onRetry once then returns ok.
   await buildCli({
-    createLogger: () => log as never,
+    createLogger: () => log,
     loadConfig: () =>
       ({
         sourceUrl: "https://example.test/replays",
@@ -1498,24 +1498,13 @@ test("buildRetryWarnEmitter emits event:\"retry\" discriminator with static \"re
       ({
         read: async () => ({}),
         write: async () => ({}),
-      }) as never,
-    createS3RawReplayStorageFromConfig: () => ({ storeRawReplay: vi.fn() }) as never,
-    createReplayByteClient: () => ({ fetchBytes: vi.fn() }) as never,
-    createSourceClient: () => ({ fetchText: vi.fn() }) as never,
+      }),
+    createS3RawReplayStorageFromConfig: () => ({ storeRawReplay: vi.fn() }),
+    createReplayByteClient: () => ({ fetchBytes: vi.fn() }),
+    createSourceClient: () => ({ fetchText: vi.fn() }),
     createPostgresStagingRepositoryFromDatabaseUrl: () =>
-      ({ stage: vi.fn() }) as never,
-    discoverReplaysDryRun: async ({ onRetry }: { onRetry?: (e: typeof retryEvent) => void }) => {
-      onRetry?.(retryEvent);
-      return {
-        candidates: [],
-        counts: { candidates: 0, diagnostics: 0, discovered: 0 },
-        diagnostics: [],
-        generatedAt: new Date().toISOString(),
-        mode: "dry-run" as const,
-        ok: true,
-        sourceUrl: "https://example.test/replays",
-      };
-    },
+      ({ stage: vi.fn() }),
+    discoverReplaysDryRun: vi.fn(),
     runOnce: async (input) => {
       // fire onRetry directly from run-once input to simulate retry
       input.onRetry?.(retryEvent);
@@ -1555,15 +1544,14 @@ test("buildRetryWarnEmitter emits event:\"retry\" discriminator with static \"re
     .parseAsync(["node", "replays-fetcher", "run-once"]);
 
   // Find the retry warn line
-  const retryLines = warnCalls.filter(
-    ([payload]) => (payload as Record<string, unknown>)["event"] === "retry",
+  const retryPayload = warnCalls.find(
+    (payload) => payload["event"] === "retry",
   );
-  expect(retryLines.length).toBeGreaterThan(0);
-  const [retryPayload] = retryLines[0] as [Record<string, unknown>, string];
-  expect(retryPayload["event"]).toBe("retry");
-  expect(retryPayload["attempt"]).toBe(1);
-  expect(retryPayload["httpStatus"]).toBe(429);
-  expect(retryPayload["causeCode"]).toBe("rate_limited");
+  expect(retryPayload).toBeDefined();
+  expect(retryPayload?.["event"]).toBe("retry");
+  expect(retryPayload?.["attempt"]).toBe(1);
+  expect(retryPayload?.["httpStatus"]).toBe(retryEvent.httpStatus);
+  expect(retryPayload?.["causeCode"]).toBe("rate_limited");
   // Static message
-  expect(String(retryPayload["msg"])).toBe("retry");
+  expect(String(retryPayload?.["msg"])).toBe("retry");
 });

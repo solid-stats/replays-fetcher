@@ -403,17 +403,18 @@ function createRunId(now: Date): string {
 
 /**
  * Builds the `onRetry` warn emitter from a `runId` child logger. Each retry
- * round logs one structured pino `warn` (phase/page/attempt/delayMs/causeCode)
- * to stderr — never stdout — so the machine-readable JSON summary contract on
- * stdout stays byte-for-byte intact (CR-01). `causeMessage`-style server data is
- * emitted as a structured value, never interpolated into the static message
- * (T-08-03).
+ * round logs one structured pino `warn` carrying `event:"retry"` (D-04/D-06)
+ * plus `attempt`/`httpStatus`/`causeCode`/`delayMs`/`phase` — to stderr, never
+ * stdout, so the machine-readable JSON summary contract on stdout stays intact
+ * (CR-01). The message is the static `"retry"` string; no source or server data
+ * is interpolated into it (T-08-03). The spread keeps all RetryAttemptEvent
+ * fields as structured values alongside the discriminator.
  */
 function buildRetryWarnEmitter(
   log: Logger,
 ): (event: RetryAttemptEvent) => void {
   return (event: RetryAttemptEvent): void => {
-    log.warn(event, "source read retry");
+    log.warn({ event: "retry", ...event }, "retry");
   };
 }
 
