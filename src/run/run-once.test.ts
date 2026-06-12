@@ -1312,7 +1312,7 @@ test("runOnce awaits the pacer floor once before each list page", async () => {
   expect(pacer.awaited()).toBe(twoPages);
 });
 
-test("runOnce emits exactly one identifiers-only rate line per completed page", async () => {
+test("runOnce emits page_complete with event discriminator, counts + rates for each completed page", async () => {
   const info = vi.fn();
   const discover = vi.fn(async ({ sourceUrl }: { sourceUrl: URL }) => {
     if (sourceUrl.searchParams.get("p") === pageTwo) {
@@ -1351,18 +1351,19 @@ test("runOnce emits exactly one identifiers-only rate line per completed page", 
   });
 
   // Exactly one completed page (page 1; page 2 is the empty stop page).
-  const rateCalls = info.mock.calls.filter(
-    (call) => call[1] === "page rate",
+  const pageCompleteCalls = info.mock.calls.filter(
+    (call) => (call[0] as Record<string, unknown>)["event"] === "page_complete",
   );
-  expect(rateCalls).toHaveLength(1);
-  const [payload] = rateCalls[0] as [Record<string, unknown>, string];
-  // Identifiers-only: keys are exactly `page` + `pagesPerMinute`, nothing else.
-  expect(Object.keys(payload).toSorted()).toStrictEqual([
-    "page",
-    "pagesPerMinute",
-  ]);
+  expect(pageCompleteCalls).toHaveLength(1);
+  const [payload] = pageCompleteCalls[0] as [Record<string, unknown>, string];
+  expect(payload["event"]).toBe("page_complete");
   expect(payload["page"]).toBe(1);
+  expect(payload["counts"]).toBeDefined();
   expect(typeof payload["pagesPerMinute"]).toBe("number");
+  expect(typeof payload["candidatesPerMinute"]).toBe("number");
+  // Static message — no data interpolated
+  const [, message] = pageCompleteCalls[0] as [unknown, string];
+  expect(message).toBe("page complete");
 });
 
 test("processPage tallies evidence in candidate-index order despite out-of-order completion", async () => {
@@ -1581,4 +1582,250 @@ test("runOnce should surface discovered range and rate metrics, no eta without a
   expect(typeof result.summary.pagesPerMinute).toBe("number");
   expect(result.summary.pagesPerMinute).toBeGreaterThan(0);
   expect(result.summary).not.toHaveProperty("etaSeconds");
+});
+
+// ─── Task 1: lifecycle event taxonomy (RED) ──────────────────────────────────
+
+test("runOnce emits run_start (info) at top of run with runId and static message", async () => {
+  const info = vi.fn();
+
+  await runOnce({
+    byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
+    checkpointStore: fakeCheckpointStore(),
+    discoverReplays: async () => discoveryReport({ candidates: [] }),
+    log: { info, warn: vi.fn() } as never,
+    now: createClock([startedAt, finishedAt]),
+    runId: "run-start-test",
+    sourceClient: { fetchText: vi.fn() },
+    sourceUrl: new URL("https://example.test/replays"),
+    stageRawReplay: vi.fn(),
+    stagingRepository: { stage: vi.fn() },
+    storage: { storeRawReplay: vi.fn() },
+    storeRawReplay: vi.fn(),
+  });
+
+  const runStartCalls = info.mock.calls.filter(
+    (call) => (call[0] as Record<string, unknown>)["event"] === "run_start",
+  );
+  expect(runStartCalls).toHaveLength(1);
+  const [payload, msg] = runStartCalls[0] as [Record<string, unknown>, string];
+  expect(payload["runId"]).toBe("run-start-test");
+  expect(typeof payload["sourceUrl"]).toBe("string");
+  // Static message
+  expect(msg).toBe("run start");
+});
+
+test("runOnce emits run_complete (info) on a successful full run", async () => {
+  const info = vi.fn();
+
+  await runOnce({
+    byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
+    checkpointStore: fakeCheckpointStore(),
+    discoverReplays: async () => discoveryReport({ candidates: [] }),
+    maxPages: 1,
+    log: { info, warn: vi.fn() } as never,
+    now: createClock([startedAt, finishedAt]),
+    runId: "run-complete-event",
+    sourceClient: { fetchText: vi.fn() },
+    sourceUrl: new URL("https://example.test/replays"),
+    stageRawReplay: vi.fn(),
+    stagingRepository: { stage: vi.fn() },
+    storage: { storeRawReplay: vi.fn() },
+    storeRawReplay: vi.fn(),
+  });
+
+  const completeCalls = info.mock.calls.filter(
+    (call) => (call[0] as Record<string, unknown>)["event"] === "run_complete",
+  );
+  expect(completeCalls).toHaveLength(1);
+  const [payload, msg] = completeCalls[0] as [Record<string, unknown>, string];
+  expect(payload["status"]).toBe("complete");
+  expect(payload["runId"]).toBe("run-complete-event");
+  expect(payload["counts"]).toBeDefined();
+  expect(msg).toBe("run complete");
+});
+
+test("runOnce emits run_partial (warn) when the run stops on a !ok page", async () => {
+  const warn = vi.fn();
+
+  await runOnce({
+    byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
+    checkpointStore: fakeCheckpointStore(),
+    discoverReplays: async () =>
+      discoveryReport({
+        candidates: [],
+        diagnostics: [
+          {
+            code: "source_unavailable",
+            message: "Source request failed",
+            severity: "error",
+          },
+        ],
+        ok: false,
+      }),
+    log: { info: vi.fn(), warn } as never,
+    now: createClock([startedAt, finishedAt]),
+    runId: "run-partial-event",
+    sourceClient: { fetchText: vi.fn() },
+    sourceUrl: new URL("https://example.test/replays"),
+    stageRawReplay: vi.fn(),
+    stagingRepository: { stage: vi.fn() },
+    storage: { storeRawReplay: vi.fn() },
+    storeRawReplay: vi.fn(),
+  });
+
+  const partialCalls = warn.mock.calls.filter(
+    (call) => (call[0] as Record<string, unknown>)["event"] === "run_partial",
+  );
+  expect(partialCalls).toHaveLength(1);
+  const [payload, msg] = partialCalls[0] as [Record<string, unknown>, string];
+  expect(payload["event"]).toBe("run_partial");
+  expect(payload["runId"]).toBe("run-partial-event");
+  expect(payload["counts"]).toBeDefined();
+  expect(msg).toBe("run partial");
+});
+
+test("runOnce emits source_unavailable or page_failed (error) on the !ok break path with identifiers-only fields", async () => {
+  const errorFn = vi.fn();
+
+  await runOnce({
+    byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
+    checkpointStore: fakeCheckpointStore(),
+    discoverReplays: async () =>
+      discoveryReport({
+        candidates: [],
+        diagnostics: [
+          {
+            code: "source_unavailable",
+            message: "Source request failed",
+            severity: "error",
+          },
+        ],
+        ok: false,
+      }),
+    log: { info: vi.fn(), warn: vi.fn(), error: errorFn } as never,
+    now: createClock([startedAt, finishedAt]),
+    runId: "run-failure-event",
+    sourceClient: { fetchText: vi.fn() },
+    sourceUrl: new URL("https://example.test/replays"),
+    stageRawReplay: vi.fn(),
+    stagingRepository: { stage: vi.fn() },
+    storage: { storeRawReplay: vi.fn() },
+    storeRawReplay: vi.fn(),
+  });
+
+  // Either source_unavailable or page_failed depending on classification
+  const failureCalls = errorFn.mock.calls.filter((call) => {
+    const evt = (call[0] as Record<string, unknown>)["event"];
+    return evt === "source_unavailable" || evt === "page_failed";
+  });
+  expect(failureCalls).toHaveLength(1);
+  const [payload] = failureCalls[0] as [Record<string, unknown>, string];
+  expect(typeof (payload as Record<string, unknown>)["event"]).toBe("string");
+  // classification field from deriveSourceFailure
+  expect(payload["classification"]).toBeDefined();
+});
+
+test("runOnce emits exactly one page_complete per completed page in a multi-page run", async () => {
+  const info = vi.fn();
+  const lastContentPage = twoPages;
+
+  await runOnce({
+    byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
+    checkpointStore: fakeCheckpointStore(),
+    discoverReplays: async ({ sourceUrl }: { sourceUrl: URL }) => {
+      if (sourceUrl.searchParams.get("p") === "3") {
+        return discoveryReport({ candidates: [], sourceUrl: sourceUrl.toString() });
+      }
+
+      return discoveryReport({
+        candidates: [replayCandidate(sourceUrl.searchParams.get("p") ?? "1", "replay.ocap")],
+        sourceUrl: sourceUrl.toString(),
+      });
+    },
+    maxPages: 3,
+    log: { info, warn: vi.fn() } as never,
+    now: createClock([
+      startedAt,
+      "2026-05-09T13:40:01.000Z",
+      "2026-05-09T13:40:02.000Z",
+      finishedAt,
+    ]),
+    runId: "run-multi-page-events",
+    sourceClient: { fetchText: vi.fn() },
+    sourceUrl: new URL("https://example.test/replays"),
+    async stageRawReplay() {
+      return { stagingId: "staging", status: "staged" };
+    },
+    stagingRepository: { stage: vi.fn() },
+    storage: { storeRawReplay: vi.fn() },
+    async storeRawReplay() {
+      return rawStored();
+    },
+  });
+
+  const pageCompleteCalls = info.mock.calls.filter(
+    (call) => (call[0] as Record<string, unknown>)["event"] === "page_complete",
+  );
+  expect(pageCompleteCalls).toHaveLength(lastContentPage);
+  // Each call carries counts and rates
+  for (const call of pageCompleteCalls) {
+    const [p] = call as [Record<string, unknown>];
+    expect(p["counts"]).toBeDefined();
+    expect(typeof p["pagesPerMinute"]).toBe("number");
+    expect(typeof p["candidatesPerMinute"]).toBe("number");
+  }
+});
+
+test("runOnce event messages are static — no source URL userinfo or candidate bodies interpolated", async () => {
+  const info = vi.fn();
+  const warn = vi.fn();
+  const errorFn = vi.fn();
+  const secret = "s3cr3t-pass";
+
+  await runOnce({
+    byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
+    checkpointStore: fakeCheckpointStore(),
+    discoverReplays: async () => discoveryReport({ candidates: [] }),
+    log: { info, warn, error: errorFn } as never,
+    now: createClock([startedAt, finishedAt]),
+    runId: "run-no-leak-events",
+    sourceClient: { fetchText: vi.fn() },
+    sourceUrl: new URL(`https://operator:${secret}@example.test/replays`),
+    stageRawReplay: vi.fn(),
+    stagingRepository: { stage: vi.fn() },
+    storage: { storeRawReplay: vi.fn() },
+    storeRawReplay: vi.fn(),
+  });
+
+  const allMessages = [
+    ...info.mock.calls.map((c) => c[1] as string),
+    ...warn.mock.calls.map((c) => c[1] as string),
+    ...errorFn.mock.calls.map((c) => c[1] as string),
+  ];
+  for (const msg of allMessages) {
+    expect(msg).not.toContain(secret);
+    expect(msg).not.toContain("operator:");
+  }
+
+  // The sourceUrl in the run_start payload must be the userinfo-stripped slug
+  const runStartCalls = info.mock.calls.filter(
+    (call) => (call[0] as Record<string, unknown>)["event"] === "run_start",
+  );
+  expect(runStartCalls).toHaveLength(1);
+  const [startPayload] = runStartCalls[0] as [Record<string, unknown>];
+  expect(String(startPayload["sourceUrl"])).not.toContain(secret);
+  expect(String(startPayload["sourceUrl"])).not.toContain("operator:");
 });
