@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Full-Corpus Ingest Resilience
 status: executing
-stopped_at: Completed 11-01-PLAN.md
-last_updated: "2026-06-12T08:43:41.658Z"
-last_activity: 2026-06-12 -- Phase 12 execution started
+stopped_at: Completed Phase 12 (source-contract-guards) — verified passed 4/4, code review resolved
+last_updated: "2026-06-12T09:30:00.000Z"
+last_activity: 2026-06-12 -- Phase 12 complete (all 6 v2.0 phases done; milestone ready for audit)
 progress:
   total_phases: 6
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 24
-  completed_plans: 22
-  percent: 83
+  completed_plans: 24
+  percent: 100
 ---
 
 # Project State
@@ -21,16 +21,24 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-07)
 
 **Core value:** Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
-**Current focus:** Phase 12 — source-contract-guards
+**Current focus:** v2.0 all phases complete — milestone ready for audit/close
 
 ## Current Position
 
-Phase: 12 (source-contract-guards) — EXECUTING
-Plan: 1 of 2
-Status: Executing Phase 12
-Last activity: 2026-06-12 -- Phase 12 execution started
+Phase: 12 (source-contract-guards) — COMPLETE (verified passed 4/4, code review 3 findings resolved)
+Plan: 2 of 2 complete
+Status: All v2.0 phases complete
+Last activity: 2026-06-12 -- Phase 12 complete
 
-Progress: `[x][x][x][x][x][ ]` 5/6 phases complete
+Progress: `[x][x][x][x][x][x]` 6/6 phases complete
+
+## Known Pre-Existing Debt (blocks aggregate `pnpm run verify`)
+
+Surfaced during Phase 12 (Docker available, full verify run). NOT introduced by phase 12 — all blamed to commit `f5a6450c` (2026-06-12 14:03, Phase 11):
+- `prettier --check` fails on `src/run/run-once.ts`, `src/run/run-once.test.ts`, `src/run/no-leak.test.ts`, `pnpm-lock.yaml`.
+- `eslint` fails on `src/run/run-once.ts`, `src/run/run-once.test.ts`, `src/run/summary.test.ts` (~35 errors: import-x/order, duplicate imports).
+- 100% coverage gate misses `cli.ts:200,486-487` and `run-once.ts:360,722`.
+Phase 12's own files are prettier/eslint clean; contract-check.ts is 100% covered; typecheck, unit (434), integration (Docker, 4/4), and build all pass.
 
 ## Accumulated Context
 
