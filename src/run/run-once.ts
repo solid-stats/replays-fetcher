@@ -101,6 +101,9 @@ export async function runOnce(input: RunOnceInput): Promise<RunOnceResult> {
   // strip any userinfo (user:pass@host) so credentials never land in a durable
   // artifact (WR-02 / threat T-09-01).
   const slug = sanitizeSourceUrl(input.sourceUrl);
+  // D-03/D-04: emit run_start (info) at the top of the run. The slug is already
+  // userinfo-stripped (WR-02). The message is static — no data interpolated.
+  input.log?.info?.({ event: "run_start", runId: input.runId, sourceUrl: slug }, "run start");
   const discoveryReport = emptyDiscoveryReport(slug);
   const rawStorage: StoreRawReplayResult[] = [];
   const staging: IngestStagingResult[] = [];
@@ -143,6 +146,13 @@ export async function runOnce(input: RunOnceInput): Promise<RunOnceResult> {
     // `deriveRunStatus` (resumable/partial/failed) and stops the loop.
     if (!pageReport.ok) {
       applyRateLimitThrottle(input, { limit, pageReport, throttle });
+      // D-03/D-04: emit source_unavailable (for permanent/source-level failures)
+      // or page_failed (for page-scoped failures) at error level. The payload is
+      // identifiers-only from deriveSourceFailure — no body or secret is copied.
+      // Discriminator choice: `source_unavailable` for permanent/source-level
+      // failures (classification === "permanent"); `page_failed` for recoverable
+      // transient/rate_limited page failures.
+      emitPageFailureEvent(input, page, pageReport);
       break;
     }
 
@@ -249,7 +259,7 @@ async function completeOkPage(
   // `Date.now()`) so the per-page rate and Wave-3 summary metrics are
   // deterministic (Pitfall 7).
   context.pageTimestampsMs.push(input.now().getTime());
-  emitPageRateLine(input, context.page, context.pageTimestampsMs);
+  emitPageRateLine(input, context.page, context.pageTimestampsMs, pageCounts);
 
   // Checkpoint is written only after the per-candidate fan-out completes — never mid-page.
   context.pages[String(context.page)] = {
@@ -291,19 +301,62 @@ function applyRateLimitThrottle(
 }
 
 /**
- * Emits ONE minimal, identifiers-only per-page rate line (RANGE-05) on each
- * completed page: the page number plus the running `pagesPerMinute` derived from
- * the injected-clock timestamps. No bytes/HTML/secret/URL ever reaches this line
- * — the rich greppable `page_complete` taxonomy is deferred to Phase 11.
+ * D-03/D-05: Emits ONE `page_complete` (info) per completed page carrying the
+ * page number, the already-computed per-page counts, the rolling pagesPerMinute
+ * (reusing `derivePagesPerMinute` as the single rate source — D-05), and the
+ * candidatesPerMinute derived from the same window. The message is static;
+ * no bytes/HTML/secret/URL is ever interpolated.
  */
 function emitPageRateLine(
   input: RunOnceInput,
   page: number,
   pageTimestampsMs: readonly number[],
+  pageCounts: MutablePageCounts,
 ): void {
-  input.log?.info(
-    { page, pagesPerMinute: derivePagesPerMinute(pageTimestampsMs) },
-    "page rate",
+  const pagesPerMinute = derivePagesPerMinute(pageTimestampsMs);
+  // candidatesPerMinute: same elapsed window, divided by discovered candidates
+  // on this page (pageCounts.discovered).
+  const first = pageTimestampsMs.at(0);
+  const last = pageTimestampsMs.at(LAST_TIMESTAMP_INDEX);
+  const candidatesPerMinute =
+    first === undefined || last === undefined
+      ? 0
+      : pageCounts.discovered /
+        Math.max((last - first) / MS_PER_MINUTE, Number.EPSILON);
+
+  input.log?.info?.(
+    {
+      event: "page_complete",
+      page,
+      counts: pageCounts,
+      pagesPerMinute,
+      candidatesPerMinute,
+    },
+    "page complete",
+  );
+}
+
+/**
+ * D-03/D-04: On the `!ok` break path, emit an error event carrying the
+ * identifiers-only fields from `deriveSourceFailure`. The discriminator is
+ * `source_unavailable` for permanent/source-level failures (classification ===
+ * "permanent") and `page_failed` for transient/rate_limited failures.
+ */
+function emitPageFailureEvent(
+  input: RunOnceInput,
+  page: number,
+  pageReport: DiscoveryReport,
+): void {
+  const failure = deriveSourceFailure(pageReport);
+  if (failure === undefined) {
+    return;
+  }
+
+  const eventName =
+    failure.classification === "permanent" ? "source_unavailable" : "page_failed";
+  input.log?.error?.(
+    { event: eventName, page, ...failure },
+    eventName === "source_unavailable" ? "source unavailable" : "page failed",
   );
 }
 
@@ -600,6 +653,21 @@ async function assembleResult(
     ...discoveredRangeOption(context.lastCompletedPage),
     ...resumeInvocationOption(status),
   });
+
+  // D-03/D-04: emit run_complete (info) when the run finished every discovered
+  // page, or run_partial (warn) for any non-complete status. The payload is
+  // identifiers-only; the message is static.
+  if (status === "complete") {
+    input.log?.info?.(
+      { event: "run_complete", runId: input.runId, status, counts: summary.counts },
+      "run complete",
+    );
+  } else {
+    input.log?.warn?.(
+      { event: "run_partial", runId: input.runId, status, counts: summary.counts },
+      "run partial",
+    );
+  }
 
   return {
     exitCode: runExitCode(summary),
