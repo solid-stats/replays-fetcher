@@ -36,7 +36,7 @@
 
 Behavior-preserving toolchain migration. The `verify` gate must stay green at 100% coverage at every phase boundary.
 
-- [ ] **Phase 13: Shared `@solid-stats/ts-toolchain` Bootstrap** — CFG-01, CFG-02, CFG-03, CFG-04
+- [x] **Phase 13: Shared `@solid-stats/ts-toolchain` Bootstrap** — CFG-01, CFG-02, CFG-03, CFG-04 (completed 2026-06-13)
   - Goal: Stand up the shared config git repo `git@github.com:solid-stats/ts-toolchain.git` (tsconfig/oxlint/oxfmt/vitest presets + `lefthook.yml`) with self-validating CI, and wire the fetcher to consume it as a tag/commit-pinned pnpm git-dependency (`github:solid-stats/ts-toolchain#<tag>`), proven end-to-end by `tsconfig.json` extending the shared base.
   - Success criteria:
     1. `@solid-stats/ts-toolchain` repo exists with the five presets + `lefthook.yml`.
@@ -46,7 +46,7 @@ Behavior-preserving toolchain migration. The `verify` gate must stay green at 10
   - Plans: 3 plans (waves 1→2→3)
     - [x] 13-01-PLAN.md — Author + push shared `solid-stats/ts-toolchain` master: 5 presets + lefthook.yml + config-only package.json (exports) + self-validating CI (CFG-01, CFG-02)
     - [x] 13-02-PLAN.md — Confirm green shared-repo CI, then cut + push annotated consumable tag `v0.1.0` on the green SHA (CFG-02 gate)
-    - [ ] 13-03-PLAN.md — Add tag-pinned git-dep to fetcher, regenerate frozen lockfile, switch `tsconfig.json` to extends shared base, prove `pnpm verify` green (CFG-03, CFG-04)
+    - [x] 13-03-PLAN.md — Add tag-pinned git-dep to fetcher, regenerate frozen lockfile, switch `tsconfig.json` to extends shared base, prove `pnpm verify` green (CFG-03, CFG-04)
 
 - [ ] **Phase 14: Repository Cleanup & Convention Compliance** — CLN-01, CLN-02, CLN-03, CLN-04
   - Goal: Bring the code to a clean, `solidstats-fetcher-ts-*`-compliant baseline on the still-ESLint toolchain, so the later Oxlint swap audits already-correct code.
@@ -179,7 +179,7 @@ Behavior-preserving toolchain migration. The `verify` gate must stay green at 10
 | 10. Dynamic Source Range and Rate Limiting | v2.0 | 5/5 | Complete | 2026-06-11 |
 | 11. Progress Events and Compact Evidence | v2.0 | 5/5 | Complete | 2026-06-12 |
 | 12. Source Contract Guards | v2.0 | 2/2 | Complete | 2026-06-12 |
-| 13. Shared @solid-stats/ts-toolchain Bootstrap | v3.0 | 2/3 | In Progress|  |
+| 13. Shared @solid-stats/ts-toolchain Bootstrap | v3.0 | 3/3 | Complete   | 2026-06-13 |
 | 14. Repository Cleanup & Convention Compliance | v3.0 | 0/? | Pending | — |
 | 15. Oxfmt Formatter Migration | v3.0 | 0/? | Pending | — |
 | 16. Oxlint Migration & Import Hygiene | v3.0 | 0/? | Pending | — |

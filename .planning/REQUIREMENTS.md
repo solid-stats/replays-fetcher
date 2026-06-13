@@ -10,8 +10,8 @@
 
 - [x] **CFG-01**: A standalone `@solid-stats/ts-toolchain` git repo exists at `git@github.com:solid-stats/ts-toolchain.git`, holding the shared tsconfig / oxlint / oxfmt / vitest presets and a `lefthook.yml`.
 - [x] **CFG-02**: The config repo self-validates in its own CI (lint/format/typecheck on the preset files) before a consumable tag is cut.
-- [ ] **CFG-03**: `replays-fetcher` consumes `@solid-stats/ts-toolchain` as a pnpm git-dependency (`github:solid-stats/ts-toolchain#<tag>`, or `git+ssh://git@github.com/solid-stats/ts-toolchain.git#<tag>`) pinned by tag/commit so the lockfile is reproducible.
-- [ ] **CFG-04**: The fetcher's config files (tsconfig, `.oxlintrc.json`, `.oxfmtrc.json`, vitest, `lefthook.yml`) reference the shared presets instead of duplicating rule content.
+- [x] **CFG-03**: `replays-fetcher` consumes `@solid-stats/ts-toolchain` as a pnpm git-dependency (`github:solid-stats/ts-toolchain#<tag>`, or `git+ssh://git@github.com/solid-stats/ts-toolchain.git#<tag>`) pinned by tag/commit so the lockfile is reproducible.
+- [x] **CFG-04**: The fetcher's config files (tsconfig, `.oxlintrc.json`, `.oxfmtrc.json`, vitest, `lefthook.yml`) reference the shared presets instead of duplicating rule content.
 
 ### Cleanup & Convention Compliance (CLN)
 
@@ -81,8 +81,8 @@ Filled during roadmap creation.
 |-------------|-------|--------|
 | CFG-01 | Phase 13 | Complete |
 | CFG-02 | Phase 13 | Complete |
-| CFG-03 | Phase 13 | Pending |
-| CFG-04 | Phase 13 | Pending |
+| CFG-03 | Phase 13 | Complete |
+| CFG-04 | Phase 13 | Complete |
 | CLN-01 | Phase 14 | Pending |
 | CLN-02 | Phase 14 | Pending |
 | CLN-03 | Phase 14 | Pending |
