@@ -43,10 +43,10 @@ interface FakeCheckpointStore extends S3CheckpointStore {
   readonly writes: CheckpointWriteInput[];
 }
 
-function fakeCheckpointStore(
+const fakeCheckpointStore = (
   initial?: Checkpoint,
   etag?: string,
-): FakeCheckpointStore {
+): FakeCheckpointStore => {
   const writes: CheckpointWriteInput[] = [];
 
   return {
@@ -68,9 +68,9 @@ function fakeCheckpointStore(
       return Promise.resolve({});
     },
   };
-}
+};
 
-function makeCheckpoint(overrides: Partial<Checkpoint> = {}): Checkpoint {
+const makeCheckpoint = (overrides: Partial<Checkpoint> = {}): Checkpoint => {
   return {
     counts: { discovered: 1, failed: 0, staged: 1, stored: 1 },
     createdAt: startedAt,
@@ -83,11 +83,11 @@ function makeCheckpoint(overrides: Partial<Checkpoint> = {}): Checkpoint {
     updatedAt: finishedAt,
     ...overrides,
   };
-}
+};
 
-function discoveryReport(
+const discoveryReport = (
   overrides: Partial<DiscoveryReport> = {},
-): DiscoveryReport {
+): DiscoveryReport => {
   return {
     candidates: [candidate],
     counts: {
@@ -102,9 +102,9 @@ function discoveryReport(
     sourceUrl: "https://example.test/replays",
     ...overrides,
   };
-}
+};
 
-function rawStored(): StoreRawReplayResult {
+const rawStored = (): StoreRawReplayResult => {
   return {
     bucket: "solid-stats-replays",
     byteSize: Number("1234"),
@@ -115,9 +115,9 @@ function rawStored(): StoreRawReplayResult {
     sourceFilename: candidate.identity.filename,
     status: "stored",
   };
-}
+};
 
-function rawSkipped(): StoreRawReplayResult {
+const rawSkipped = (): StoreRawReplayResult => {
   return {
     bucket: "solid-stats-replays",
     byteSize: Number("1234"),
@@ -129,9 +129,9 @@ function rawSkipped(): StoreRawReplayResult {
     sourceFilename: candidate.identity.filename,
     status: "skipped",
   };
-}
+};
 
-function rawFetchFailed(): StoreRawReplayResult {
+const rawFetchFailed = (): StoreRawReplayResult => {
   return {
     failureCategory: "fetch_failed",
     fetchedAt: finishedAt,
@@ -140,12 +140,12 @@ function rawFetchFailed(): StoreRawReplayResult {
     sourceFilename: candidate.identity.filename,
     status: "failed",
   };
-}
+};
 
-function replayCandidate(
+const replayCandidate = (
   externalId: string,
   filename: string,
-): ReplayCandidate {
+): ReplayCandidate => {
   return {
     identity: {
       filename,
@@ -155,7 +155,7 @@ function replayCandidate(
       url: `https://example.test/replays/${externalId}`,
     },
   };
-}
+};
 
 test("runOnce should execute one discovery, raw storage, and staging cycle", async () => {
   const store = vi.fn(async () => rawStored());
@@ -821,7 +821,7 @@ test("runOnce should continue when a checkpoint write rejects transiently", asyn
 
 const LAST_INDEX = -1;
 
-function persistentCheckpointStore(): FakeCheckpointStore {
+const persistentCheckpointStore = (): FakeCheckpointStore => {
   const writes: CheckpointWriteInput[] = [];
 
   return {
@@ -840,7 +840,7 @@ function persistentCheckpointStore(): FakeCheckpointStore {
       return Promise.resolve({});
     },
   };
-}
+};
 
 test("runOnce full resume cycle skips completed pages across two runs", async () => {
   const checkpointStore = persistentCheckpointStore();
@@ -956,7 +956,7 @@ test("runOnce persists only identifiers in the checkpoint and summary (no leak)"
   expect(JSON.stringify(result.summary)).not.toContain(secret);
 });
 
-function createClock(values: readonly string[]): () => Date {
+const createClock = (values: readonly string[]): () => Date => {
   let index = 0;
   const lastValueIndex = values.length - 1;
 
@@ -970,7 +970,7 @@ function createClock(values: readonly string[]): () => Date {
 
     return new Date(value);
   };
-}
+};
 
 interface InspectableLimiter {
   readonly assignments: number[];
@@ -984,7 +984,7 @@ interface InspectableLimiter {
  * simultaneous in-flight tasks so a test can prove the shared cap serializes or
  * parallelizes dispatch.
  */
-function inspectableLimiter(initial: number): InspectableLimiter {
+const inspectableLimiter = (initial: number): InspectableLimiter => {
   const assignments: number[] = [];
   let concurrency = initial;
   let running = 0;
@@ -1029,14 +1029,14 @@ function inspectableLimiter(initial: number): InspectableLimiter {
   });
 
   return { assignments, limit, maxInFlight: () => maxInFlight };
-}
+};
 
 interface SpyPacer {
   readonly awaited: () => number;
   readonly pacer: Pacer;
 }
 
-function spyPacer(): SpyPacer {
+const spyPacer = (): SpyPacer => {
   let awaited = 0;
 
   return {
@@ -1049,7 +1049,7 @@ function spyPacer(): SpyPacer {
       },
     },
   };
-}
+};
 
 interface ThrottleEvent {
   readonly kind: "clean" | "rate_limited";
@@ -1066,7 +1066,7 @@ interface SpyThrottle {
  * turn on every `onRateLimited`/`onCleanWindow` call, so a test can assert the
  * shared limiter is resized to the controller's shrunk/grown concurrency.
  */
-function spyThrottle(scripted: readonly number[]): SpyThrottle {
+const spyThrottle = (scripted: readonly number[]): SpyThrottle => {
   const events: ThrottleEvent[] = [];
   let cursor = 0;
   let effective = scripted.at(0) ?? 0;
@@ -1097,9 +1097,9 @@ function spyThrottle(scripted: readonly number[]): SpyThrottle {
       },
     },
   };
-}
+};
 
-function rateLimitedReport(sourceUrl: string): DiscoveryReport {
+const rateLimitedReport = (sourceUrl: string): DiscoveryReport => {
   return discoveryReport({
     candidates: [],
     diagnostics: [
@@ -1112,7 +1112,7 @@ function rateLimitedReport(sourceUrl: string): DiscoveryReport {
     ok: false,
     sourceUrl,
   });
-}
+};
 
 test("runOnce runs past the old single-page bound and stops complete on the first empty page", async () => {
   const lastContentPage = 3;

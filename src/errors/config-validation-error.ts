@@ -10,6 +10,14 @@ export interface ConfigValidationDetails {
 }
 
 /**
+ * Flatten the issues array into a plain record for the `AppError` base.
+ * Keeps the payload identifiers-only (threat T-07-01) with no `as` cast.
+ */
+const toDetailsRecord = (issues: string[]): Readonly<Record<string, unknown>> => {
+  return { issues };
+};
+
+/**
  * Raised when `loadConfig` or `loadSourceConfig` receives an environment that
  * fails Zod schema validation (CLN-04a). Typed `AppError` subclass following
  * the `checkpoint-conflict-error.ts` pattern (CORE-01).
@@ -32,12 +40,4 @@ export class ConfigValidationError extends AppError<"config_invalid"> {
     });
     this.issues = issues;
   }
-}
-
-/**
- * Flatten the issues array into a plain record for the `AppError` base.
- * Keeps the payload identifiers-only (threat T-07-01) with no `as` cast.
- */
-function toDetailsRecord(issues: string[]): Readonly<Record<string, unknown>> {
-  return { issues };
 }

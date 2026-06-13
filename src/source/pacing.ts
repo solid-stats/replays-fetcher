@@ -24,18 +24,18 @@ export interface Pacer {
 const noFloorRemaining = 0;
 
 /* v8 ignore next 3 -- exercised through injected stubs in pacing.test.ts */
-function defaultNow(): number {
+const defaultNow = (): number => {
   return Date.now();
-}
+};
 
 /* v8 ignore next 5 -- exercised through injected stubs in pacing.test.ts */
-async function defaultSleep(milliseconds: number): Promise<void> {
+const defaultSleep = async (milliseconds: number): Promise<void> => {
   await new Promise((resolve) => {
     setTimeout(resolve, milliseconds);
   });
-}
+};
 
-export function createPacer(options: PacerOptions): Pacer {
+export const createPacer = (options: PacerOptions): Pacer => {
   const { spacingMs } = options;
   const now = options.now ?? defaultNow;
   const sleep = options.sleep ?? defaultSleep;

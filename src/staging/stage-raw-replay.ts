@@ -14,9 +14,23 @@ interface StageRawReplayInput {
   readonly runId?: string;
 }
 
-export async function stageRawReplay(
+const isRawStorageEvidence = (
+  result: StoreRawReplayResult,
+): result is RawReplayStorageEvidence => {
+  return "checksum" in result && "bucket" in result && "objectKey" in result;
+};
+
+const payloadOptions = (runId: string | undefined): { runId?: string } => {
+  if (runId === undefined) {
+    return {};
+  }
+
+  return { runId };
+};
+
+export const stageRawReplay = async (
   input: StageRawReplayInput,
-): Promise<IngestStagingResult> {
+): Promise<IngestStagingResult> => {
   if (!isRawStorageEvidence(input.rawResult)) {
     return {
       reason: `Raw storage status ${input.rawResult.status} is not stageable`,
@@ -37,18 +51,4 @@ export async function stageRawReplay(
   }
 
   return input.repository.stage(payloadResult.payload);
-}
-
-function payloadOptions(runId: string | undefined): { runId?: string } {
-  if (runId === undefined) {
-    return {};
-  }
-
-  return { runId };
-}
-
-function isRawStorageEvidence(
-  result: StoreRawReplayResult,
-): result is RawReplayStorageEvidence {
-  return "checksum" in result && "bucket" in result && "objectKey" in result;
-}
+};

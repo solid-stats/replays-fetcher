@@ -43,20 +43,10 @@ export interface S3EvidenceStore {
   write(input: EvidenceWriteInput): Promise<void>;
 }
 
-export function createS3EvidenceStore(
-  options: CreateS3EvidenceStoreOptions,
-): S3EvidenceStore {
-  return {
-    write(input): Promise<void> {
-      return putEvidence(options, input);
-    },
-  };
-}
-
-async function putEvidence(
+const putEvidence = async (
   options: CreateS3EvidenceStoreOptions,
   input: EvidenceWriteInput,
-): Promise<void> {
+): Promise<void> => {
   const key = toEvidenceObjectKey(options.prefix, input.runId);
   await options.sender.send(
     new PutObjectCommand({
@@ -66,11 +56,21 @@ async function putEvidence(
       Key: key,
     }),
   );
-}
+};
 
-export function createS3EvidenceStoreFromConfig(
+export const createS3EvidenceStore = (
+  options: CreateS3EvidenceStoreOptions,
+): S3EvidenceStore => {
+  return {
+    write(input): Promise<void> {
+      return putEvidence(options, input);
+    },
+  };
+};
+
+export const createS3EvidenceStoreFromConfig = (
   config: AppConfig["s3"],
-): S3EvidenceStore {
+): S3EvidenceStore => {
   return createS3EvidenceStore({
     bucket: config.bucket,
     prefix: config.evidencePrefix,
@@ -84,4 +84,4 @@ export function createS3EvidenceStoreFromConfig(
       region: config.region,
     }),
   });
-}
+};

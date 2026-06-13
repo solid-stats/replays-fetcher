@@ -29,9 +29,9 @@ interface StoreRawReplayInput {
   readonly storage: S3RawReplayStorage;
 }
 
-export async function storeRawReplay(
+export const storeRawReplay = async (
   input: StoreRawReplayInput,
-): Promise<StoreRawReplayResult> {
+): Promise<StoreRawReplayResult> => {
   const fetchedAt = (input.now ?? (() => new Date()))().toISOString();
 
   try {
@@ -62,4 +62,4 @@ export async function storeRawReplay(
       status: "failed",
     };
   }
-}
+};

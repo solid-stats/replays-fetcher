@@ -96,25 +96,87 @@ export interface S3CheckpointStore {
   write(input: CheckpointWriteInput): Promise<CheckpointWriteResult>;
 }
 
-export function createS3CheckpointStore(
-  options: CreateS3CheckpointStoreOptions,
-): S3CheckpointStore {
-  const random = options.random ?? Math.random;
+const isNotFound = (error: unknown): boolean => {
+  return (
+    error instanceof S3ServiceException &&
+    (error.name === "NotFound" ||
+      error.$metadata.httpStatusCode === HTTP_NOT_FOUND)
+  );
+};
 
-  return {
-    read(slug): Promise<CheckpointReadResult> {
-      return readCheckpoint(options, slug);
-    },
-    write(input): Promise<CheckpointWriteResult> {
-      return writeCheckpoint(options, random, input);
-    },
-  };
+const isPreconditionFailed = (error: unknown): boolean => {
+  return (
+    error instanceof S3ServiceException &&
+    (error.name === "PreconditionFailed" ||
+      error.name === "ConditionalRequestConflict" ||
+      error.$metadata.httpStatusCode === HTTP_PRECONDITION_FAILED ||
+      error.$metadata.httpStatusCode === HTTP_CONDITIONAL_REQUEST_CONFLICT)
+  );
+};
+
+const etagResult = (
+  checkpoint: Checkpoint | undefined,
+  etag: string | undefined,
+): { checkpoint?: Checkpoint; etag?: string } => {
+  const base: { checkpoint?: Checkpoint } = {};
+  if (checkpoint !== undefined) {
+    base.checkpoint = checkpoint;
+  }
+  if (etag === undefined) {
+    return base;
+  }
+
+  return { ...base, etag };
+};
+
+const conditionalHeader = (
+  etag: string | undefined,
+  conditionalWrites: boolean,
+): { IfMatch: string } | { IfNoneMatch: string } | Record<string, never> => {
+  if (!conditionalWrites) {
+    return {};
+  }
+
+  if (etag === undefined) {
+    return { IfNoneMatch: CREATE_IF_ABSENT_CONDITION };
+  }
+
+  return { IfMatch: etag };
+};
+
+const delay = (milliseconds: number): Promise<void> =>
+  new Promise((resolve) => {
+    setTimeout(resolve, milliseconds);
+  });
+
+interface PutCheckpointInput {
+  readonly checkpoint: Checkpoint;
+  readonly etag: string | undefined;
+  readonly slug: string;
 }
 
-async function readCheckpoint(
+const putCheckpoint = async (
+  options: CreateS3CheckpointStoreOptions,
+  input: PutCheckpointInput,
+): Promise<CheckpointWriteResult> => {
+  const key = toCheckpointObjectKey(options.prefix, new URL(input.slug));
+  const output = await options.sender.send(
+    new PutObjectCommand({
+      Body: JSON.stringify(input.checkpoint),
+      Bucket: options.bucket,
+      ContentType: "application/json",
+      Key: key,
+      ...conditionalHeader(input.etag, options.conditionalWrites),
+    }),
+  );
+
+  return etagResult(undefined, output.ETag);
+};
+
+const readCheckpoint = async (
   options: CreateS3CheckpointStoreOptions,
   slug: string,
-): Promise<CheckpointReadResult> {
+): Promise<CheckpointReadResult> => {
   const key = toCheckpointObjectKey(options.prefix, new URL(slug));
 
   try {
@@ -138,13 +200,13 @@ async function readCheckpoint(
     }
     throw error;
   }
-}
+};
 
-async function writeCheckpoint(
+const writeCheckpoint = async (
   options: CreateS3CheckpointStoreOptions,
   random: () => number,
   input: CheckpointWriteInput,
-): Promise<CheckpointWriteResult> {
+): Promise<CheckpointWriteResult> => {
   let { checkpoint: intended, etag } = input;
 
   for (let round = 0; round < MAX_CAS_ROUNDS; round += 1) {
@@ -176,65 +238,26 @@ async function writeCheckpoint(
     page: intended.lastCompletedPage,
     slug: input.slug,
   });
-}
+};
 
-interface PutCheckpointInput {
-  readonly checkpoint: Checkpoint;
-  readonly etag: string | undefined;
-  readonly slug: string;
-}
-
-async function putCheckpoint(
+export const createS3CheckpointStore = (
   options: CreateS3CheckpointStoreOptions,
-  input: PutCheckpointInput,
-): Promise<CheckpointWriteResult> {
-  const key = toCheckpointObjectKey(options.prefix, new URL(input.slug));
-  const output = await options.sender.send(
-    new PutObjectCommand({
-      Body: JSON.stringify(input.checkpoint),
-      Bucket: options.bucket,
-      ContentType: "application/json",
-      Key: key,
-      ...conditionalHeader(input.etag, options.conditionalWrites),
-    }),
-  );
+): S3CheckpointStore => {
+  const random = options.random ?? Math.random;
 
-  return etagResult(undefined, output.ETag);
-}
+  return {
+    read(slug): Promise<CheckpointReadResult> {
+      return readCheckpoint(options, slug);
+    },
+    write(input): Promise<CheckpointWriteResult> {
+      return writeCheckpoint(options, random, input);
+    },
+  };
+};
 
-function conditionalHeader(
-  etag: string | undefined,
-  conditionalWrites: boolean,
-): { IfMatch: string } | { IfNoneMatch: string } | Record<string, never> {
-  if (!conditionalWrites) {
-    return {};
-  }
-
-  if (etag === undefined) {
-    return { IfNoneMatch: CREATE_IF_ABSENT_CONDITION };
-  }
-
-  return { IfMatch: etag };
-}
-
-function etagResult(
-  checkpoint: Checkpoint | undefined,
-  etag: string | undefined,
-): { checkpoint?: Checkpoint; etag?: string } {
-  const base: { checkpoint?: Checkpoint } = {};
-  if (checkpoint !== undefined) {
-    base.checkpoint = checkpoint;
-  }
-  if (etag === undefined) {
-    return base;
-  }
-
-  return { ...base, etag };
-}
-
-export function createS3CheckpointStoreFromConfig(
+export const createS3CheckpointStoreFromConfig = (
   config: AppConfig["s3"],
-): S3CheckpointStore {
+): S3CheckpointStore => {
   return createS3CheckpointStore({
     bucket: config.bucket,
     conditionalWrites: config.conditionalWrites,
@@ -249,28 +272,4 @@ export function createS3CheckpointStoreFromConfig(
       region: config.region,
     }),
   });
-}
-
-function delay(milliseconds: number): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, milliseconds);
-  });
-}
-
-function isNotFound(error: unknown): boolean {
-  return (
-    error instanceof S3ServiceException &&
-    (error.name === "NotFound" ||
-      error.$metadata.httpStatusCode === HTTP_NOT_FOUND)
-  );
-}
-
-function isPreconditionFailed(error: unknown): boolean {
-  return (
-    error instanceof S3ServiceException &&
-    (error.name === "PreconditionFailed" ||
-      error.name === "ConditionalRequestConflict" ||
-      error.$metadata.httpStatusCode === HTTP_PRECONDITION_FAILED ||
-      error.$metadata.httpStatusCode === HTTP_CONDITIONAL_REQUEST_CONFLICT)
-  );
-}
+};

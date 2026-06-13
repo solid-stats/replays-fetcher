@@ -44,6 +44,10 @@ if (!stagingResult.stageable) {
 
 const { payload } = stagingResult;
 
+const noopCleanup = (): Promise<void> => {
+  return Promise.resolve();
+};
+
 let stopPool = noopCleanup;
 let stopContainer = noopCleanup;
 
@@ -97,7 +101,7 @@ test("PostgreSQL staging repository should insert idempotent discovered timestam
   expect(second).toMatchObject({ status: "already_staged" });
 });
 
-async function applyStagingSchema(client: Pool): Promise<void> {
+const applyStagingSchema = async (client: Pool): Promise<void> => {
   await client.query("create extension if not exists pgcrypto");
   await client.query(
     "create type ingest_status as enum ('pending', 'processing', 'promoted', 'conflict', 'failed')",
@@ -120,8 +124,4 @@ async function applyStagingSchema(client: Pool): Promise<void> {
       unique (checksum, object_key)
     )
   `);
-}
-
-function noopCleanup(): Promise<void> {
-  return Promise.resolve();
-}
+};

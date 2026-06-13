@@ -76,7 +76,7 @@ interface CaptureSink {
   readonly stream: Writable;
 }
 
-function createCaptureSink(): CaptureSink {
+const createCaptureSink = (): CaptureSink => {
   const chunks: string[] = [];
   const stream = new Writable({
     write(
@@ -90,9 +90,9 @@ function createCaptureSink(): CaptureSink {
   });
 
   return { chunks, stream };
-}
+};
 
-function createClock(values: readonly string[]): () => Date {
+const createClock = (values: readonly string[]): () => Date => {
   let index = 0;
   const lastValueIndex = values.length - 1;
 
@@ -106,14 +106,14 @@ function createClock(values: readonly string[]): () => Date {
 
     return new Date(value);
   };
-}
+};
 
-function fakeCheckpointStore(): {
+const fakeCheckpointStore = (): {
   readonly read: () => Promise<Record<string, never>>;
   readonly write: (
     input: CheckpointWriteInput,
   ) => Promise<Record<string, never>>;
-} {
+} => {
   return {
     read(): Promise<Record<string, never>> {
       return Promise.resolve({});
@@ -122,9 +122,9 @@ function fakeCheckpointStore(): {
       return Promise.resolve({});
     },
   };
-}
+};
 
-function baseDiscoveryReport(): DiscoveryReport {
+const baseDiscoveryReport = (): DiscoveryReport => {
   return {
     candidates: [
       {
@@ -142,9 +142,9 @@ function baseDiscoveryReport(): DiscoveryReport {
     ok: true,
     sourceUrl: sanitizedHostPath,
   };
-}
+};
 
-function emptyDiscoveryReport(): DiscoveryReport {
+const emptyDiscoveryReport = (): DiscoveryReport => {
   return {
     candidates: [],
     counts: { candidates: 0, diagnostics: 0, discovered: 0 },
@@ -154,9 +154,9 @@ function emptyDiscoveryReport(): DiscoveryReport {
     ok: true,
     sourceUrl: sanitizedHostPath,
   };
-}
+};
 
-function rawStorageEvidence(): RawReplayStorageEvidence {
+const rawStorageEvidence = (): RawReplayStorageEvidence => {
   return {
     bucket: "solid-stats-replays",
     byteSize: 512,
@@ -167,15 +167,15 @@ function rawStorageEvidence(): RawReplayStorageEvidence {
     sourceFilename: "replay-leak-test.ocap",
     status: "stored",
   };
-}
+};
 
-function rawStoredResult(): StoreRawReplayResult {
+const rawStoredResult = (): StoreRawReplayResult => {
   return rawStorageEvidence();
-}
+};
 
-function stagedResult(): IngestStagingResult {
+const stagedResult = (): IngestStagingResult => {
   return { stagingId: "staging-leak-test", status: "staged" };
-}
+};
 
 // ---------------------------------------------------------------------------
 // Test

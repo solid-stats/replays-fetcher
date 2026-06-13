@@ -6,10 +6,10 @@ import {
 
 import type { Command } from "commander";
 
-export function registerContractCheckCommand(
+export const registerContractCheckCommand = (
   program: Command,
   dependencies: Required<BuildCliDependencies>,
-): void {
+): void => {
   program
     .command("contract-check")
     .description(

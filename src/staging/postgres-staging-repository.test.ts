@@ -253,10 +253,14 @@ class UniqueViolationError extends Error {
   }
 }
 
-function createUniqueViolationClient(
+const normalizeSql = (sql: string): string => {
+  return sql.replaceAll(/\s+/gu, " ").trim().toLowerCase();
+};
+
+const createUniqueViolationClient = (
   sourceRows: readonly StagingRow[],
   objectRows: readonly StagingRow[] = [],
-): StagingQueryClient {
+): StagingQueryClient => {
   let selectCount = 0;
 
   const client = {
@@ -276,8 +280,4 @@ function createUniqueViolationClient(
   } as StagingQueryClient;
 
   return client;
-}
-
-function normalizeSql(sql: string): string {
-  return sql.replaceAll(/\s+/gu, " ").trim().toLowerCase();
-}
+};

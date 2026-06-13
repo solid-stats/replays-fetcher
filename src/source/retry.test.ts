@@ -24,9 +24,9 @@ const attempts = Number("3");
 const retryAfterMs = Number("9000");
 const baseRetryUrl = "https://example.test/replays";
 
-function neverSignal(): AbortSignal {
+const neverSignal = (): AbortSignal => {
   return new AbortController().signal;
-}
+};
 
 const noopSleep = async (): Promise<undefined> => undefined;
 

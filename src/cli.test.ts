@@ -152,15 +152,15 @@ const ignoredProjectDirectories = new Set([
   "node_modules",
 ]);
 
-function parseCheckOutput(writes: readonly string[]): CheckOutput {
+const parseCheckOutput = (writes: readonly string[]): CheckOutput => {
   return JSON.parse(writes.join("")) as CheckOutput;
-}
+};
 
-function parseCliOutput(writes: readonly string[]): CliOutput {
+const parseCliOutput = (writes: readonly string[]): CliOutput => {
   return JSON.parse(writes.join("")) as CliOutput;
-}
+};
 
-function createCandidate(externalId: string): ReplayCandidate {
+const createCandidate = (externalId: string): ReplayCandidate => {
   return {
     identity: {
       filename: `replay-${externalId}.ocap`,
@@ -170,11 +170,11 @@ function createCandidate(externalId: string): ReplayCandidate {
       url: `https://example.test/replays/${externalId}`,
     },
   };
-}
+};
 
-function createDiscoveryReport(
+const createDiscoveryReport = (
   candidates: readonly ReplayCandidate[],
-): DiscoveryReport {
+): DiscoveryReport => {
   return {
     candidates,
     counts: {
@@ -188,12 +188,12 @@ function createDiscoveryReport(
     ok: true,
     sourceUrl: validEnvironment.REPLAY_SOURCE_URL,
   };
-}
+};
 
-function createStorageResult(
+const createStorageResult = (
   candidate: ReplayCandidate,
   status: StoreRawReplayResult["status"],
-): StoreRawReplayResult {
+): StoreRawReplayResult => {
   if (status === "failed") {
     return {
       failureCategory: "fetch_failed",
@@ -217,11 +217,11 @@ function createStorageResult(
     sourceFilename: candidate.identity.filename,
     status,
   };
-}
+};
 
-function createStagingResult(
+const createStagingResult = (
   status: IngestStagingResult["status"],
-): IngestStagingResult {
+): IngestStagingResult => {
   if (status === "staged") {
     return {
       stagingId: "00000000-0000-4000-8000-000000000001",
@@ -247,9 +247,9 @@ function createStagingResult(
     reason: `${status} staging result`,
     status,
   };
-}
+};
 
-function createRunSummary(overrides: Partial<RunSummary> = {}): RunSummary {
+const createRunSummary = (overrides: Partial<RunSummary> = {}): RunSummary => {
   return {
     candidates: [],
     counts: {
@@ -275,22 +275,22 @@ function createRunSummary(overrides: Partial<RunSummary> = {}): RunSummary {
     startedAt: "2026-05-09T12:00:00.000Z",
     ...overrides,
   };
-}
+};
 
-function stubValidEnvironment(): void {
+const stubValidEnvironment = (): void => {
   for (const [key, value] of Object.entries(validEnvironment)) {
     vi.stubEnv(key, value);
   }
-}
+};
 
-async function readProjectFile(filePath: string): Promise<string> {
+const readProjectFile = async (filePath: string): Promise<string> => {
   return readFile(new URL(`../${filePath}`, import.meta.url), "utf8");
-}
+};
 
-async function listProjectFiles(
+const listProjectFiles = async (
   directory: URL,
   prefix = "",
-): Promise<readonly string[]> {
+): Promise<readonly string[]> => {
   const entries = await readdir(directory, { withFileTypes: true });
   const nestedFiles = await Promise.all(
     entries.map(async (entry) => {
@@ -312,7 +312,7 @@ async function listProjectFiles(
   );
 
   return nestedFiles.flat();
-}
+};
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -644,9 +644,9 @@ test("buildCli should report rejected source fetches as structured dry-run failu
   expect(process.exitCode).toBe(2);
 });
 
-function createCapturingLogger(lines: string[]): {
+const createCapturingLogger = (lines: string[]): {
   readonly createLogger: typeof createLogger;
-} {
+} => {
   const destination = new Writable({
     write(chunk: Buffer, _encoding, callback) {
       lines.push(chunk.toString("utf8"));
@@ -658,7 +658,7 @@ function createCapturingLogger(lines: string[]): {
     createLogger: (options) =>
       createLogger({ ...options, destination, level: "warn" }),
   };
-}
+};
 
 test("buildCli dry-run should emit one stderr warn per retry round without disturbing stdout", async () => {
   vi.stubEnv("REPLAY_SOURCE_URL", validEnvironment.REPLAY_SOURCE_URL);
@@ -1479,16 +1479,16 @@ interface CompactRunOutput {
   readonly resumeInvocation?: string;
 }
 
-function parseCompactOutput(writes: readonly string[]): CompactRunOutput {
+const parseCompactOutput = (writes: readonly string[]): CompactRunOutput => {
   return JSON.parse(writes.join("")) as CompactRunOutput;
-}
+};
 
-function createMinimalRunOnceResult(summary: RunSummary): {
+const createMinimalRunOnceResult = (summary: RunSummary): {
   readonly exitCode: 0;
   readonly summary: RunSummary;
-} {
+} => {
   return { exitCode: 0 as const, summary };
-}
+};
 
 test("buildCli run-once stdout is exactly one compact JSON document (no heavy arrays)", async () => {
   stubValidEnvironment();
@@ -1534,10 +1534,10 @@ test("buildCli run-once stdout is exactly one compact JSON document (no heavy ar
 
 // Helper: a real runOnce dependency set that completes one empty page (no candidates → stop-on-empty)
 // and collects evidence writes. The real runOnce is used so writeEvidence() fires for real.
-function buildRealRunOnceDeps(
+const buildRealRunOnceDeps = (
   evidenceWrites: { runId: string; summary: RunSummary }[],
   fileWrites: { body: string; path: string }[],
-): Parameters<typeof buildCli>[0] {
+): Parameters<typeof buildCli>[0] => {
   return {
     createPostgresStagingRepositoryFromDatabaseUrl: () => ({ stage: vi.fn() }),
     createReplayByteClient: () => ({ fetchBytes: vi.fn() }),
@@ -1572,7 +1572,7 @@ function buildRealRunOnceDeps(
       };
     },
   };
-}
+};
 
 test("buildCli run-once --emit-evidence: stdout still compact AND evidenceStore.write receives full summary", async () => {
   stubValidEnvironment();
@@ -1637,9 +1637,9 @@ test("buildCli run-once --evidence-file: writeEvidenceFile seam receives (path, 
   expect(Object.hasOwn(output, "candidates")).toBe(false);
 });
 
-async function runEvidenceMatrix(
+const runEvidenceMatrix = async (
   flags: readonly string[],
-): Promise<{ evidenceWrites: number; fileWrites: number }> {
+): Promise<{ evidenceWrites: number; fileWrites: number }> => {
   stubValidEnvironment();
   const evidenceWrites: { runId: string; summary: RunSummary }[] = [];
   const fileWriteList: { body: string; path: string }[] = [];
@@ -1655,7 +1655,7 @@ async function runEvidenceMatrix(
     evidenceWrites: evidenceWrites.length,
     fileWrites: fileWriteList.length,
   };
-}
+};
 
 test("buildCli run-once evidence-flags both/either/neither matrix", async () => {
   const neither = await runEvidenceMatrix([]);

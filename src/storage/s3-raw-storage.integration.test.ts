@@ -31,6 +31,10 @@ const candidate: ReplayCandidate = {
   },
 };
 
+const noopCleanup = (): Promise<void> => {
+  return Promise.resolve();
+};
+
 let stopContainer = noopCleanup;
 
 afterEach(async () => {
@@ -109,7 +113,3 @@ test("S3 raw storage should store, skip, and pass read-only connectivity against
     objectKey,
   ]);
 });
-
-function noopCleanup(): Promise<void> {
-  return Promise.resolve();
-}

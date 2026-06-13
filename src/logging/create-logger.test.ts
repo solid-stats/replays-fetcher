@@ -13,7 +13,7 @@ interface CaptureSink {
   readonly chunks: string[];
 }
 
-function createCaptureSink(): CaptureSink {
+const createCaptureSink = (): CaptureSink => {
   const chunks: string[] = [];
   const stream = new Writable({
     write(chunk: Buffer | string, _encoding, callback): void {
@@ -23,15 +23,15 @@ function createCaptureSink(): CaptureSink {
   });
 
   return { chunks, stream };
-}
+};
 
-function parseLines(chunks: readonly string[]): Record<string, unknown>[] {
+const parseLines = (chunks: readonly string[]): Record<string, unknown>[] => {
   return chunks
     .join("")
     .split("\n")
     .filter((line) => line.length > 0)
     .map((line) => JSON.parse(line) as Record<string, unknown>);
-}
+};
 
 test("createLogger child emits runId on every record", () => {
   const sink = createCaptureSink();

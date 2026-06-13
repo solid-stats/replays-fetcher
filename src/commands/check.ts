@@ -6,10 +6,10 @@ import { writeJson, type BuildCliDependencies } from "./shared.js";
 
 import type { Command } from "commander";
 
-export function registerCheckCommand(
+export const registerCheckCommand = (
   program: Command,
   dependencies: Required<BuildCliDependencies>,
-): void {
+): void => {
   program
     .command("check")
     .description("Validate required configuration before running ingest work")

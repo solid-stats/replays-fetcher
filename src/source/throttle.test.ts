@@ -13,7 +13,7 @@ const cleanWindow = Number("3");
 
 const fixedNow = Number("1000000000000");
 
-function scriptedClock(): () => number {
+const scriptedClock = (): () => number => {
   let tick = fixedNow;
 
   return () => {
@@ -21,36 +21,36 @@ function scriptedClock(): () => number {
 
     return tick;
   };
-}
+};
 
-function makeController(): ReturnType<typeof createThrottleController> {
+const makeController = (): ReturnType<typeof createThrottleController> => {
   return createThrottleController({
     baseConcurrency,
     min: minConcurrency,
     max: maxConcurrency,
     baseSpacingMs,
   });
-}
+};
 
-function signalRateLimited(
+const signalRateLimited = (
   controller: ReturnType<typeof createThrottleController>,
   times: number,
   now: () => number,
-): void {
+): void => {
   for (let index = 0; index < times; index += 1) {
     controller.onRateLimited(now());
   }
-}
+};
 
-function signalClean(
+const signalClean = (
   controller: ReturnType<typeof createThrottleController>,
   times: number,
   now: () => number,
-): void {
+): void => {
   for (let index = 0; index < times; index += 1) {
     controller.onCleanWindow(now());
   }
-}
+};
 
 test("starts at baseConcurrency with the base pacing floor", () => {
   const controller = makeController();

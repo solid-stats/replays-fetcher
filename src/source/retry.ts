@@ -49,15 +49,15 @@ export interface RetrySourceReadOptions<T> {
 }
 
 /* v8 ignore next 5 -- tested through injected sleep to avoid real timer delay. */
-async function defaultSleep(milliseconds: number): Promise<void> {
+const defaultSleep = async (milliseconds: number): Promise<void> => {
   await new Promise((resolve) => {
     setTimeout(resolve, milliseconds);
   });
-}
+};
 
-function defaultNow(): number {
+const defaultNow = (): number => {
   return Date.now();
-}
+};
 
 /**
  * Races the backoff `sleep` against the caller `AbortSignal` (BL-08-01). The
@@ -67,19 +67,19 @@ function defaultNow(): number {
  * not stop the chain promptly. This rejects as soon as `signal` aborts and
  * always detaches the listener in `finally` so a settled sleep leaves no leak.
  */
-function toAbortError(reason: unknown): Error {
+const toAbortError = (reason: unknown): Error => {
   if (reason instanceof Error) {
     return reason;
   }
 
   return new Error("Aborted", { cause: reason });
-}
+};
 
-async function abortableSleep(
+const abortableSleep = async (
   delayMs: number,
   signal: AbortSignal,
   sleep: (milliseconds: number) => Promise<void>,
-): Promise<void> {
+): Promise<void> => {
   signal.throwIfAborted();
 
   const controller = new AbortController();
@@ -98,7 +98,7 @@ async function abortableSleep(
   } finally {
     controller.abort();
   }
-}
+};
 
 interface RetryRound<T> {
   readonly classification: FailureClassification;
@@ -109,10 +109,10 @@ interface RetryRound<T> {
   readonly round: number;
 }
 
-function buildRetryEvent<T>(
+const buildRetryEvent = <T,>(
   context: RetryRound<T>,
   delayMs: number,
-): RetryAttemptEvent {
+): RetryAttemptEvent => {
   const { classification, options, round } = context;
   let event: RetryAttemptEvent = {
     attempt: round + 1,
@@ -133,9 +133,9 @@ function buildRetryEvent<T>(
   }
 
   return event;
-}
+};
 
-function resolveDelay<T>(context: RetryRound<T>): number {
+const resolveDelay = <T,>(context: RetryRound<T>): number => {
   const { classification, error, now, options, random, round } = context;
   const backoff = fullJitterDelay(round, random);
   if (classification.kind !== "rate_limited") {
@@ -147,18 +147,18 @@ function resolveDelay<T>(context: RetryRound<T>): number {
   // (CR-08-01). `now` is threaded to the moment of delay resolution (WR-08-03)
   // so HTTP-date math reflects call time, not a factory-fixed closure.
   return Math.min(Math.max(backoff, retryAfter), retryAfterCapMs);
-}
+};
 
-function isRetryable(classification: FailureClassification): boolean {
+const isRetryable = (classification: FailureClassification): boolean => {
   return (
     classification.kind === "transient" ||
     classification.kind === "rate_limited"
   );
-}
+};
 
-export async function withRetry<T>(
+export const withRetry = async <T,>(
   options: RetrySourceReadOptions<T>,
-): Promise<T> {
+): Promise<T> => {
   const sleep = options.sleep ?? defaultSleep;
   const random = options.random ?? Math.random;
   const now = options.now ?? defaultNow;
@@ -190,4 +190,4 @@ export async function withRetry<T>(
       await abortableSleep(delayMs, options.signal, sleep);
     }
   }
-}
+};

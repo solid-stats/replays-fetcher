@@ -19,13 +19,24 @@ const s3SafeKeyPattern = /^[a-z0-9._/-]+$/u;
 const rollingObjectName = "latest.json";
 
 /**
+ * Derive a deterministic, S3-safe slug from a source URL's host + pathname.
+ * Exposed so the read path (Plan 05) and the store can share one derivation.
+ */
+export const toSourceSlug = (sourceUrl: URL): string => {
+  return `${sourceUrl.host}${sourceUrl.pathname}`
+    .toLowerCase()
+    .replaceAll(unsafeSlugRunPattern, "-")
+    .replaceAll(leadingTrailingDashPattern, "");
+};
+
+/**
  * Build the rolling checkpoint object key for a source URL. Lowercases
  * `host + pathname`, replaces every run of non-`[a-z0-9._-]` characters with a
  * single `-`, trims leading/trailing dashes, and returns
  * `<prefix>/<slug>/latest.json`. Throws on an empty prefix, an empty resulting
  * slug, or a final key that is not S3-safe.
  */
-export function toCheckpointObjectKey(prefix: string, sourceUrl: URL): string {
+export const toCheckpointObjectKey = (prefix: string, sourceUrl: URL): string => {
   if (prefix.length === 0) {
     throw new Error("Checkpoint object-key prefix must not be empty");
   }
@@ -43,15 +54,4 @@ export function toCheckpointObjectKey(prefix: string, sourceUrl: URL): string {
   }
 
   return key;
-}
-
-/**
- * Derive a deterministic, S3-safe slug from a source URL's host + pathname.
- * Exposed so the read path (Plan 05) and the store can share one derivation.
- */
-export function toSourceSlug(sourceUrl: URL): string {
-  return `${sourceUrl.host}${sourceUrl.pathname}`
-    .toLowerCase()
-    .replaceAll(unsafeSlugRunPattern, "-")
-    .replaceAll(leadingTrailingDashPattern, "");
-}
+};

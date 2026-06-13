@@ -84,21 +84,6 @@ interface CreateReplayByteClientOptions {
   readonly execFile?: ExecFile;
 }
 
-export function createReplayByteClient(
-  config: SourceConfig,
-  options: CreateReplayByteClientOptions = {},
-): ReplayByteClient {
-  if (config.sourceTransport === "direct") {
-    return createDirectReplayByteClient(config);
-  }
-
-  return createSshReplayByteClient(
-    config,
-    /* v8 ignore next -- production SSH transport uses the Node child_process adapter; tests inject a fake execFile. */
-    options.execFile ?? defaultExecFile,
-  );
-}
-
 const bytesPhase: SourceReadPhase = "bytes";
 const noRetryAttempts = 0;
 const initialTry = 1;
@@ -107,9 +92,9 @@ const initialTry = 1;
  * Total byte-read tries the wrapper is configured to make: the initial read
  * plus the bounded retry rounds. Reported in `details.attempts` (DIAG-01).
  */
-function totalTries(options: ByteFetchOptions | undefined): number {
+const totalTries = (options: ByteFetchOptions | undefined): number => {
   return (options?.attempts ?? noRetryAttempts) + initialTry;
-}
+};
 
 /**
  * Maps the shared classifier's tri-state kind onto the narrow
@@ -118,13 +103,13 @@ function totalTries(options: ByteFetchOptions | undefined): number {
  * `fetch_failed` to preserve the existing failure category that
  * `store-raw-replay.ts` depends on.
  */
-function toByteCode(kind: FailureKind): ReplayByteFetchError["code"] {
+const toByteCode = (kind: FailureKind): ReplayByteFetchError["code"] => {
   if (kind === "rate_limited") {
     return "rate_limited";
   }
 
   return "fetch_failed";
-}
+};
 
 interface RetryWiring<T> {
   readonly classify: (error: unknown) => FailureClassification;
@@ -142,10 +127,10 @@ interface RetryWiring<T> {
  * options are supplied, `attempts` defaults to 0 so a single try is made,
  * preserving the legacy single-shot behavior for existing callers.
  */
-async function runWithRetry<T>(
+const runWithRetry = async <T,>(
   wiring: RetryWiring<T>,
   options?: ByteFetchOptions,
-): Promise<T> {
+): Promise<T> => {
   const attempts = options?.attempts ?? noRetryAttempts;
   const callerSignal = options?.signal ?? new AbortController().signal;
 
@@ -183,7 +168,7 @@ async function runWithRetry<T>(
   }
 
   return withRetry(retryOptions);
-}
+};
 
 interface BuildErrorInput {
   readonly attempts: number;
@@ -203,7 +188,7 @@ interface BuildErrorInput {
  * failing response body, raw replay bytes, headers, and secrets are NEVER
  * copied here (threat T-08-01 / DIAG-04).
  */
-function buildByteFetchError(input: BuildErrorInput): ReplayByteFetchError {
+const buildByteFetchError = (input: BuildErrorInput): ReplayByteFetchError => {
   const { attempts, classification, fallbackMessage, url } = input;
   let details: Record<string, unknown> = {
     attempts,
@@ -241,7 +226,7 @@ function buildByteFetchError(input: BuildErrorInput): ReplayByteFetchError {
     fallbackMessage,
     { cause: input.originalError, details },
   );
-}
+};
 
 const httpHeaderRetryAfter = "retry-after";
 
@@ -255,9 +240,9 @@ interface DirectHttpErrorInput {
  * the status (and `Retry-After` header string when present) so `classify` and
  * the retry wrapper can act on it. No body or bytes are read here.
  */
-function buildDirectHttpError(
+const buildDirectHttpError = (
   input: DirectHttpErrorInput,
-): ReplayByteFetchError {
+): ReplayByteFetchError => {
   const { response, url } = input;
   const classification = classifyFailure({ httpStatus: response.status });
   const retryAfter = response.headers.get(httpHeaderRetryAfter);
@@ -276,17 +261,17 @@ function buildDirectHttpError(
     `Replay byte request failed with status ${String(response.status)}`,
     { details },
   );
-}
+};
 
 /**
  * Extracts `Retry-After` from a `rate_limited` direct byte read by reading the
  * header string already stored on the thrown `ReplayByteFetchError`. Only the
  * header string is read here, never the body.
  */
-function directRetryAfter(
+const directRetryAfter = (
   error: unknown,
   now: () => number,
-): number | undefined {
+): number | undefined => {
   /* v8 ignore next 3 -- only the rate_limited path (a thrown ReplayByteFetchError) reaches the Retry-After extractor; defensive guard for other error shapes. */
   if (!(error instanceof ReplayByteFetchError)) {
     return undefined;
@@ -298,9 +283,11 @@ function directRetryAfter(
   }
 
   return parseRetryAfter(retryAfter, now);
-}
+};
 
-function reclassifyDirect(error: ReplayByteFetchError): FailureClassification {
+const reclassifyDirect = (
+  error: ReplayByteFetchError,
+): FailureClassification => {
   const httpStatus = error.details?.["httpStatus"];
   let input: ClassifyInput = { cfChallenge: false };
   /* v8 ignore next 3 -- a direct ReplayByteFetchError always originates from buildDirectHttpError with an httpStatus; the no-status branch is a defensive guard. */
@@ -309,19 +296,19 @@ function reclassifyDirect(error: ReplayByteFetchError): FailureClassification {
   }
 
   return classifyFailure(input);
-}
+};
 
-function classifyDirect(error: unknown): FailureClassification {
+const classifyDirect = (error: unknown): FailureClassification => {
   if (error instanceof ReplayByteFetchError) {
     return reclassifyDirect(error);
   }
 
   return classifyFailure({ error });
-}
+};
 
-function classifySsh(error: unknown): FailureClassification {
+const classifySsh = (error: unknown): FailureClassification => {
   return classifyFailure({ error });
-}
+};
 
 interface DirectByteErrorInput {
   readonly error: unknown;
@@ -329,17 +316,21 @@ interface DirectByteErrorInput {
   readonly url: URL;
 }
 
-function buildPageInput(options: ByteFetchOptions | undefined): {
+const buildPageInput = (
+  options: ByteFetchOptions | undefined,
+): {
   readonly page?: number;
-} {
+} => {
   if (options?.page === undefined) {
     return {};
   }
 
   return { page: options.page };
-}
+};
 
-function toDirectByteError(input: DirectByteErrorInput): ReplayByteFetchError {
+const toDirectByteError = (
+  input: DirectByteErrorInput,
+): ReplayByteFetchError => {
   const { error, options, url } = input;
   const attempts = totalTries(options);
   const pageInput = buildPageInput(options);
@@ -362,9 +353,11 @@ function toDirectByteError(input: DirectByteErrorInput): ReplayByteFetchError {
     url,
     ...pageInput,
   });
-}
+};
 
-function createDirectReplayByteClient(config: SourceConfig): ReplayByteClient {
+const createDirectReplayByteClient = (
+  config: SourceConfig,
+): ReplayByteClient => {
   return {
     async fetchBytes(url, options): Promise<Uint8Array> {
       const read = async (callerSignal: AbortSignal): Promise<Uint8Array> => {
@@ -407,7 +400,7 @@ function createDirectReplayByteClient(config: SourceConfig): ReplayByteClient {
       });
     },
   };
-}
+};
 
 interface SshByteErrorInput {
   readonly error: unknown;
@@ -415,7 +408,7 @@ interface SshByteErrorInput {
   readonly url: URL;
 }
 
-function toSshByteError(input: SshByteErrorInput): ReplayByteFetchError {
+const toSshByteError = (input: SshByteErrorInput): ReplayByteFetchError => {
   const { error, options, url } = input;
 
   return buildByteFetchError({
@@ -426,12 +419,23 @@ function toSshByteError(input: SshByteErrorInput): ReplayByteFetchError {
     url,
     ...buildPageInput(options),
   });
-}
+};
 
-function createSshReplayByteClient(
+const getSshHost = (config: SourceConfig): string => {
+  if (config.sourceSshHost === undefined) {
+    throw new ReplayByteFetchError(
+      "fetch_failed",
+      "SSH source host is not configured",
+    );
+  }
+
+  return config.sourceSshHost;
+};
+
+const createSshReplayByteClient = (
   config: SourceConfig,
   execFile: ExecFile,
-): ReplayByteClient {
+): ReplayByteClient => {
   return {
     async fetchBytes(url, options): Promise<Uint8Array> {
       const host = getSshHost(config);
@@ -473,15 +477,19 @@ function createSshReplayByteClient(
       );
     },
   };
-}
+};
 
-function getSshHost(config: SourceConfig): string {
-  if (config.sourceSshHost === undefined) {
-    throw new ReplayByteFetchError(
-      "fetch_failed",
-      "SSH source host is not configured",
-    );
+export const createReplayByteClient = (
+  config: SourceConfig,
+  options: CreateReplayByteClientOptions = {},
+): ReplayByteClient => {
+  if (config.sourceTransport === "direct") {
+    return createDirectReplayByteClient(config);
   }
 
-  return config.sourceSshHost;
-}
+  return createSshReplayByteClient(
+    config,
+    /* v8 ignore next -- production SSH transport uses the Node child_process adapter; tests inject a fake execFile. */
+    options.execFile ?? defaultExecFile,
+  );
+};

@@ -18,6 +18,10 @@ const expectedKey = "checkpoints/sg.zone-replays/latest.json";
 const slug = checkpointSourceUrl;
 const CONCURRENT_PAGE = 7;
 
+const noopCleanup = (): Promise<void> => {
+  return Promise.resolve();
+};
+
 let stopContainer = noopCleanup;
 
 afterEach(async () => {
@@ -105,7 +109,3 @@ test("S3 checkpoint store creates, conditionally updates, and merges on a real 4
     expectedKey,
   ]);
 });
-
-function noopCleanup(): Promise<void> {
-  return Promise.resolve();
-}

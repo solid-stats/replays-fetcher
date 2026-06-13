@@ -52,7 +52,7 @@ type Store = ReturnType<typeof createS3EvidenceStore>;
  * userinfo-stripped sourceUrl only, no replay bytes, secrets, or HTML
  * (threat T-11-02).
  */
-export function makeRunSummary(runId = evidenceRunId): RunSummary {
+export const makeRunSummary = (runId = evidenceRunId): RunSummary => {
   return {
     candidates: [],
     counts,
@@ -68,34 +68,34 @@ export function makeRunSummary(runId = evidenceRunId): RunSummary {
     startedAt: timestamp,
     status: "complete",
   };
-}
+};
 
-export function putInput(command: SentCommand): PutInput {
+export const putInput = (command: SentCommand): PutInput => {
   return command.input as PutInput;
-}
+};
 
 type Send = (command: SentCommand) => Promise<SenderResponse>;
 
-function baseStore(send: Send): Store {
+const baseStore = (send: Send): Store => {
   return createS3EvidenceStore({
     bucket: evidenceBucket,
     prefix: evidencePrefix,
     sender: { send },
   });
-}
+};
 
 /** Store that records every command into `commands` and resolves `response`. */
-export function capturingStore(
+export const capturingStore = (
   commands: SentCommand[],
   response: SenderResponse,
-): Store {
+): Store => {
   return baseStore((command): Promise<SenderResponse> => {
     commands.push(command);
     return Promise.resolve(response);
   });
-}
+};
 
 /** Store whose sender always rejects with `error`. */
-export function rejectingStore(error: Error): Store {
+export const rejectingStore = (error: Error): Store => {
   return baseStore((): Promise<SenderResponse> => Promise.reject(error));
-}
+};

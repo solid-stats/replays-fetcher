@@ -112,13 +112,13 @@ export interface StoreRawResources {
   readonly storage: S3RawReplayStorage;
 }
 
-export function writeJson(value: unknown): void {
+export const writeJson = (value: unknown): void => {
   process.stdout.write(`${JSON.stringify(value, undefined, 2)}\n`);
-}
+};
 
-export function createRunId(now: Date): string {
+export const createRunId = (now: Date): string => {
   return `run-${now.toISOString()}-${randomUUID()}`;
-}
+};
 
 /**
  * Builds the `onRetry` warn emitter from a `runId` child logger. Each retry
@@ -129,17 +129,17 @@ export function createRunId(now: Date): string {
  * is interpolated into it (T-08-03). The spread keeps all RetryAttemptEvent
  * fields as structured values alongside the discriminator.
  */
-export function buildRetryWarnEmitter(
+export const buildRetryWarnEmitter = (
   log: Logger,
-): (event: RetryAttemptEvent) => void {
+): (event: RetryAttemptEvent) => void => {
   return (event: RetryAttemptEvent): void => {
     log.warn({ event: "retry", ...event }, "retry");
   };
-}
+};
 
-export function loadDryRunSourceConfig(
+export const loadDryRunSourceConfig = (
   dependencies: Pick<Required<BuildCliDependencies>, "loadSourceConfig">,
-): SourceConfigResult {
+): SourceConfigResult => {
   try {
     return {
       config: dependencies.loadSourceConfig(),
@@ -156,11 +156,11 @@ export function loadDryRunSourceConfig(
     /* v8 ignore next -- defensive guard for unexpected config loader failures. */
     throw error;
   }
-}
+};
 
-export function loadStoreRawConfig(
+export const loadStoreRawConfig = (
   dependencies: Pick<Required<BuildCliDependencies>, "loadConfig">,
-): AppConfigResult {
+): AppConfigResult => {
   try {
     return {
       config: dependencies.loadConfig(),
@@ -177,13 +177,30 @@ export function loadStoreRawConfig(
     /* v8 ignore next -- defensive guard for unexpected config loader failures. */
     throw error;
   }
-}
+};
 
-export function createStoreRawResources(
+const createStagingRepository = (
+  dependencies: Pick<
+    Required<BuildCliDependencies>,
+    "createPostgresStagingRepositoryFromDatabaseUrl"
+  >,
+  config: AppConfig,
+  shouldStage: boolean,
+): StagingRepository | undefined => {
+  if (!shouldStage) {
+    return undefined;
+  }
+
+  return dependencies.createPostgresStagingRepositoryFromDatabaseUrl(
+    config.staging.databaseUrl,
+  );
+};
+
+export const createStoreRawResources = (
   dependencies: Required<BuildCliDependencies>,
   config: AppConfig,
   shouldStage: boolean,
-): StoreRawResources {
+): StoreRawResources => {
   return {
     byteClient: dependencies.createReplayByteClient(config),
     checkpointStore: dependencies.createS3CheckpointStoreFromConfig(config.s3),
@@ -195,28 +212,11 @@ export function createStoreRawResources(
     ),
     storage: dependencies.createS3RawReplayStorageFromConfig(config.s3),
   };
-}
+};
 
-function createStagingRepository(
-  dependencies: Pick<
-    Required<BuildCliDependencies>,
-    "createPostgresStagingRepositoryFromDatabaseUrl"
-  >,
-  config: AppConfig,
-  shouldStage: boolean,
-): StagingRepository | undefined {
-  if (!shouldStage) {
-    return undefined;
-  }
-
-  return dependencies.createPostgresStagingRepositoryFromDatabaseUrl(
-    config.staging.databaseUrl,
-  );
-}
-
-export function resolveDependencies(
+export const resolveDependencies = (
   dependencies: BuildCliDependencies,
-): Required<BuildCliDependencies> {
+): Required<BuildCliDependencies> => {
   return {
     checkPostgresConnectivityFromDatabaseUrl,
     checkS3Connectivity,
@@ -241,4 +241,4 @@ export function resolveDependencies(
     writeEvidenceFile: (path, body) => writeFile(path, body, "utf8"),
     ...dependencies,
   };
-}
+};

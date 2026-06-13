@@ -37,62 +37,101 @@ interface StagingCounts {
   readonly staged: number;
 }
 
-export function registerDiscoverCommand(
-  program: Command,
+const countRawStorage = (
+  discoveryReport: DiscoveryReport,
+  storageResults: readonly StoreRawReplayResult[],
+): RawStorageCounts => {
+  return {
+    candidates: discoveryReport.candidates.length,
+    conflict: storageResults.filter((result) => result.status === "conflict")
+      .length,
+    diagnostics: discoveryReport.diagnostics.length,
+    failed: storageResults.filter((result) => result.status === "failed")
+      .length,
+    skipped: storageResults.filter((result) => result.status === "skipped")
+      .length,
+    stored: storageResults.filter((result) => result.status === "stored")
+      .length,
+  };
+};
+
+const countStaging = (
+  stagingResults: readonly IngestStagingResult[],
+): StagingCounts => {
+  return {
+    alreadyStaged: stagingResults.filter(
+      (result) => result.status === "already_staged",
+    ).length,
+    conflict: stagingResults.filter((result) => result.status === "conflict")
+      .length,
+    failed: stagingResults.filter((result) => result.status === "failed")
+      .length,
+    skipped: stagingResults.filter(
+      (result) => result.status === "not_stageable",
+    ).length,
+    staged: stagingResults.filter((result) => result.status === "staged")
+      .length,
+  };
+};
+
+const storeRawMode = (
+  shouldStage: boolean,
+): "store-raw" | "store-raw-and-stage" => {
+  if (shouldStage) {
+    return "store-raw-and-stage";
+  }
+
+  return "store-raw";
+};
+
+type StoreRawCountsResult =
+  | RawStorageCounts
+  | { readonly rawStorage: RawStorageCounts; readonly staging: StagingCounts };
+
+const storeRawCounts = (
+  shouldStage: boolean,
+  rawCounts: RawStorageCounts,
+  stagingCounts: StagingCounts,
+): StoreRawCountsResult => {
+  if (shouldStage) {
+    return { rawStorage: rawCounts, staging: stagingCounts };
+  }
+
+  return rawCounts;
+};
+
+const stageRawEvidence = async (
+  dependencies: Pick<Required<BuildCliDependencies>, "stageRawReplay">,
+  repository: StoreRawResources["stagingRepository"],
+  rawResult: StoreRawReplayResult,
+): Promise<IngestStagingResult> => {
+  /* v8 ignore next -- registerDiscoverCommand only calls staging when the repository was created. */
+  if (repository === undefined) {
+    throw new Error("Expected staging repository for stage mode");
+  }
+
+  return dependencies.stageRawReplay({ rawResult, repository });
+};
+
+const discoverForStoreRaw = async (
   dependencies: Required<BuildCliDependencies>,
-): void {
-  program
-    .command("discover")
-    .description("Discover replay candidates")
-    .option(
-      "--dry-run",
-      "report candidates without writing S3 or staging records",
-    )
-    .option(
-      "--store-raw",
-      "discover candidates and store raw replay objects without staging",
-    )
-    .option("--stage", "write pending server-2 staging rows after raw storage")
-    .action(async (options: DiscoverOptions) => {
-      if (options.dryRun === true && options.storeRaw === true) {
-        writeJson({
-          ok: false,
-          error: "discover accepts only one mode: --dry-run or --store-raw",
-        });
-        process.exitCode = 2;
-        return;
-      }
+  config: AppConfig,
+  sourceClient: SourceClient,
+): Promise<DiscoveryReport> => {
+  const runId = dependencies.createRunId(dependencies.now());
+  const log = dependencies.createLogger().child({ runId });
 
-      if (options.stage === true && options.storeRaw !== true) {
-        writeJson({
-          ok: false,
-          error: "discover --stage requires --store-raw",
-        });
-        process.exitCode = 2;
-        return;
-      }
+  return dependencies.discoverReplaysDryRun({
+    attempts: config.sourceRetryAttempts,
+    onRetry: buildRetryWarnEmitter(log),
+    sourceClient,
+    sourceUrl: new URL(config.sourceUrl),
+  });
+};
 
-      if (options.storeRaw === true) {
-        await runStoreRawDiscovery(dependencies, options.stage === true);
-        return;
-      }
-
-      if (options.dryRun !== true) {
-        writeJson({
-          ok: false,
-          error: "discover requires --dry-run or --store-raw",
-        });
-        process.exitCode = 2;
-        return;
-      }
-
-      await runDryRunDiscovery(dependencies);
-    });
-}
-
-async function runDryRunDiscovery(
+const runDryRunDiscovery = async (
   dependencies: Required<BuildCliDependencies>,
-): Promise<void> {
+): Promise<void> => {
   const configResult = loadDryRunSourceConfig(dependencies);
   if (!configResult.ok) {
     writeJson({
@@ -119,12 +158,12 @@ async function runDryRunDiscovery(
   if (!report.ok) {
     process.exitCode = 2;
   }
-}
+};
 
-async function runStoreRawDiscovery(
+const runStoreRawDiscovery = async (
   dependencies: Required<BuildCliDependencies>,
   shouldStage: boolean,
-): Promise<void> {
+): Promise<void> => {
   const configResult = loadStoreRawConfig(dependencies);
   if (!configResult.ok) {
     writeJson({
@@ -202,96 +241,57 @@ async function runStoreRawDiscovery(
   if (!ok) {
     process.exitCode = 2;
   }
-}
+};
 
-async function discoverForStoreRaw(
+export const registerDiscoverCommand = (
+  program: Command,
   dependencies: Required<BuildCliDependencies>,
-  config: AppConfig,
-  sourceClient: SourceClient,
-): Promise<DiscoveryReport> {
-  const runId = dependencies.createRunId(dependencies.now());
-  const log = dependencies.createLogger().child({ runId });
+): void => {
+  program
+    .command("discover")
+    .description("Discover replay candidates")
+    .option(
+      "--dry-run",
+      "report candidates without writing S3 or staging records",
+    )
+    .option(
+      "--store-raw",
+      "discover candidates and store raw replay objects without staging",
+    )
+    .option("--stage", "write pending server-2 staging rows after raw storage")
+    .action(async (options: DiscoverOptions) => {
+      if (options.dryRun === true && options.storeRaw === true) {
+        writeJson({
+          ok: false,
+          error: "discover accepts only one mode: --dry-run or --store-raw",
+        });
+        process.exitCode = 2;
+        return;
+      }
 
-  return dependencies.discoverReplaysDryRun({
-    attempts: config.sourceRetryAttempts,
-    onRetry: buildRetryWarnEmitter(log),
-    sourceClient,
-    sourceUrl: new URL(config.sourceUrl),
-  });
-}
+      if (options.stage === true && options.storeRaw !== true) {
+        writeJson({
+          ok: false,
+          error: "discover --stage requires --store-raw",
+        });
+        process.exitCode = 2;
+        return;
+      }
 
-async function stageRawEvidence(
-  dependencies: Pick<Required<BuildCliDependencies>, "stageRawReplay">,
-  repository: StoreRawResources["stagingRepository"],
-  rawResult: StoreRawReplayResult,
-): Promise<IngestStagingResult> {
-  /* v8 ignore next -- registerDiscoverCommand only calls staging when the repository was created. */
-  if (repository === undefined) {
-    throw new Error("Expected staging repository for stage mode");
-  }
+      if (options.storeRaw === true) {
+        await runStoreRawDiscovery(dependencies, options.stage === true);
+        return;
+      }
 
-  return dependencies.stageRawReplay({ rawResult, repository });
-}
+      if (options.dryRun !== true) {
+        writeJson({
+          ok: false,
+          error: "discover requires --dry-run or --store-raw",
+        });
+        process.exitCode = 2;
+        return;
+      }
 
-function storeRawMode(
-  shouldStage: boolean,
-): "store-raw" | "store-raw-and-stage" {
-  if (shouldStage) {
-    return "store-raw-and-stage";
-  }
-
-  return "store-raw";
-}
-
-type StoreRawCountsResult =
-  | RawStorageCounts
-  | { readonly rawStorage: RawStorageCounts; readonly staging: StagingCounts };
-
-function storeRawCounts(
-  shouldStage: boolean,
-  rawCounts: RawStorageCounts,
-  stagingCounts: StagingCounts,
-): StoreRawCountsResult {
-  if (shouldStage) {
-    return { rawStorage: rawCounts, staging: stagingCounts };
-  }
-
-  return rawCounts;
-}
-
-function countRawStorage(
-  discoveryReport: DiscoveryReport,
-  storageResults: readonly StoreRawReplayResult[],
-): RawStorageCounts {
-  return {
-    candidates: discoveryReport.candidates.length,
-    conflict: storageResults.filter((result) => result.status === "conflict")
-      .length,
-    diagnostics: discoveryReport.diagnostics.length,
-    failed: storageResults.filter((result) => result.status === "failed")
-      .length,
-    skipped: storageResults.filter((result) => result.status === "skipped")
-      .length,
-    stored: storageResults.filter((result) => result.status === "stored")
-      .length,
-  };
-}
-
-function countStaging(
-  stagingResults: readonly IngestStagingResult[],
-): StagingCounts {
-  return {
-    alreadyStaged: stagingResults.filter(
-      (result) => result.status === "already_staged",
-    ).length,
-    conflict: stagingResults.filter((result) => result.status === "conflict")
-      .length,
-    failed: stagingResults.filter((result) => result.status === "failed")
-      .length,
-    skipped: stagingResults.filter(
-      (result) => result.status === "not_stageable",
-    ).length,
-    staged: stagingResults.filter((result) => result.status === "staged")
-      .length,
-  };
-}
+      await runDryRunDiscovery(dependencies);
+    });
+};

@@ -30,9 +30,47 @@ export interface S3RawReplayStorage {
   ): Promise<RawReplayStorageEvidence>;
 }
 
-export function createS3RawReplayStorage(
+const isNotFound = (error: unknown): boolean => {
+  const notFoundStatus = 404;
+
+  return (
+    error instanceof S3ServiceException &&
+    (error.name === "NotFound" ||
+      error.$metadata.httpStatusCode === notFoundStatus)
+  );
+};
+
+const toBaseEvidence = (input: {
+  readonly bucket: string;
+  readonly byteSize: number;
+  readonly candidate: ReplayCandidate;
+  readonly checksum: string;
+  readonly fetchedAt: string;
+  readonly objectKey: string;
+}): Omit<RawReplayStorageEvidence, "status"> => {
+  const evidence: Omit<RawReplayStorageEvidence, "status"> = {
+    bucket: input.bucket,
+    byteSize: input.byteSize,
+    checksum: input.checksum,
+    fetchedAt: input.fetchedAt,
+    objectKey: input.objectKey,
+    source: input.candidate.source,
+    sourceFilename: input.candidate.identity.filename,
+  };
+
+  if (input.candidate.metadata?.discoveredAt !== undefined) {
+    return {
+      ...evidence,
+      discoveredAt: input.candidate.metadata.discoveredAt,
+    };
+  }
+
+  return evidence;
+};
+
+export const createS3RawReplayStorage = (
   options: CreateS3RawReplayStorageOptions,
-): S3RawReplayStorage {
+): S3RawReplayStorage => {
   return {
     async storeRawReplay(input): Promise<RawReplayStorageEvidence> {
       const baseEvidence = toBaseEvidence({
@@ -103,11 +141,11 @@ export function createS3RawReplayStorage(
       }
     },
   };
-}
+};
 
-export function createS3RawReplayStorageFromConfig(
+export const createS3RawReplayStorageFromConfig = (
   config: AppConfig["s3"],
-): S3RawReplayStorage {
+): S3RawReplayStorage => {
   return createS3RawReplayStorage({
     bucket: config.bucket,
     sender: new S3Client({
@@ -120,42 +158,4 @@ export function createS3RawReplayStorageFromConfig(
       region: config.region,
     }),
   });
-}
-
-function toBaseEvidence(input: {
-  readonly bucket: string;
-  readonly byteSize: number;
-  readonly candidate: ReplayCandidate;
-  readonly checksum: string;
-  readonly fetchedAt: string;
-  readonly objectKey: string;
-}): Omit<RawReplayStorageEvidence, "status"> {
-  const evidence: Omit<RawReplayStorageEvidence, "status"> = {
-    bucket: input.bucket,
-    byteSize: input.byteSize,
-    checksum: input.checksum,
-    fetchedAt: input.fetchedAt,
-    objectKey: input.objectKey,
-    source: input.candidate.source,
-    sourceFilename: input.candidate.identity.filename,
-  };
-
-  if (input.candidate.metadata?.discoveredAt !== undefined) {
-    return {
-      ...evidence,
-      discoveredAt: input.candidate.metadata.discoveredAt,
-    };
-  }
-
-  return evidence;
-}
-
-function isNotFound(error: unknown): boolean {
-  const notFoundStatus = 404;
-
-  return (
-    error instanceof S3ServiceException &&
-    (error.name === "NotFound" ||
-      error.$metadata.httpStatusCode === notFoundStatus)
-  );
-}
+};

@@ -92,12 +92,20 @@ export type CheckpointSourceFailure = z.infer<typeof sourceFailureSchema>;
  */
 export type Checkpoint = Readonly<z.infer<typeof checkpointSchema>>;
 
+const parseJsonOrUndefined = (raw: string): unknown => {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return undefined;
+  }
+};
+
 /**
  * Safe-parse a raw checkpoint string. Returns `undefined` on ANY failure
  * (invalid JSON OR schema mismatch) so the caller can degrade to a page-1
  * start without throwing (RESUME-03, threat T-09-02). Pure: no logging.
  */
-export function parseCheckpoint(raw: string): Checkpoint | undefined {
+export const parseCheckpoint = (raw: string): Checkpoint | undefined => {
   const candidate = parseJsonOrUndefined(raw);
   if (candidate === undefined) {
     return undefined;
@@ -109,15 +117,7 @@ export function parseCheckpoint(raw: string): Checkpoint | undefined {
   }
 
   return result.data;
-}
-
-function parseJsonOrUndefined(raw: string): unknown {
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return undefined;
-  }
-}
+};
 
 const FIRST_PAGE = 1;
 const NO_PAGE_COMPLETED = 0;
@@ -127,7 +127,7 @@ const NO_PAGE_COMPLETED = 0;
  * `1` when there is no checkpoint or no page has completed yet, otherwise the
  * page after the last completed one. Pure and deterministic.
  */
-export function resumeStartPage(checkpoint?: Checkpoint): number {
+export const resumeStartPage = (checkpoint?: Checkpoint): number => {
   if (
     checkpoint === undefined ||
     checkpoint.lastCompletedPage === NO_PAGE_COMPLETED
@@ -136,7 +136,7 @@ export function resumeStartPage(checkpoint?: Checkpoint): number {
   }
 
   return checkpoint.lastCompletedPage + FIRST_PAGE;
-}
+};
 
 /**
  * Status precedence for merge tie-breaks (BL-01). A higher rank is a "more
@@ -153,9 +153,28 @@ const statusRanks: Readonly<Record<CheckpointStatus, number>> = {
   running: 1,
 };
 
-function statusRank(status: CheckpointStatus): number {
+const statusRank = (status: CheckpointStatus): number => {
   return statusRanks[status];
-}
+};
+
+const pickHigherProgress = (local: Checkpoint, remote: Checkpoint): Checkpoint => {
+  if (local.lastCompletedPage > remote.lastCompletedPage) {
+    return local;
+  }
+
+  if (local.lastCompletedPage < remote.lastCompletedPage) {
+    return remote;
+  }
+
+  // Equal progress: the more-determined status wins so `complete` is never
+  // downgraded to `running` (BL-01). `local` wins exact ties to keep the
+  // intended write (the side the caller is trying to persist).
+  if (statusRank(local.status) >= statusRank(remote.status)) {
+    return local;
+  }
+
+  return remote;
+};
 
 /**
  * Resolve a checkpoint write conflict by merging two views of the same run
@@ -166,10 +185,10 @@ function statusRank(status: CheckpointStatus): number {
  * never downgrades a terminal status (BL-01). Pure; the S3 re-read+retry path
  * that calls this lives in Plan 04.
  */
-export function mergeCheckpoints(
+export const mergeCheckpoints = (
   local: Checkpoint,
   remote: Checkpoint,
-): Checkpoint {
+): Checkpoint => {
   const winner = pickHigherProgress(local, remote);
   const pages: Record<string, CheckpointPage> = {
     ...local.pages,
@@ -199,23 +218,4 @@ export function mergeCheckpoints(
   }
 
   return merged;
-}
-
-function pickHigherProgress(local: Checkpoint, remote: Checkpoint): Checkpoint {
-  if (local.lastCompletedPage > remote.lastCompletedPage) {
-    return local;
-  }
-
-  if (local.lastCompletedPage < remote.lastCompletedPage) {
-    return remote;
-  }
-
-  // Equal progress: the more-determined status wins so `complete` is never
-  // downgraded to `running` (BL-01). `local` wins exact ties to keep the
-  // intended write (the side the caller is trying to persist).
-  if (statusRank(local.status) >= statusRank(remote.status)) {
-    return local;
-  }
-
-  return remote;
-}
+};

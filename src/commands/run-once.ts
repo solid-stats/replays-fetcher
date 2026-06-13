@@ -22,10 +22,58 @@ interface RunOnceOptions {
   readonly resume?: boolean;
 }
 
-export function registerRunOnceCommand(
+/**
+ * Wraps pino's callback-based `log.flush(cb)` in a Promise so the cli action
+ * can `await` the flush before setting `process.exitCode` (D-16/PROG-04).
+ * Resolves on success; rejects on error. Never calls `process.exit()`.
+ */
+const flushLogger = (log: Logger): Promise<void> =>
+  new Promise<void>((resolve, reject) => {
+    log.flush((flushError) => {
+      if (flushError !== undefined) {
+        reject(flushError);
+        return;
+      }
+
+      resolve();
+    });
+  });
+
+const evidenceFileOption = (evidenceFile: string | undefined): {
+  evidenceFile?: string;
+} => {
+  if (evidenceFile === undefined) {
+    return {};
+  }
+
+  return { evidenceFile };
+};
+
+const maxPagesOption = (maxPages: number | undefined): {
+  maxPages?: number;
+} => {
+  if (maxPages === undefined) {
+    return {};
+  }
+
+  return { maxPages };
+};
+
+const requireStagingRepository = (
+  repository: StagingRepository | undefined,
+): StagingRepository => {
+  /* v8 ignore next -- run-once always requests staging resources. */
+  if (repository === undefined) {
+    throw new Error("Expected staging repository for run-once");
+  }
+
+  return repository;
+};
+
+export const registerRunOnceCommand = (
   program: Command,
   dependencies: Required<BuildCliDependencies>,
-): void {
+): void => {
   program
     .command("run-once")
     .description("Execute one scheduled ingest cycle")
@@ -110,53 +158,4 @@ export function registerRunOnceCommand(
       await flushLogger(rootLogger);
       process.exitCode = result.exitCode;
     });
-}
-
-/**
- * Wraps pino's callback-based `log.flush(cb)` in a Promise so the cli action
- * can `await` the flush before setting `process.exitCode` (D-16/PROG-04).
- * Resolves on success; rejects on error. Never calls `process.exit()`.
- */
-function flushLogger(log: Logger): Promise<void> {
-  return new Promise<void>((resolve, reject) => {
-    log.flush((flushError) => {
-      if (flushError !== undefined) {
-        reject(flushError);
-        return;
-      }
-
-      resolve();
-    });
-  });
-}
-
-function evidenceFileOption(evidenceFile: string | undefined): {
-  evidenceFile?: string;
-} {
-  if (evidenceFile === undefined) {
-    return {};
-  }
-
-  return { evidenceFile };
-}
-
-function maxPagesOption(maxPages: number | undefined): {
-  maxPages?: number;
-} {
-  if (maxPages === undefined) {
-    return {};
-  }
-
-  return { maxPages };
-}
-
-function requireStagingRepository(
-  repository: StagingRepository | undefined,
-): StagingRepository {
-  /* v8 ignore next -- run-once always requests staging resources. */
-  if (repository === undefined) {
-    throw new Error("Expected staging repository for run-once");
-  }
-
-  return repository;
-}
+};

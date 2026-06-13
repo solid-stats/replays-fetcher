@@ -29,11 +29,11 @@ export interface JitterBounds {
   readonly cap?: number;
 }
 
-export function fullJitterDelay(
+export const fullJitterDelay = (
   round: number,
   random: () => number,
   bounds: JitterBounds = {},
-): number {
+): number => {
   const base = bounds.base ?? baseDelayMs;
   const cap = bounds.cap ?? capDelayMs;
   const exponential = base * 2 ** round;
@@ -42,10 +42,10 @@ export function fullJitterDelay(
   return Math.floor(random() * capped);
 }
 
-export function parseRetryAfter(
+export const parseRetryAfter = (
   value: string | undefined,
   now: () => number,
-): number | undefined {
+): number | undefined => {
   if (value === undefined) {
     return undefined;
   }

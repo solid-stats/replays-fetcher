@@ -10,7 +10,7 @@ import {
   type BuildCliDependencies,
 } from "./commands/shared.js";
 
-export function buildCli(dependencies: BuildCliDependencies = {}): Command {
+export const buildCli = (dependencies: BuildCliDependencies = {}): Command => {
   const cliDependencies = resolveDependencies(dependencies);
   const program = new Command();
 

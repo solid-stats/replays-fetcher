@@ -68,27 +68,12 @@ interface CreateSourceClientOptions {
   readonly execFile?: ExecFile;
 }
 
-export function createSourceClient(
-  config: SourceConfig,
-  options: CreateSourceClientOptions = {},
-): SourceClient {
-  if (config.sourceTransport === "direct") {
-    return createDirectSourceClient(config);
-  }
-
-  if (options.execFile === undefined) {
-    return createSshSourceClient(config, defaultExecFile);
-  }
-
-  return createSshSourceClient(config, options.execFile);
-}
-
 /**
  * Maps the shared classifier's tri-state kind onto the narrow
  * `SourceFetchError` code union, keeping `rate_limited` distinct so pacing and
  * `Retry-After` handling stay observable downstream.
  */
-function toFetchCode(kind: FailureKind): SourceFetchCode {
+const toFetchCode = (kind: FailureKind): SourceFetchCode => {
   if (kind === "rate_limited") {
     return "rate_limited";
   }
@@ -98,7 +83,7 @@ function toFetchCode(kind: FailureKind): SourceFetchCode {
   }
 
   return "source_unavailable";
-}
+};
 
 interface BuildErrorInput {
   readonly attempts: number;
@@ -119,7 +104,7 @@ interface BuildErrorInput {
  * failing response body, raw bytes, headers, and secrets are NEVER copied here
  * (threat T-08-01 / DIAG-04).
  */
-function buildSourceFetchError(input: BuildErrorInput): SourceFetchError {
+const buildSourceFetchError = (input: BuildErrorInput): SourceFetchError => {
   const { attempts, classification, fallbackMessage, phase, url } = input;
   let details: Record<string, unknown> = {
     attempts,
@@ -157,11 +142,11 @@ function buildSourceFetchError(input: BuildErrorInput): SourceFetchError {
     fallbackMessage,
     { cause: input.originalError, details },
   );
-}
+};
 
-function resolvePhase(options?: SourceFetchOptions): SourceReadPhase {
+const resolvePhase = (options?: SourceFetchOptions): SourceReadPhase => {
   return options?.phase ?? "list";
-}
+};
 
 interface RetryWiring<T> {
   readonly classify: (error: unknown) => FailureClassification;
@@ -188,14 +173,14 @@ const initialTry = 1;
  * plus the bounded retry rounds. Reported in `details.attempts` so an operator
  * sees how many tries the read was allowed (DIAG-01).
  */
-function totalTries(options: SourceFetchOptions | undefined): number {
+const totalTries = (options: SourceFetchOptions | undefined): number => {
   return (options?.attempts ?? noRetryAttempts) + initialTry;
-}
+};
 
-async function runWithRetry<T>(
+const runWithRetry = async <T,>(
   wiring: RetryWiring<T>,
   options?: SourceFetchOptions,
-): Promise<T> {
+): Promise<T> => {
   const attempts = options?.attempts ?? noRetryAttempts;
   const callerSignal = options?.signal ?? new AbortController().signal;
 
@@ -233,35 +218,213 @@ async function runWithRetry<T>(
   }
 
   return withRetry(retryOptions);
-}
+};
 
-function detectCloudflareChallenge(
+const detectCloudflareChallenge = (
   response: Response,
   bodyText: string,
-): boolean {
+): boolean => {
   if (!response.headers.has("cf-ray")) {
     return false;
   }
 
   const lower = bodyText.toLowerCase();
   return cfBodyMarkers.some((marker) => lower.includes(marker));
-}
+};
 
 interface CloudflareChallengeError extends Error {
   readonly isCloudflareChallenge: true;
 }
 
-function isCloudflareChallengeError(
+const isCloudflareChallengeError = (
   error: unknown,
-): error is CloudflareChallengeError {
+): error is CloudflareChallengeError => {
   return (
     error instanceof Error &&
     "isCloudflareChallenge" in error &&
     error.isCloudflareChallenge === true
   );
+};
+
+const httpHeaderRetryAfter = "retry-after";
+
+/**
+ * Extracts `Retry-After` from a `rate_limited` direct read by re-running the
+ * fetch headers we already captured on the thrown `SourceFetchError`. The
+ * wrapper passes the thrown error here; we only read the header string we
+ * stored, never the body.
+ */
+const directRetryAfter = (
+  error: unknown,
+  now: () => number,
+): number | undefined => {
+  /* v8 ignore next 3 -- only the rate_limited path (a thrown SourceFetchError) reaches the Retry-After extractor; defensive guard for other error shapes. */
+  if (!(error instanceof SourceFetchError)) {
+    return undefined;
+  }
+
+  const retryAfter = error.details?.["retryAfter"];
+  if (typeof retryAfter !== "string") {
+    return undefined;
+  }
+
+  return parseRetryAfter(retryAfter, now);
+};
+
+interface DirectHttpErrorInput {
+  readonly phase: SourceReadPhase;
+  readonly response: Response;
+  readonly url: URL;
 }
 
-function createDirectSourceClient(config: SourceConfig): SourceClient {
+/**
+ * Wraps a non-ok direct HTTP response in a `SourceFetchError` carrying the
+ * status (and `Retry-After` header string when present) so `classify` and the
+ * retry wrapper can act on it. No body is read here.
+ */
+const buildDirectHttpError = (
+  input: DirectHttpErrorInput,
+): SourceFetchError => {
+  const { phase, response, url } = input;
+  const classification = classifyFailure({ httpStatus: response.status });
+  const retryAfter = response.headers.get(httpHeaderRetryAfter);
+  let details: Record<string, unknown> = {
+    cfChallenge: false,
+    httpStatus: response.status,
+    phase,
+    url: url.toString(),
+  };
+  if (retryAfter !== null) {
+    details = { ...details, retryAfter };
+  }
+
+  return new SourceFetchError(
+    toFetchCode(classification.kind),
+    `Source request failed with status ${String(response.status)}`,
+    { details },
+  );
+};
+
+const reclassifyDirect = (error: SourceFetchError): FailureClassification => {
+  const httpStatus = error.details?.["httpStatus"];
+  const cfChallenge = error.details?.["cfChallenge"] === true;
+  let input: ClassifyInput = { cfChallenge };
+  /* v8 ignore next 3 -- a direct SourceFetchError always originates from buildDirectHttpError with an httpStatus; the no-status branch is a defensive guard. */
+  if (typeof httpStatus === "number") {
+    input = { ...input, httpStatus };
+  }
+
+  return classifyFailure(input);
+};
+
+const classifyDirect = (error: unknown): FailureClassification => {
+  if (error instanceof SourceFetchError) {
+    return reclassifyDirect(error);
+  }
+
+  return classifyFailure({
+    cfChallenge: isCloudflareChallengeError(error),
+    error,
+  });
+};
+
+const classifySsh = (error: unknown): FailureClassification => {
+  return classifyFailure({ error });
+};
+
+interface DirectFetchErrorInput {
+  readonly error: unknown;
+  readonly options: SourceFetchOptions | undefined;
+  readonly phase: SourceReadPhase;
+  readonly url: URL;
+}
+
+const buildPageInput = (
+  options: SourceFetchOptions | undefined,
+): {
+  readonly page?: number;
+} => {
+  if (options?.page === undefined) {
+    return {};
+  }
+
+  return { page: options.page };
+};
+
+const toDirectFetchError = (
+  input: DirectFetchErrorInput,
+): SourceFetchError => {
+  const { error, options, phase, url } = input;
+  const attempts = totalTries(options);
+  const pageInput = buildPageInput(options);
+
+  if (isCloudflareChallengeError(error)) {
+    return buildSourceFetchError({
+      attempts,
+      classification: classifyFailure({ cfChallenge: true }),
+      fallbackMessage: "Source returned a Cloudflare challenge",
+      phase,
+      url,
+      ...pageInput,
+    });
+  }
+
+  if (error instanceof SourceFetchError) {
+    return buildSourceFetchError({
+      attempts,
+      classification: reclassifyDirect(error),
+      fallbackMessage: error.message,
+      phase,
+      url,
+      ...pageInput,
+    });
+  }
+
+  return buildSourceFetchError({
+    attempts,
+    classification: classifyFailure({ error }),
+    fallbackMessage: "Source request failed",
+    originalError: error,
+    phase,
+    url,
+    ...pageInput,
+  });
+};
+
+const getSshHost = (config: SourceConfig): string => {
+  if (config.sourceSshHost === undefined) {
+    throw new SourceFetchError(
+      "source_unavailable",
+      "SSH source host is not configured",
+    );
+  }
+
+  return config.sourceSshHost;
+};
+
+interface SshFetchErrorInput {
+  readonly error: unknown;
+  readonly options: SourceFetchOptions | undefined;
+  readonly phase: SourceReadPhase;
+  readonly url: URL;
+}
+
+const toSshFetchError = (input: SshFetchErrorInput): SourceFetchError => {
+  const { error, options, phase, url } = input;
+  const classification = classifyFailure({ error });
+
+  return buildSourceFetchError({
+    attempts: totalTries(options),
+    classification,
+    fallbackMessage: "SSH source request failed",
+    originalError: error,
+    phase,
+    url,
+    ...buildPageInput(options),
+  });
+};
+
+const createDirectSourceClient = (config: SourceConfig): SourceClient => {
   return {
     async fetchText(url: URL, options?: SourceFetchOptions): Promise<string> {
       const phase = resolvePhase(options);
@@ -316,151 +479,12 @@ function createDirectSourceClient(config: SourceConfig): SourceClient {
       });
     },
   };
-}
+};
 
-const httpHeaderRetryAfter = "retry-after";
-
-/**
- * Extracts `Retry-After` from a `rate_limited` direct read by re-running the
- * fetch headers we already captured on the thrown `SourceFetchError`. The
- * wrapper passes the thrown error here; we only read the header string we
- * stored, never the body.
- */
-function directRetryAfter(
-  error: unknown,
-  now: () => number,
-): number | undefined {
-  /* v8 ignore next 3 -- only the rate_limited path (a thrown SourceFetchError) reaches the Retry-After extractor; defensive guard for other error shapes. */
-  if (!(error instanceof SourceFetchError)) {
-    return undefined;
-  }
-
-  const retryAfter = error.details?.["retryAfter"];
-  if (typeof retryAfter !== "string") {
-    return undefined;
-  }
-
-  return parseRetryAfter(retryAfter, now);
-}
-
-interface DirectHttpErrorInput {
-  readonly phase: SourceReadPhase;
-  readonly response: Response;
-  readonly url: URL;
-}
-
-/**
- * Wraps a non-ok direct HTTP response in a `SourceFetchError` carrying the
- * status (and `Retry-After` header string when present) so `classify` and the
- * retry wrapper can act on it. No body is read here.
- */
-function buildDirectHttpError(input: DirectHttpErrorInput): SourceFetchError {
-  const { phase, response, url } = input;
-  const classification = classifyFailure({ httpStatus: response.status });
-  const retryAfter = response.headers.get(httpHeaderRetryAfter);
-  let details: Record<string, unknown> = {
-    cfChallenge: false,
-    httpStatus: response.status,
-    phase,
-    url: url.toString(),
-  };
-  if (retryAfter !== null) {
-    details = { ...details, retryAfter };
-  }
-
-  return new SourceFetchError(
-    toFetchCode(classification.kind),
-    `Source request failed with status ${String(response.status)}`,
-    { details },
-  );
-}
-
-function reclassifyDirect(error: SourceFetchError): FailureClassification {
-  const httpStatus = error.details?.["httpStatus"];
-  const cfChallenge = error.details?.["cfChallenge"] === true;
-  let input: ClassifyInput = { cfChallenge };
-  /* v8 ignore next 3 -- a direct SourceFetchError always originates from buildDirectHttpError with an httpStatus; the no-status branch is a defensive guard. */
-  if (typeof httpStatus === "number") {
-    input = { ...input, httpStatus };
-  }
-
-  return classifyFailure(input);
-}
-
-function classifyDirect(error: unknown): FailureClassification {
-  if (error instanceof SourceFetchError) {
-    return reclassifyDirect(error);
-  }
-
-  return classifyFailure({
-    cfChallenge: isCloudflareChallengeError(error),
-    error,
-  });
-}
-
-function classifySsh(error: unknown): FailureClassification {
-  return classifyFailure({ error });
-}
-
-interface DirectFetchErrorInput {
-  readonly error: unknown;
-  readonly options: SourceFetchOptions | undefined;
-  readonly phase: SourceReadPhase;
-  readonly url: URL;
-}
-
-function buildPageInput(options: SourceFetchOptions | undefined): {
-  readonly page?: number;
-} {
-  if (options?.page === undefined) {
-    return {};
-  }
-
-  return { page: options.page };
-}
-
-function toDirectFetchError(input: DirectFetchErrorInput): SourceFetchError {
-  const { error, options, phase, url } = input;
-  const attempts = totalTries(options);
-  const pageInput = buildPageInput(options);
-
-  if (isCloudflareChallengeError(error)) {
-    return buildSourceFetchError({
-      attempts,
-      classification: classifyFailure({ cfChallenge: true }),
-      fallbackMessage: "Source returned a Cloudflare challenge",
-      phase,
-      url,
-      ...pageInput,
-    });
-  }
-
-  if (error instanceof SourceFetchError) {
-    return buildSourceFetchError({
-      attempts,
-      classification: reclassifyDirect(error),
-      fallbackMessage: error.message,
-      phase,
-      url,
-      ...pageInput,
-    });
-  }
-
-  return buildSourceFetchError({
-    attempts,
-    classification: classifyFailure({ error }),
-    fallbackMessage: "Source request failed",
-    originalError: error,
-    phase,
-    url,
-    ...pageInput,
-  });
-}
-
-function createSshSourceClient(
+const createSshSourceClient = (
   config: SourceConfig,
   execFile: ExecFile,
-): SourceClient {
+): SourceClient => {
   return {
     async fetchText(url: URL, options?: SourceFetchOptions): Promise<string> {
       const phase = resolvePhase(options);
@@ -504,37 +528,19 @@ function createSshSourceClient(
       });
     },
   };
-}
+};
 
-interface SshFetchErrorInput {
-  readonly error: unknown;
-  readonly options: SourceFetchOptions | undefined;
-  readonly phase: SourceReadPhase;
-  readonly url: URL;
-}
-
-function toSshFetchError(input: SshFetchErrorInput): SourceFetchError {
-  const { error, options, phase, url } = input;
-  const classification = classifyFailure({ error });
-
-  return buildSourceFetchError({
-    attempts: totalTries(options),
-    classification,
-    fallbackMessage: "SSH source request failed",
-    originalError: error,
-    phase,
-    url,
-    ...buildPageInput(options),
-  });
-}
-
-function getSshHost(config: SourceConfig): string {
-  if (config.sourceSshHost === undefined) {
-    throw new SourceFetchError(
-      "source_unavailable",
-      "SSH source host is not configured",
-    );
+export const createSourceClient = (
+  config: SourceConfig,
+  options: CreateSourceClientOptions = {},
+): SourceClient => {
+  if (config.sourceTransport === "direct") {
+    return createDirectSourceClient(config);
   }
 
-  return config.sourceSshHost;
-}
+  if (options.execFile === undefined) {
+    return createSshSourceClient(config, defaultExecFile);
+  }
+
+  return createSshSourceClient(config, options.execFile);
+};

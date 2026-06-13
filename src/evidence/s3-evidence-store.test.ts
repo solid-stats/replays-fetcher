@@ -14,13 +14,13 @@ import {
 } from "./s3-evidence-store.fixtures.js";
 import { createS3EvidenceStoreFromConfig } from "./s3-evidence-store.js";
 
-function onlyCommand(commands: SentCommand[]): SentCommand {
+const onlyCommand = (commands: SentCommand[]): SentCommand => {
   const [command] = commands;
   if (command === undefined) {
     throw new Error("expected exactly one sent command");
   }
   return command;
-}
+};
 
 test("write sends exactly one PutObjectCommand with the sanitized key, full body, and JSON content type", async () => {
   const commands: SentCommand[] = [];

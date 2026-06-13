@@ -148,7 +148,60 @@ export type RedactedAppConfig = Omit<
 
 export type ConfigSource = Record<string, boolean | string | undefined>;
 
-export function loadConfig(source: ConfigSource = process.env): AppConfig {
+const stringOrUndefined = (
+  value: boolean | string | undefined,
+): string | undefined => {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  return undefined;
+};
+
+const sourceTransportOrUndefined = (
+  value: boolean | string | undefined,
+): SourceTransport | undefined => {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    return undefined;
+  }
+
+  return value as SourceTransport;
+};
+
+const redactSecret = (value: string): string => {
+  if (value.length <= 4) {
+    return "****";
+  }
+  return `${value.slice(0, 2)}****${value.slice(-2)}`;
+};
+
+const readSourceConfigInput = (source: ConfigSource): {
+  readonly sourceConcurrency: string | boolean | undefined;
+  readonly sourceMaxPages: string | boolean | undefined;
+  readonly sourceRequestSpacingMs: string | boolean | undefined;
+  readonly sourceRetryAttempts: string | boolean | undefined;
+  readonly sourceSshCommand: string | undefined;
+  readonly sourceSshHost: string | undefined;
+  readonly sourceTimeoutMs: string | boolean | undefined;
+  readonly sourceTransport: SourceTransport | undefined;
+  readonly sourceUrl: string | boolean | undefined;
+} => {
+  return {
+    sourceConcurrency: source["REPLAY_SOURCE_CONCURRENCY"],
+    sourceMaxPages: source["REPLAY_SOURCE_MAX_PAGES"],
+    sourceRequestSpacingMs: source["REPLAY_SOURCE_REQUEST_SPACING_MS"],
+    sourceUrl: source["REPLAY_SOURCE_URL"],
+    sourceTransport: sourceTransportOrUndefined(
+      source["REPLAY_SOURCE_TRANSPORT"],
+    ),
+    sourceSshHost: stringOrUndefined(source["REPLAY_SOURCE_SSH_HOST"]),
+    sourceSshCommand: stringOrUndefined(source["REPLAY_SOURCE_SSH_COMMAND"]),
+    sourceTimeoutMs: source["REPLAY_SOURCE_TIMEOUT_MS"],
+    sourceRetryAttempts: source["REPLAY_SOURCE_RETRY_ATTEMPTS"],
+  };
+};
+
+export const loadConfig = (source: ConfigSource = process.env): AppConfig => {
   const sourceConfig = readSourceConfigInput(source);
   const result = configSchema.safeParse({
     ...sourceConfig,
@@ -177,11 +230,11 @@ export function loadConfig(source: ConfigSource = process.env): AppConfig {
   }
 
   return result.data;
-}
+};
 
-export function loadSourceConfig(
+export const loadSourceConfig = (
   source: ConfigSource = process.env,
-): SourceConfig {
+): SourceConfig => {
   const result = sourceConfigSchema.safeParse(readSourceConfigInput(source));
 
   if (!result.success) {
@@ -193,9 +246,9 @@ export function loadSourceConfig(
   }
 
   return result.data;
-}
+};
 
-export function redactConfig(config: AppConfig): RedactedAppConfig {
+export const redactConfig = (config: AppConfig): RedactedAppConfig => {
   return {
     ...config,
     s3: {
@@ -208,57 +261,4 @@ export function redactConfig(config: AppConfig): RedactedAppConfig {
       databaseUrl: "[redacted-database-url]",
     },
   };
-}
-
-function readSourceConfigInput(source: ConfigSource): {
-  readonly sourceConcurrency: string | boolean | undefined;
-  readonly sourceMaxPages: string | boolean | undefined;
-  readonly sourceRequestSpacingMs: string | boolean | undefined;
-  readonly sourceRetryAttempts: string | boolean | undefined;
-  readonly sourceSshCommand: string | undefined;
-  readonly sourceSshHost: string | undefined;
-  readonly sourceTimeoutMs: string | boolean | undefined;
-  readonly sourceTransport: SourceTransport | undefined;
-  readonly sourceUrl: string | boolean | undefined;
-} {
-  return {
-    sourceConcurrency: source["REPLAY_SOURCE_CONCURRENCY"],
-    sourceMaxPages: source["REPLAY_SOURCE_MAX_PAGES"],
-    sourceRequestSpacingMs: source["REPLAY_SOURCE_REQUEST_SPACING_MS"],
-    sourceUrl: source["REPLAY_SOURCE_URL"],
-    sourceTransport: sourceTransportOrUndefined(
-      source["REPLAY_SOURCE_TRANSPORT"],
-    ),
-    sourceSshHost: stringOrUndefined(source["REPLAY_SOURCE_SSH_HOST"]),
-    sourceSshCommand: stringOrUndefined(source["REPLAY_SOURCE_SSH_COMMAND"]),
-    sourceTimeoutMs: source["REPLAY_SOURCE_TIMEOUT_MS"],
-    sourceRetryAttempts: source["REPLAY_SOURCE_RETRY_ATTEMPTS"],
-  };
-}
-
-function stringOrUndefined(
-  value: boolean | string | undefined,
-): string | undefined {
-  if (typeof value === "string") {
-    return value;
-  }
-
-  return undefined;
-}
-
-function sourceTransportOrUndefined(
-  value: boolean | string | undefined,
-): SourceTransport | undefined {
-  if (typeof value !== "string" || value.trim().length === 0) {
-    return undefined;
-  }
-
-  return value as SourceTransport;
-}
-
-function redactSecret(value: string): string {
-  if (value.length <= 4) {
-    return "****";
-  }
-  return `${value.slice(0, 2)}****${value.slice(-2)}`;
-}
+};

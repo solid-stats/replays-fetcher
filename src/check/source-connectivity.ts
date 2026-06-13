@@ -8,9 +8,9 @@ interface CheckSourceConnectivityInput {
   readonly sourceUrl: URL;
 }
 
-export async function checkSourceConnectivity(
+export const checkSourceConnectivity = async (
   input: CheckSourceConnectivityInput,
-): Promise<ConnectivityCheck> {
+): Promise<ConnectivityCheck> => {
   try {
     await input.sourceClient.fetchText(input.sourceUrl);
 

@@ -15,7 +15,7 @@ interface SleepSpy {
   readonly calls: number[];
 }
 
-function createSleepSpy(): SleepSpy {
+const createSleepSpy = (): SleepSpy => {
   const calls: number[] = [];
 
   return {
@@ -26,9 +26,9 @@ function createSleepSpy(): SleepSpy {
       await Promise.resolve();
     },
   };
-}
+};
 
-function createScriptedNow(sequence: number[]): () => number {
+const createScriptedNow = (sequence: number[]): () => number => {
   let index = 0;
 
   return (): number => {
@@ -37,7 +37,7 @@ function createScriptedNow(sequence: number[]): () => number {
 
     return value;
   };
-}
+};
 
 test("createPacer should not sleep on the first call", async () => {
   const spy = createSleepSpy();

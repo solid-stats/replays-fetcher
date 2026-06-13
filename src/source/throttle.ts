@@ -48,9 +48,9 @@ export interface ThrottleController {
   onCleanWindow(nowMs: number): void;
 }
 
-export function createThrottleController(
+export const createThrottleController = (
   options: ThrottleControllerOptions,
-): ThrottleController {
+): ThrottleController => {
   const { max } = options;
   const floor = Math.max(CONCURRENCY_FLOOR, options.min);
 
