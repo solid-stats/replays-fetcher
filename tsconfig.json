@@ -1,21 +1,8 @@
 {
+  "extends": "@solid-stats/ts-toolchain/tsconfig/base.json",
   "compilerOptions": {
-    "target": "ES2023",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "strict": true,
-    "exactOptionalPropertyTypes": true,
-    "noFallthroughCasesInSwitch": true,
-    "noImplicitOverride": true,
-    "noImplicitReturns": true,
-    "noPropertyAccessFromIndexSignature": true,
-    "noUncheckedIndexedAccess": true,
-    "noUncheckedSideEffectImports": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
     "outDir": "dist",
     "rootDir": ".",
-    "skipLibCheck": true,
     "types": ["node", "vitest"]
   },
   "include": ["src/**/*.ts", "vitest.config.ts", "eslint.config.js"],

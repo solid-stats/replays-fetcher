@@ -107,6 +107,7 @@ export default tseslint.config(
       "coverage/**",
       "eslint.config.js",
       ".agents/**",
+      ".claude/**",
       ".planning/**",
     ],
   },
