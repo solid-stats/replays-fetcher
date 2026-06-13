@@ -44,7 +44,7 @@ Behavior-preserving toolchain migration. The `verify` gate must stay green at 10
     3. Fetcher `package.json` carries the git-dep pinned by tag/commit; `pnpm-lock.yaml` is reproducible (frozen-lockfile install works in CI + Docker).
     4. Fetcher `tsconfig.json` extends the shared base; `pnpm verify` stays green.
   - Plans: 3 plans (waves 1→2→3)
-    - [ ] 13-01-PLAN.md — Author + push shared `solid-stats/ts-toolchain` master: 5 presets + lefthook.yml + config-only package.json (exports) + self-validating CI (CFG-01, CFG-02)
+    - [x] 13-01-PLAN.md — Author + push shared `solid-stats/ts-toolchain` master: 5 presets + lefthook.yml + config-only package.json (exports) + self-validating CI (CFG-01, CFG-02)
     - [ ] 13-02-PLAN.md — Confirm green shared-repo CI, then cut + push annotated consumable tag `v0.1.0` on the green SHA (CFG-02 gate)
     - [ ] 13-03-PLAN.md — Add tag-pinned git-dep to fetcher, regenerate frozen lockfile, switch `tsconfig.json` to extends shared base, prove `pnpm verify` green (CFG-03, CFG-04)
 
@@ -179,7 +179,7 @@ Behavior-preserving toolchain migration. The `verify` gate must stay green at 10
 | 10. Dynamic Source Range and Rate Limiting | v2.0 | 5/5 | Complete | 2026-06-11 |
 | 11. Progress Events and Compact Evidence | v2.0 | 5/5 | Complete | 2026-06-12 |
 | 12. Source Contract Guards | v2.0 | 2/2 | Complete | 2026-06-12 |
-| 13. Shared @solid-stats/ts-toolchain Bootstrap | v3.0 | 0/? | Pending | — |
+| 13. Shared @solid-stats/ts-toolchain Bootstrap | v3.0 | 1/3 | In Progress|  |
 | 14. Repository Cleanup & Convention Compliance | v3.0 | 0/? | Pending | — |
 | 15. Oxfmt Formatter Migration | v3.0 | 0/? | Pending | — |
 | 16. Oxlint Migration & Import Hygiene | v3.0 | 0/? | Pending | — |
