@@ -10,13 +10,14 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "check": "tsx src/cli.ts check",
-    "format": "prettier --check .",
+    "format": "oxfmt --write .",
+    "format:check": "oxfmt --check .",
     "lint": "eslint .",
     "test": "vitest run",
     "test:integration": "VITEST_INTEGRATION=true VITEST_INTEGRATION_GLOB=\"src/**/*.integration.test.ts\" vitest run --dir src --no-file-parallelism --testTimeout 120000 --hookTimeout 120000",
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "verify": "pnpm run format && pnpm run lint && pnpm run typecheck && pnpm test && pnpm run test:integration && pnpm run test:coverage && pnpm run build"
+    "verify": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm test && pnpm run test:integration && pnpm run test:coverage && pnpm run build"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1045.0",
@@ -38,7 +39,7 @@
     "eslint-import-resolver-typescript": "^4.4.4",
     "eslint-plugin-import-x": "^4.16.2",
     "eslint-plugin-unicorn": "^64.0.0",
-    "prettier": "^3.8.3",
+    "oxfmt": "0.54.0",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.2",
