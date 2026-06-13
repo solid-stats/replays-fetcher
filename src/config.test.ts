@@ -2,12 +2,12 @@
 import { expect, test } from "vitest";
 
 import {
-  ConfigError,
   defaultSourceRetryAttempts,
   loadConfig,
   loadSourceConfig,
   redactConfig,
 } from "./config.js";
+import { ConfigValidationError } from "./errors/config-validation-error.js";
 
 const validEnvironment = {
   REPLAY_SOURCE_URL: "https://example.test/replays",
@@ -67,7 +67,7 @@ test("loadSourceConfig should not require S3 or staging settings for dry-run", (
 });
 
 test("loadSourceConfig should validate required source settings", () => {
-  expect(() => loadSourceConfig({})).toThrow(ConfigError);
+  expect(() => loadSourceConfig({})).toThrow(ConfigValidationError);
 });
 
 test("loadSourceConfig should parse source timeout override", () => {
@@ -272,8 +272,8 @@ test("loadConfig should require an SSH host when SSH transport is enabled", () =
   ).toThrow("REPLAY_SOURCE_SSH_HOST");
 });
 
-test("loadConfig should throw ConfigError when required settings are missing", () => {
-  expect(() => loadConfig({})).toThrow(ConfigError);
+test("loadConfig should throw ConfigValidationError when required settings are missing", () => {
+  expect(() => loadConfig({})).toThrow(ConfigValidationError);
 });
 
 test("loadConfig should parse path-style override when boolean-like value is provided", () => {
@@ -342,7 +342,7 @@ test("loadConfig should honor an S3_CHECKPOINT_CONDITIONAL_WRITES=false override
 test("loadConfig should reject an empty checkpoint prefix", () => {
   expect(() =>
     loadConfig({ ...validEnvironment, S3_CHECKPOINT_PREFIX: "" }),
-  ).toThrow(ConfigError);
+  ).toThrow(ConfigValidationError);
 });
 
 test("redactConfig should keep the non-secret checkpoint prefix visible", () => {
@@ -371,7 +371,7 @@ test("loadConfig should honor an S3_EVIDENCE_PREFIX override", () => {
 test("loadConfig should reject an empty evidence prefix", () => {
   expect(() =>
     loadConfig({ ...validEnvironment, S3_EVIDENCE_PREFIX: "" }),
-  ).toThrow(ConfigError);
+  ).toThrow(ConfigValidationError);
 });
 
 test("redactConfig should keep the non-secret evidence prefix visible", () => {

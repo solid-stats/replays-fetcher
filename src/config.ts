@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import type { SourceTransport } from "./discovery/types.js";
+import { ConfigValidationError } from "./errors/config-validation-error.js";
 
 const booleanFromEnvironment = z
   .union([z.boolean(), z.string()])
@@ -119,16 +120,6 @@ export type RedactedAppConfig = Omit<
 
 export type ConfigSource = Record<string, boolean | string | undefined>;
 
-export class ConfigError extends Error {
-  readonly issues: string[];
-
-  constructor(issues: string[]) {
-    super(`Invalid configuration: ${issues.join("; ")}`);
-    this.name = "ConfigError";
-    this.issues = issues;
-  }
-}
-
 export function loadConfig(source: ConfigSource = process.env): AppConfig {
   const sourceConfig = readSourceConfigInput(source);
   const result = configSchema.safeParse({
@@ -150,7 +141,7 @@ export function loadConfig(source: ConfigSource = process.env): AppConfig {
   });
 
   if (!result.success) {
-    throw new ConfigError(
+    throw new ConfigValidationError(
       result.error.issues.map(
         (issue) => `${issue.path.join(".")}: ${issue.message}`,
       ),
@@ -166,7 +157,7 @@ export function loadSourceConfig(
   const result = sourceConfigSchema.safeParse(readSourceConfigInput(source));
 
   if (!result.success) {
-    throw new ConfigError(
+    throw new ConfigValidationError(
       result.error.issues.map(
         (issue) => `${issue.path.join(".")}: ${issue.message}`,
       ),

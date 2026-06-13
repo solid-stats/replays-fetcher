@@ -17,13 +17,13 @@ import {
   type S3CheckpointStore,
 } from "./checkpoint/s3-checkpoint-store.js";
 import {
-  ConfigError,
   loadConfig,
   loadSourceConfig,
   redactConfig,
   type AppConfig,
   type SourceConfig,
 } from "./config.js";
+import { ConfigValidationError } from "./errors/config-validation-error.js";
 import { runContractCheck } from "./contract-check/contract-check.js";
 import { discoverReplaysDryRun } from "./discovery/discover.js";
 import { createSourceClient } from "./discovery/source-client.js";
@@ -247,7 +247,7 @@ function registerCheckCommand(
           process.exitCode = 2;
         }
       } catch (error) {
-        if (error instanceof ConfigError) {
+        if (error instanceof ConfigValidationError) {
           writeJson({
             ok: false,
             checks: {
@@ -726,7 +726,7 @@ function loadDryRunSourceConfig(
       ok: true,
     };
   } catch (error) {
-    if (error instanceof ConfigError) {
+    if (error instanceof ConfigValidationError) {
       return {
         issues: error.issues,
         ok: false,
@@ -747,7 +747,7 @@ function loadStoreRawConfig(
       ok: true,
     };
   } catch (error) {
-    if (error instanceof ConfigError) {
+    if (error instanceof ConfigValidationError) {
       return {
         issues: error.issues,
         ok: false,
