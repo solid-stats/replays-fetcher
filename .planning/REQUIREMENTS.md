@@ -79,35 +79,35 @@ Filled during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CFG-01 | TBD | Pending |
-| CFG-02 | TBD | Pending |
-| CFG-03 | TBD | Pending |
-| CFG-04 | TBD | Pending |
-| CLN-01 | TBD | Pending |
-| CLN-02 | TBD | Pending |
-| CLN-03 | TBD | Pending |
-| CLN-04 | TBD | Pending |
-| LNT-01 | TBD | Pending |
-| LNT-02 | TBD | Pending |
-| LNT-03 | TBD | Pending |
-| LNT-04 | TBD | Pending |
-| FMT-01 | TBD | Pending |
-| FMT-02 | TBD | Pending |
-| BLD-01 | TBD | Pending |
-| BLD-02 | TBD | Pending |
-| IMP-01 | TBD | Pending |
-| IMP-02 | TBD | Pending |
-| HOK-01 | TBD | Pending |
-| HOK-02 | TBD | Pending |
-| HOK-03 | TBD | Pending |
-| VRF-01 | TBD | Pending |
-| VRF-02 | TBD | Pending |
-| VRF-03 | TBD | Pending |
+| CFG-01 | Phase 13 | Pending |
+| CFG-02 | Phase 13 | Pending |
+| CFG-03 | Phase 13 | Pending |
+| CFG-04 | Phase 13 | Pending |
+| CLN-01 | Phase 14 | Pending |
+| CLN-02 | Phase 14 | Pending |
+| CLN-03 | Phase 14 | Pending |
+| CLN-04 | Phase 14 | Pending |
+| FMT-01 | Phase 15 | Pending |
+| FMT-02 | Phase 15 | Pending |
+| LNT-01 | Phase 16 | Pending |
+| LNT-02 | Phase 16 | Pending |
+| LNT-03 | Phase 16 | Pending |
+| LNT-04 | Phase 16 | Pending |
+| IMP-01 | Phase 16 | Pending |
+| IMP-02 | Phase 16 | Pending |
+| BLD-01 | Phase 17 | Pending |
+| BLD-02 | Phase 17 | Pending |
+| HOK-01 | Phase 18 | Pending |
+| HOK-02 | Phase 18 | Pending |
+| HOK-03 | Phase 18 | Pending |
+| VRF-01 | Phase 18 | Pending |
+| VRF-02 | Phase 18 | Pending |
+| VRF-03 | Phase 18 | Pending |
 
 **Coverage:**
 - v1 requirements: 24 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 24 ⚠️
+- Mapped to phases: 24
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-06-13*

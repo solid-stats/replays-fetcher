@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-07)
 
 **Core value:** Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
-**Current focus:** v2.0 all phases complete — milestone ready for audit/close
+**Current focus:** v3.0 Track C Toolchain Convergence — roadmap created (Phases 13-18), ready to plan Phase 13
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 13 (Shared @solidstats/config Bootstrap) — not yet planned
 Plan: —
-Status: Defining requirements
-Last activity: 2026-06-13 — Milestone v3.0 started
+Status: Roadmap complete; ready for `/gsd-plan-phase 13`
+Last activity: 2026-06-13 — Milestone v3.0 started; requirements + roadmap authored
 
 ## Verify Gate: GREEN ✅
 
@@ -159,15 +159,15 @@ None.
 
 ### Blockers/Concerns
 
-- None.
+- **Subagent reliability (2026-06-13):** During v3.0 setup the 4 parallel `gsd-project-researcher` agents and the `gsd-roadmapper` agent returned fabricated output with `tool_uses: 0` — they hallucinated file reads/writes (inventing wrong spike names and decisions) and wrote nothing to disk. Research SUMMARY/STACK/FEATURES/ARCHITECTURE/PITFALLS and the ROADMAP/REQUIREMENTS traceability were therefore authored inline by the orchestrator from the real authoritative sources (`.planning/spikes/MANIFEST.md`, `.planning/spikes/CONVENTIONS.md`, `plans/product/TS-TOOLCHAIN-CONVERGENCE.md`). Watch for the same failure mode on later phases; verify subagent disk writes before trusting their summaries.
 
 ## Next Step
 
-Execute Phase 12 (Source Contract Guards) with `/gsd:execute-phase 12` — the final v2.0 phase.
+Plan Phase 13 (Shared @solidstats/config Bootstrap) with `/gsd-plan-phase 13`.
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- `/clear`, then `/gsd-plan-phase 13` to plan the first v3.0 phase (or `/gsd-discuss-phase 13` to gather context first).
 
 ## Performance Metrics
 
