@@ -4,13 +4,13 @@ milestone: v3.0
 milestone_name: Track C Toolchain Convergence
 status: executing
 stopped_at: Completed 11-01-PLAN.md
-last_updated: "2026-06-13T19:17:01.539Z"
+last_updated: "2026-06-13T19:23:35.858Z"
 last_activity: 2026-06-13 -- Phase 14 execution started
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 7
-  completed_plans: 5
+  completed_plans: 6
   percent: 17
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 ## Current Position
 
 Phase: 14 (repository-cleanup-convention-compliance) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-06-13 -- Phase 14 execution started
 
@@ -124,6 +124,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: ConfigValidationError carries public issues field so cli.ts call sites work without change
 - [Phase ?]: toDetailsRecord helper avoids unnecessary-type-assertion (checkpoint-conflict-error.ts pattern)
 - [Phase ?]: Named .max() bound constants — no magic numbers (Phase 10-01 ESLint decision)
+- [Phase ?]: CLN-04c: RunSummary (9 типов) перенесён в src/types/run-summary.ts; run/types.ts — barrel; fence #1 закрыт в evidence-адаптере
 
 ### Roadmap Evolution
 
@@ -216,9 +217,10 @@ Behavioral fixes from the live parity-baseline run (registry `plans/product/PARI
 | Phase 13 P13-03 | 33 | 2 tasks | 4 files |
 | Phase 14 P01 | 10min | 3 tasks | 5 files |
 | Phase 14 P02 | 15 | 2 tasks | 5 files |
+| Phase 14 P03 | 120 | 2 tasks | 3 files |
 
 ## Session
 
-**Last session:** 2026-06-13T19:16:25.976Z
+**Last session:** 2026-06-13T19:23:18.216Z
 **Stopped at:** Completed 11-01-PLAN.md
 **Resume file:** .planning/phases/11-progress-events-and-compact-evidence/11-CONTEXT.md
