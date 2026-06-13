@@ -148,11 +148,14 @@ Architecture not yet mapped. Follow existing patterns found in the codebase.
 
 | Skill | When to Invoke |
 |-------|----------------|
-| `solidstats-backend-ts-conventions` | Любой роут, плагин, хук, схема валидации, конфиг клиента БД/очереди/S3, дизайн эндпоинта — архитектура и конвенции TS/Fastify backend (вобрал Fastify/Node/API-design best practices). |
-| `solidstats-backend-ts-code-review` | Педантичное код-ревью TS/Fastify backend; ruleset делегируется в conventions, формат отчёта — в process-review-standards. |
-| `solidstats-backend-ts-tests` | Написание или ревью backend-тестов (unit + integration, Vitest) поверх process-testing-standards. |
-| `solidstats-process-review-standards` | Общий фундамент формата код-ревью (severity-бакеты, формат отчёта, правила вердикта); подключается code-review skills, не используется самостоятельно. |
-| `solidstats-process-testing-standards` | Общая философия тестов (AAA, изоляция, детерминизм, test doubles, размещение файлов); подключается per-stack test skills. |
+| `solidstats-fetcher-ts-conventions` | Любой код фетчера — стадия инжеста, discovery, staging, checkpoint, S3, дизайн пайплайна: пятибэндовая ingest-архитектура + инварианты границы (no parsing, write-scope, идемпотентность, evidence), Zod-конфиг, CLI error boundary. |
+| `solidstats-fetcher-ts-code-review` | Педантичное код-ревью фетчера; ingest-boundary gate + risk-ordered sweep; ruleset — fetcher-conventions + shared-backend-ts-standards, формат — shared-review-standards. |
+| `solidstats-fetcher-ts-tests` | Написание/ревью тестов фетчера (Vitest; testcontainers PostgreSQL+MinIO, без RabbitMQ) поверх shared-testing-standards. |
+| `solidstats-shared-backend-ts-standards` | Стек-нейтральные правила TS-сервисов (нейминг/фабрики, база типизированных ошибок, енумы, дисциплина конфига, async, §Z/§AA/§AB) — читается fetcher-conventions, не вызывается напрямую. |
+| `solidstats-shared-ts-standards` | TS/Node baseline (tsconfig, code style, ESLint 10, Node 25/pnpm 11, Vitest, утилиты, lint-suppression policy) — читается conventions, не вызывается напрямую. |
+| `solidstats-shared-review-standards` | Общий фундамент формата код-ревью (severity-бакеты, формат отчёта, правила вердикта); подключается code-review skills, не используется самостоятельно. |
+| `solidstats-shared-testing-standards` | Общая философия тестов (AAA, изоляция, детерминизм, test doubles, размещение файлов); подключается per-stack test skills. |
+| `solidstats-shared-project-standards` | Универсальный baseline всех репо (GSD-обязательства, гигиена сессии, git-конвенции, cross-app границы, безопасность); авто-триггерится на каждой задаче. |
 <!-- GSD:skills-end -->
 
 <!-- GSD:workflow-start source:GSD defaults -->

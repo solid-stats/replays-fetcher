@@ -1,5 +1,5 @@
 ---
-name: solidstats-process-project-standards
+name: solidstats-shared-project-standards
 description: >
   Universal project standards for every SolidStats repository (server-2, replays-fetcher,
   replay-parser-2, web, infrastructure). Covers GSD workflow obligations, session hygiene, git
@@ -205,7 +205,7 @@ mcp__context7__query-docs({ context7CompatibleLibraryID: "/fastify/fastify", top
 
 | Repo | Libraries to look up via Context7 |
 |------|-----------------------------------|
-| **server-2** | fastify, @sinclair/typebox, @fastify/type-provider-typebox, @fastify/swagger, kysely, pg, amqplib, pino, envalid, prom-client, @aws-sdk/client-s3 |
+| **server-2** | fastify, zod, fastify-type-provider-zod, @fastify/swagger, kysely, pg, amqplib, pino, envalid, prom-client, @aws-sdk/client-s3 |
 | **replays-fetcher** | zod, commander, @aws-sdk/client-s3, pg |
 | **web** | @tanstack/start, @tanstack/router, @tanstack/react-query, @tanstack/react-table, @tanstack/react-form, @ark-ui/react, vanilla-extract, openapi-typescript, openapi-fetch, openapi-react-query |
 | **replay-parser-2** | tokio, serde, serde_json, thiserror, lapin, aws-sdk-s3, axum, tracing, tracing-subscriber |

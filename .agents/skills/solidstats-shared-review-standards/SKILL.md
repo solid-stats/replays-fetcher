@@ -1,12 +1,12 @@
 ---
-name: solidstats-process-review-standards
+name: solidstats-shared-review-standards
 description: >
   Shared review foundation for every SolidStats code-review skill — backend, parser, and
   frontend alike. Owns the canonical severity buckets (🔴🟠🟡🔵 — severity only, one axis), the
   report output format with continuous numbering, the APPROVE / REQUEST CHANGES / BLOCK verdict
   rules, scope establishment and scope discipline (findings stay tied to the change), the
   read-only default, the test-file rule, and the noise filter. The specific reviewers
-  (solidstats-backend-ts-code-review, solidstats-parser-rust-code-review,
+  (solidstats-server-ts-code-review, solidstats-parser-rust-code-review,
   solidstats-frontend-react-code-review) hard-require this skill and read it first; each adds
   only its stack-specific gate and conventions on top. Do NOT trigger this for an actual
   review — use the matching reviewer skill; this skill only defines the shared standard and is

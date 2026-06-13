@@ -1,4 +1,7 @@
-# Changelog — solidstats-process-testing-standards
+# Changelog — solidstats-shared-testing-standards
+
+## 2026-06-13
+- §H: added "Suppressing coverage — the policy" sub-block (inline-ignore rules, blanket-exclude policy, owner/expiry/CI gate requirement, cross-ref to solidstats-shared-ts-standards §C).
 
 ## 2026-06-05 — Initial
 - Authored fresh (no estesis analog; estesis only had a React-specific unit-tests skill).

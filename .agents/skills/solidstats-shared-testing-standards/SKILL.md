@@ -1,11 +1,11 @@
 ---
-name: solidstats-process-testing-standards
+name: solidstats-shared-testing-standards
 description: >
   Shared testing foundation for every SolidStats stack — backend (TS/Fastify), parser (Rust),
   and frontend (React/TanStack) alike. Owns the stack-agnostic testing philosophy: the RITE
   standard, AAA structure, the unit-vs-integration boundary, determinism and flakiness rules,
   the test-double vocabulary, oracle strength, the coverage-and-mutation mindset, naming, and
-  scope/realism. The per-stack test skills (solidstats-backend-ts-tests, solidstats-parser-rust-tests,
+  scope/realism. The per-stack test skills (solidstats-server-ts-tests, solidstats-parser-rust-tests,
   solidstats-frontend-react-tests) hard-require this skill and read it first; each adds only its
   runner, file placement, language idioms, and integration harness on top. Do NOT trigger this for
   actually writing tests — use the matching per-stack skill; this skill only defines the shared
@@ -189,6 +189,20 @@ a diagnostic, **never proof of quality**:
 Numeric coverage **thresholds and gates are owned by the per-stack skill** (the tools and what
 "reachable" means differ per stack); this standard sets only the direction — maximize coverage,
 justify every exception.
+
+**Suppressing coverage — the policy.** Never add a coverage ignore to a real, reachable branch
+just to hit the number — if the branch has semantics, it gets a test (most need only a new
+fixture input, not new infrastructure). Blanket file-level excludes belong in tool config (the
+runner's coverage exclude list, an allowlist file), and only for genuinely non-unit-testable
+entry/bootstrap code (a CLI's argv parse, an `import.meta.url` / main-guard, a live-I/O
+boundary) — never for ordinary application logic. Every inline ignore must be narrow (a single
+line or branch) and carry a reason naming the invariant that makes the branch unreachable in a
+passing run; a file that accumulates many inline ignores is itself the smell and triggers a
+refactor, not more ignores. Where the tooling supports it, a suppression carries an owner and an
+expiry and is enforced in CI — an allowlist no job checks is not a gate.
+
+Note: the concrete mechanism (which globs, the marker syntax) is owned by each per-stack -tests
+skill. This mirrors the lint-suppression policy in solidstats-shared-ts-standards §C.
 
 ---
 

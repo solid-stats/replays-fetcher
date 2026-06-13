@@ -1,4 +1,4 @@
-# Changelog — solidstats-process-review-standards
+# Changelog — solidstats-shared-review-standards
 
 ## 2026-06-06 — Calibration (user-confirmed)
 - §C: "blocking I/O on an async path" moved from 🔴 to 🟠 (🔴 only when it stalls a hot/shared path);
@@ -11,7 +11,7 @@
 ## 2026-06-05 — Initial
 - Adapted from `estesis-process-review-standards` (stack-agnostic review foundation).
 - Retargeted name, description, and body to the SolidStats reviewers:
-  `solidstats-backend-ts-code-review`, `solidstats-parser-rust-code-review`,
+  `solidstats-server-ts-code-review`, `solidstats-parser-rust-code-review`,
   `solidstats-frontend-react-code-review`.
 - Kept severity buckets (🔴🟠🟡🔵), continuous-numbering output format, verdict rules,
   scope discipline, the test-file rule, and the noise filter verbatim.

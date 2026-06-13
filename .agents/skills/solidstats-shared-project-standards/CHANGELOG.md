@@ -1,4 +1,4 @@
-# Changelog — solidstats-process-project-standards
+# Changelog — solidstats-shared-project-standards
 
 ## 2026-06-07 — v1.1 — MCP usage guidelines
 
