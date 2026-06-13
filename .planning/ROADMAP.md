@@ -112,10 +112,11 @@ Behavior-preserving toolchain migration. The `verify` gate must stay green at 10
   3. Redundant `eslint-disable`/suppressions removed; ignore files tightened.
   4. Convention-skill review passes; ingest-boundary invariants intact; `pnpm verify` green.
 
-**Plans:** 4 plans
+**Plans:** 1/4 plans executed
 
 Plans:
-- [ ] 14-01-PLAN.md — CLN-01/02/03: remove deprecated pnpm field, confirm 0 TODO/FIXME, justify 9 no-await-in-loop suppressions (Wave 1)
+
+- [x] 14-01-PLAN.md — CLN-01/02/03: remove deprecated pnpm field, confirm 0 TODO/FIXME, justify 9 no-await-in-loop suppressions (Wave 1)
 - [ ] 14-02-PLAN.md — CLN-04a/b: ConfigError → ConfigValidationError extends AppError; add .max() bounds to 11 config fields (Wave 2)
 - [ ] 14-03-PLAN.md — CLN-04c: move RunSummary contract to src/types/, fix evidence→run boundary fence (Wave 3)
 - [ ] 14-04-PLAN.md — CLN-04d: split the 822-line cli.ts god-file into src/commands/ (HIGH risk, isolated last wave) (Wave 4)
@@ -188,7 +189,7 @@ Plans:
 | 11. Progress Events and Compact Evidence | v2.0 | 5/5 | Complete | 2026-06-12 |
 | 12. Source Contract Guards | v2.0 | 2/2 | Complete | 2026-06-12 |
 | 13. Shared @solid-stats/ts-toolchain Bootstrap | v3.0 | 3/3 | Complete   | 2026-06-13 |
-| 14. Repository Cleanup & Convention Compliance | v3.0 | 0/? | Pending | — |
+| 14. Repository Cleanup & Convention Compliance | v3.0 | 1/4 | In Progress|  |
 | 15. Oxfmt Formatter Migration | v3.0 | 0/? | Pending | — |
 | 16. Oxlint Migration & Import Hygiene | v3.0 | 0/? | Pending | — |
 | 17. tsdown Build & Docker Smoke | v3.0 | 0/? | Pending | — |

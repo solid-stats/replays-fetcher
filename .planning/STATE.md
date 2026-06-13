@@ -4,13 +4,13 @@ milestone: v3.0
 milestone_name: Track C Toolchain Convergence
 status: executing
 stopped_at: Completed 11-01-PLAN.md
-last_updated: "2026-06-13T18:51:53.792Z"
+last_updated: "2026-06-13T18:59:57.500Z"
 last_activity: 2026-06-13 -- Phase 14 execution started
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 7
-  completed_plans: 3
+  completed_plans: 4
   percent: 17
 ---
 
@@ -26,8 +26,8 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 ## Current Position
 
 Phase: 14 (repository-cleanup-convention-compliance) — EXECUTING
-Plan: 1 of 4
-Status: Executing Phase 14
+Plan: 2 of 4
+Status: Ready to execute
 Last activity: 2026-06-13 -- Phase 14 execution started
 
 ## Verify Gate: GREEN ✅
@@ -118,6 +118,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: 13-02: Тег v0.1.0 срезан на SHA 7563551 (CI conclusion=success); annotated tag
 - [Phase ?]: Pin @solid-stats/ts-toolchain git-dep тегом #v0.1.0 → lockfile SHA для --frozen-lockfile
 - [Phase ?]: tsconfig extends bare specifier; include/types явные в fetcher (Pitfall P13-5)
+- [Phase ?]: CLN-01: pnpm.onlyBuiltDependencies удалён из package.json; allowBuilds в pnpm-workspace.yaml единственный авторитетный источник для pnpm 11+
+- [Phase ?]: CLN-02: 0 TODO/FIXME/XXX/HACK в src/ и конфигах подтверждено repo-wide grep
+- [Phase ?]: CLN-03: все 14 no-await-in-loop suppress несут -- reason; 9 bare дополнены без удалений
 
 ### Roadmap Evolution
 
@@ -208,9 +211,10 @@ Behavioral fixes from the live parity-baseline run (registry `plans/product/PARI
 | Phase 13 P01 | 21 | 2 tasks | 11 files |
 | Phase 13 P02 | 3min | 2 tasks | 0 files |
 | Phase 13 P13-03 | 33 | 2 tasks | 4 files |
+| Phase 14 P01 | 10min | 3 tasks | 5 files |
 
 ## Session
 
-**Last session:** 2026-06-13T17:04:45.790Z
+**Last session:** 2026-06-13T18:59:25.669Z
 **Stopped at:** Completed 11-01-PLAN.md
 **Resume file:** .planning/phases/11-progress-events-and-compact-evidence/11-CONTEXT.md

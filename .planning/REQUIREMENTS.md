@@ -15,9 +15,9 @@
 
 ### Cleanup & Convention Compliance (CLN)
 
-- [ ] **CLN-01**: Dead code, unused config, and stale scripts are removed from the repository.
-- [ ] **CLN-02**: Stale TODO/FIXME annotations are cleared or promoted to tracked work.
-- [ ] **CLN-03**: Redundant `eslint-disable`/suppression comments are removed and ignore files are tightened.
+- [x] **CLN-01**: Dead code, unused config, and stale scripts are removed from the repository.
+- [x] **CLN-02**: Stale TODO/FIXME annotations are cleared or promoted to tracked work.
+- [x] **CLN-03**: Redundant `eslint-disable`/suppression comments are removed and ignore files are tightened.
 - [ ] **CLN-04**: Source passes `solidstats-fetcher-ts-*` convention-skill review with findings resolved; ingest-boundary invariants stay intact.
 
 ### Linting — Oxlint (LNT)
@@ -83,9 +83,9 @@ Filled during roadmap creation.
 | CFG-02 | Phase 13 | Complete |
 | CFG-03 | Phase 13 | Complete |
 | CFG-04 | Phase 13 | Complete |
-| CLN-01 | Phase 14 | Pending |
-| CLN-02 | Phase 14 | Pending |
-| CLN-03 | Phase 14 | Pending |
+| CLN-01 | Phase 14 | Complete |
+| CLN-02 | Phase 14 | Complete |
+| CLN-03 | Phase 14 | Complete |
 | CLN-04 | Phase 14 | Pending |
 | FMT-01 | Phase 15 | Pending |
 | FMT-02 | Phase 15 | Pending |
