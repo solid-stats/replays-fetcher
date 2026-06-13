@@ -1,0 +1,119 @@
+# Phase 16 ESLint → Oxlint Rule Delta
+
+**Дата:** 2026-06-14
+**Фаза:** 16 — oxlint-migration-import-hygiene (LNT-03)
+
+## Контекст
+
+| | До | После |
+|---|---|---|
+| Linter | ESLint + 5 плагинов | Oxlint 1.69.0 |
+| Config | `eslint.config.js` | `.oxlintrc.json` |
+| Базовый пресет | `js.configs.all` + `strictTypeChecked` + `stylisticTypeChecked` + `eslint-plugin-import-x` + `eslint-plugin-unicorn` (recommended) | `@solid-stats/ts-toolchain` `oxlint/base.oxlintrc.json` + repo overrides |
+| Import порядок | `eslint-plugin-import-x/order` | Нет эквивалента (см. секцию ниже) |
+
+Источник списка dropped-правил: `.planning/spikes/001-oxlint-preset-port/dropped.tsv` (32 правила).
+Spike 001 эмпирически верифицирован на 81 файле `src/` этого репо.
+
+---
+
+## Dropped Rules — полная таблица
+
+| Plugin | Rule | Disposition | Rationale |
+|--------|------|-------------|-----------|
+| `eslint` | `consistent-this` | accepted-lost | Крайне редкий паттерн; архаичная JS-практика; TypeScript+arrow functions делают `consistent-this` бессмысленным |
+| `eslint` | `no-octal` | covered-by:tsc | TypeScript `strict` отклоняет восьмеричные литералы на уровне парсера (SyntaxError) |
+| `eslint` | `no-octal-escape` | covered-by:tsc | TypeScript в `strict` / `noImplicitAny` запрещает восьмеричные escape-последовательности |
+| `eslint` | `no-undef-init` | covered-by:tsc | `strictNullChecks` + `strictPropertyInitialization` покрывают семантику `undefined`-инициализации |
+| `eslint` | `no-unreachable-loop` | accepted-lost | Редкий паттерн; tsc ловит недостижимый код частично; минимальный практический риск |
+| `eslint` | `require-atomic-updates` | accepted-lost | Присутствует в `oxlintrc.supported.json` spike, но не входит в shared preset v0.1.0; приёмлемо — код чистый, async-паттерны проверяются type-aware правилами |
+| `import` | `no-deprecated` | covered-by:preset | Покрыто `typescript/no-deprecated` (error) в shared preset `@solid-stats/ts-toolchain` |
+| `import` | `no-extraneous-dependencies` | covered-by:knip | knip (Phase 16 Wave 3) обнаруживает extraneous deps через entry-based tracing |
+| `import` | `no-import-module-exports` | accepted-lost | ESM-репо (package.json `"type":"module"`); `unicorn/prefer-module` в preset блокирует CJS `module.exports`; паттерн недостижим |
+| `import` | `no-relative-packages` | accepted-lost | Монорепо отсутствует; правило актуально только для workspace-монорепо — не применимо |
+| `import` | `no-unresolved` | covered-by:tsc | `tsc --noEmit` (`moduleResolution: NodeNext`) отклоняет неразрешимые импорты |
+| `import` | `no-unused-modules` | covered-by:knip | knip (Phase 16 Wave 3) обнаруживает unused modules через entry-based tracing точнее, чем import плагин |
+| `import` | `no-useless-path-segments` | accepted-lost | Косметическое правило; oxfmt/prettier не нормализует пути; минимальный риск |
+| `import` | `order` | **orphan — accepted loss** | **Единственный genuine orphan; нет эквивалента в Oxlint 1.69.0; принято per DFT-02 deferred (см. секцию ниже)** |
+| `typescript` | `member-ordering` | accepted-lost | Нет Oxlint 1.69.0 эквивалента; stylistic; code review / conventions-skill покрывают это |
+| `typescript` | `naming-convention` | accepted-lost | **ЗНАЧИМАЯ потеря** — нет Oxlint 1.69.0 эквивалента для полного enforcement naming convention по типам/интерфейсам/перечислениям; TypeScript `strict` частично покрывает через type-checking; code review gate |
+| `typescript` | `prefer-destructuring` | accepted-lost | Stylistic; покрывается частично `unicorn/destructuring-any-default-parameter` и `unicorn/no-object-as-default-parameter` в preset; чистая потеря минимальна |
+| `unicorn` | `better-regex` | accepted-lost | Regex-оптимизация; низкий практический риск; код проходил strictTypeChecked на чистом src |
+| `unicorn` | `consistent-destructuring` | accepted-lost | Stylistic; code review gate |
+| `unicorn` | `expiring-todo-comments` | accepted-lost | Phase 14 CLN-02 очистил все 0 TODO/FIXME/XXX/HACK в src/; правило неактуально |
+| `unicorn` | `no-array-push-push` | accepted-lost | Микро-оптимизация; низкий риск |
+| `unicorn` | `no-for-loop` | accepted-lost | `unicorn/no-for-loop` требует итерирование через `for...of`; код уже следует этому паттерну |
+| `unicorn` | `no-keyword-prefix` | accepted-lost | Naming convention; code review gate |
+| `unicorn` | `no-named-default` | accepted-lost | Микро-стилистика для default-импортов; ESM-репо; низкий риск |
+| `unicorn` | `no-unnecessary-polyfills` | accepted-lost | Node.js 25 = современный runtime; все native API доступны; правило неактуально |
+| `unicorn` | `no-unused-properties` | accepted-lost | Частично покрыто tsc (`noUnusedLocals`) и knip; остаточный риск минимален |
+| `unicorn` | `prefer-export-from` | accepted-lost | Minor stylistic для re-export паттернов; нет runtime impact |
+| `unicorn` | `prefer-json-parse-buffer` | accepted-lost | Minor performance hint; Node.js 25 оптимизирован; нет практического риска |
+| `unicorn` | `prefer-switch` | accepted-lost | Stylistic; code review gate |
+| `unicorn` | `prevent-abbreviations` | restored-via-override | **НЕ потеря.** Правило присутствует в `oxlintrc.supported.json` spike. В `dropped.tsv` появилось, т.к. spike генерировал severity-only без allowList. В `.oxlintrc.json` восстановлено через repo override: `unicorn/prevent-abbreviations: ["error", { allowList: { cli: true, env: true, s3: true } }]` |
+| `unicorn` | `string-content` | accepted-lost | Stylistic; форматирование строк не влияет на корректность или безопасность |
+| `unicorn` | `template-indent` | covered-by:oxfmt | oxfmt (Phase 15, `format:check` в verify) форматирует template literals, включая отступы |
+
+**Итого:** 32 правила — 13 accepted-lost + 13 accepted-lost с rationale + 6 covered-by:tool + 1 restored-via-override + 1 orphan (import/order).
+
+### Сводка по dispositions
+
+| Disposition | Кол-во | Правила |
+|-------------|--------|---------|
+| `accepted-lost` | 19 | consistent-this, no-unreachable-loop, require-atomic-updates, no-import-module-exports, no-relative-packages, no-useless-path-segments, member-ordering, naming-convention, prefer-destructuring, better-regex, consistent-destructuring, expiring-todo-comments, no-array-push-push, no-for-loop, no-keyword-prefix, no-named-default, no-unnecessary-polyfills, no-unused-properties, prefer-export-from, prefer-json-parse-buffer, prefer-switch, string-content |
+| `covered-by:tsc` | 4 | no-octal, no-octal-escape, no-undef-init, no-unresolved |
+| `covered-by:knip` | 2 | no-extraneous-dependencies, no-unused-modules |
+| `covered-by:preset` | 1 | no-deprecated (→ typescript/no-deprecated) |
+| `covered-by:oxfmt` | 1 | template-indent |
+| `restored-via-override` | 1 | prevent-abbreviations |
+| **orphan (accepted loss)** | 1 | **import/order** |
+
+> Примечание: `accepted-lost` для naming-convention является ЗНАЧИМОЙ потерей — нет Oxlint 1.69.0 эквивалента
+> для enforcement naming convention по типам/интерфейсам. Это компенсируется code review + conventions-skill.
+
+---
+
+## import/order — Accepted Loss (DFT-02 deferred)
+
+**Статус:** Единственный genuine orphan — нет эквивалента в Oxlint 1.69.0.
+
+**Анализ:**
+- ESLint `import-x/order` обеспечивал сортировку импортов по группам (builtin → external → internal → parent → sibling → index).
+- Oxlint 1.69.0 не поддерживает полный `import/order`. Поддерживаются только `import/no-duplicates` и часть других import-правил, но не ordering.
+- `simple-import-sort` как residual ESLint plugin противоречит цели «удалить ESLint».
+
+**Решение Phase 16:**
+- Принято как потеря per **DFT-02** (REQUIREMENTS.md): «A residual `import/order` rule is added only if depcruise/knip leave import ordering uncovered.»
+- depcruise (IMP-01) и knip (IMP-02) не покрывают ordering, но ordering — stylistic, не structural.
+- Если Oxlint в будущих версиях добавит полный `import/order` — shared preset `@solid-stats/ts-toolchain` обновится.
+- `simple-import-sort` НЕ добавляется в Phase 16.
+
+---
+
+## ESLint.config.js Option Losses
+
+Следующие конфигурационные опции ESLint-правил не могут быть полностью перенесены в Oxlint 1.69.0:
+
+| ESLint правило + опции | Статус | Oxlint ситуация |
+|------------------------|--------|-----------------|
+| `max-lines-per-function: ["error", { max: 100, skipBlankLines: true, skipComments: true }]` | accepted | Oxlint поддерживает `max-lines-per-function`, но НЕ поддерживает `skipBlankLines`/`skipComments` опции [Assumption A1]. Shared preset держит правило `off`. Потеря задокументирована, принята. |
+| `max-statements: ["error", { max: 25 }]` | accepted | Статус поддержки Oxlint неточен [Assumption A2]; в shared preset отсутствует. Принято как потеря. |
+
+---
+
+## discover.ts Fence #2 Boundary (IMP-01 контекст)
+
+Для документирования перед планом 16-05 (dependency-cruiser):
+
+**Паттерн:** `src/commands/discover.ts` использует Dependency Injection через `BuildCliDependencies` интерфейс — вызовы `dependencies.storeRawReplay()` и `dependencies.stageRawReplay()` не создают прямых статических `import` из `src/storage/` или `src/staging/`.
+
+**Implikация для depcruise (Plan 16-05):**
+- Граница `commands/ → storage/staging` уже соблюдается через DI.
+- depcruise boundary rule (если добавляется) применяется как `severity: "warn"` (информационное), не `error`.
+- Это не блокирует `verify`-цепочку, пока fence #2 backlog явно задокументирован.
+- Прямых нарушений DI-паттерна в текущем `discover.ts` нет — это known/allowed pattern, не нарушение.
+
+---
+
+*Артефакт LNT-03 — Phase 16 oxlint-migration-import-hygiene*
+*Источник: `.planning/spikes/001-oxlint-preset-port/dropped.tsv` (spike 001, эмпирически верифицирован)*
