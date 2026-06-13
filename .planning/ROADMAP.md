@@ -128,11 +128,15 @@ Plans:
 **Goal**: Replace Prettier with Oxfmt (shared `.oxfmtrc` preset) and land the repo-wide reformat as a single isolated commit before the linter swap, so format churn does not collide with lint changes.
 **Depends on**: Phase 13 (shared `.oxfmtrc` preset), Phase 14 (clean baseline before the repo-wide reformat)
 **Requirements**: FMT-01, FMT-02
+**Plans**: 1 plan
 **Success Criteria** (what must be TRUE):
 
   1. Prettier removed; `pnpm format`/`format:check` run oxfmt against the shared preset.
   2. The repo-wide reformat is a single, verifiably format-only commit.
   3. `pnpm verify` green.
+
+Plans:
+- [ ] 15-01-PLAN.md — Swap prettier→oxfmt 0.54.0 (deps + .oxfmtrc.json + .prettierignore + scripts/verify), then isolated repo-wide reformat (FMT-01, FMT-02)
 
 ---
 
