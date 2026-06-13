@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Track C Toolchain Convergence
-status: verifying
+status: executing
 stopped_at: Completed 11-01-PLAN.md
-last_updated: "2026-06-13T20:41:56.753Z"
-last_activity: 2026-06-13 -- Phase 15 execution started
+last_updated: "2026-06-13T21:38:45.437Z"
+last_activity: 2026-06-13 -- Phase 16 execution started
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 8
+  total_plans: 14
   completed_plans: 8
   percent: 50
 ---
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-07)
 
 **Core value:** Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
-**Current focus:** Phase 15 — oxfmt-formatter-migration
+**Current focus:** Phase 16 — oxlint-migration-import-hygiene
 
 ## Current Position
 
-Phase: 15 (oxfmt-formatter-migration) — EXECUTING
-Plan: 1 of 1
-Status: Phase complete — ready for verification
-Last activity: 2026-06-13 -- Phase 15 execution started
+Phase: 16 (oxlint-migration-import-hygiene) — EXECUTING
+Plan: 1 of 6
+Status: Executing Phase 16
+Last activity: 2026-06-13 -- Phase 16 execution started
 
 ## Verify Gate: GREEN ✅
 
