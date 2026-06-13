@@ -22,7 +22,7 @@ import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { toEvidenceObjectKey } from "./object-key.js";
 
 import type { AppConfig } from "../config.js";
-import type { RunSummary } from "../run/types.js";
+import type { RunSummary } from "../types/run-summary.js";
 
 export interface S3EvidenceSender {
   send(command: PutObjectCommand): Promise<{ readonly ETag?: string }>;
