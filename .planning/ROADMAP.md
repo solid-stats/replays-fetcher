@@ -43,6 +43,10 @@ Behavior-preserving toolchain migration. The `verify` gate must stay green at 10
     2. Its own CI lints/formats/typechecks the preset files before a consumable tag is cut.
     3. Fetcher `package.json` carries the git-dep pinned by tag/commit; `pnpm-lock.yaml` is reproducible (frozen-lockfile install works in CI + Docker).
     4. Fetcher `tsconfig.json` extends the shared base; `pnpm verify` stays green.
+  - Plans: 3 plans (waves 1→2→3)
+    - [ ] 13-01-PLAN.md — Author + push shared `solid-stats/ts-toolchain` master: 5 presets + lefthook.yml + config-only package.json (exports) + self-validating CI (CFG-01, CFG-02)
+    - [ ] 13-02-PLAN.md — Confirm green shared-repo CI, then cut + push annotated consumable tag `v0.1.0` on the green SHA (CFG-02 gate)
+    - [ ] 13-03-PLAN.md — Add tag-pinned git-dep to fetcher, regenerate frozen lockfile, switch `tsconfig.json` to extends shared base, prove `pnpm verify` green (CFG-03, CFG-04)
 
 - [ ] **Phase 14: Repository Cleanup & Convention Compliance** — CLN-01, CLN-02, CLN-03, CLN-04
   - Goal: Bring the code to a clean, `solidstats-fetcher-ts-*`-compliant baseline on the still-ESLint toolchain, so the later Oxlint swap audits already-correct code.
