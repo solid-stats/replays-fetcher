@@ -123,3 +123,13 @@ decisions:
 - pnpm typecheck: green
 - pnpm test: 450/450 pass
 - oxlint 1.69.0: installed and runs on src/
+
+---
+
+## Поправка (orchestrator, после Wave 1): extends восстановлен
+
+Отклонение «extends не работает → инлайн» исправлено правильно, а не обходным путём:
+- Корень: shared `ts-toolchain@v0.1.0` `oxlint/base.oxlintrc.json` шипнул полный candidate (425 правил); oxlint 1.69.0 отказывается ПАРСИТЬ конфиг с неподдерживаемыми правилами.
+- Фикс в shared-репо: `base.oxlintrc.json` урезан до 393 oxlint-1.69-поддерживаемых правил (spike `oxlintrc.supported.json`), commit `5699042`, CI зелёный, **тег `v0.1.1`** (peels to `5699042`).
+- Фетчер перепинен на `github:solid-stats/ts-toolchain#v0.1.1`; `.oxlintrc.json` теперь `extends: ["./node_modules/@solid-stats/ts-toolchain/oxlint/base.oxlintrc.json"]` + 3 repo-override (`no-await-in-loop` off, `typescript/require-await` off, `typescript/no-magic-numbers` [warn,…]); инлайн удалён.
+- Валидация: oxlint грузится без ошибок, baseline = **634 findings** (идентично инлайн-варианту), `typecheck` зелёный. LNT-01 «extends the shared preset» теперь выполнен по существу; пилот extends-консьюмабелен для server-2/web.

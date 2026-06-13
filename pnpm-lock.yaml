@@ -28,8 +28,8 @@ importers:
         version: 4.4.3
     devDependencies:
       '@solid-stats/ts-toolchain':
-        specifier: github:solid-stats/ts-toolchain#v0.1.0
-        version: https://codeload.github.com/solid-stats/ts-toolchain/tar.gz/7563551087fad1415a0ddb969ef8ac477f957195
+        specifier: github:solid-stats/ts-toolchain#v0.1.1
+        version: https://codeload.github.com/solid-stats/ts-toolchain/tar.gz/569904253e09a05b608bfc7f2f5f7cc5c15cdf53
       '@testcontainers/minio':
         specifier: 11.14.0
         version: 11.14.0
@@ -1048,8 +1048,8 @@ packages:
     resolution: {integrity: sha512-O/IEdcCUKkubz60tFbGA7ceITTAJsty+lBjNoorP4Z6XRqaFb/OjQjZODophEcuq68nKm6/0r+6/lLQ+XVpk8g==}
     engines: {node: '>=18.0.0'}
 
-  '@solid-stats/ts-toolchain@https://codeload.github.com/solid-stats/ts-toolchain/tar.gz/7563551087fad1415a0ddb969ef8ac477f957195':
-    resolution: {gitHosted: true, integrity: sha512-IHKjIpX0S0bkvFxmQUVOEGA2N6Mt7uMef7kvojYr3Jb9eGBD7lxEdSHulw3alnT4hncZZvBgOfzuRN3VVbnqdQ==, tarball: https://codeload.github.com/solid-stats/ts-toolchain/tar.gz/7563551087fad1415a0ddb969ef8ac477f957195}
+  '@solid-stats/ts-toolchain@https://codeload.github.com/solid-stats/ts-toolchain/tar.gz/569904253e09a05b608bfc7f2f5f7cc5c15cdf53':
+    resolution: {gitHosted: true, integrity: sha512-y0Oda0tGWakWcQb+8HAzryicZyN8zHKlPoSaSdLYvPnqaGqwDYpXG1PNdLe+fM4cKrAEPmA1d3hs7bZ0VHojLA==, tarball: https://codeload.github.com/solid-stats/ts-toolchain/tar.gz/569904253e09a05b608bfc7f2f5f7cc5c15cdf53}
     version: 0.1.0
     engines: {node: '>=25 <26', pnpm: '>=11 <12'}
 
@@ -3265,7 +3265,7 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  '@solid-stats/ts-toolchain@https://codeload.github.com/solid-stats/ts-toolchain/tar.gz/7563551087fad1415a0ddb969ef8ac477f957195': {}
+  '@solid-stats/ts-toolchain@https://codeload.github.com/solid-stats/ts-toolchain/tar.gz/569904253e09a05b608bfc7f2f5f7cc5c15cdf53': {}
 
   '@standard-schema/spec@1.1.0': {}
 
