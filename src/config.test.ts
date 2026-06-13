@@ -324,6 +324,21 @@ test("loadConfig should honor an S3_CHECKPOINT_PREFIX override", () => {
   expect(config.s3.checkpointPrefix).toBe("cp");
 });
 
+test("loadConfig should default checkpoint conditional writes to true", () => {
+  const config = loadConfig(validEnvironment);
+
+  expect(config.s3.conditionalWrites).toBe(true);
+});
+
+test("loadConfig should honor an S3_CHECKPOINT_CONDITIONAL_WRITES=false override", () => {
+  const config = loadConfig({
+    ...validEnvironment,
+    S3_CHECKPOINT_CONDITIONAL_WRITES: "false",
+  });
+
+  expect(config.s3.conditionalWrites).toBe(false);
+});
+
 test("loadConfig should reject an empty checkpoint prefix", () => {
   expect(() =>
     loadConfig({ ...validEnvironment, S3_CHECKPOINT_PREFIX: "" }),

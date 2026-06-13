@@ -88,6 +88,11 @@ const configSchema = sourceConfigSchema.extend({
     forcePathStyle: booleanFromEnvironment,
     checkpointPrefix: z.string().min(1).default("checkpoints"),
     evidencePrefix: z.string().min(1).default("runs"),
+    // Conditional checkpoint writes (If-Match / If-None-Match CAS) are off on
+    // S3 backends that don't implement them (e.g. Timeweb S3). Default true
+    // keeps the CAS guarantee on compliant backends; set false to fall back to
+    // unconditional PUT (safe for the single-writer controlled run).
+    conditionalWrites: booleanFromEnvironment,
   }),
   staging: z.object({
     databaseUrl: z.url(),
@@ -137,6 +142,7 @@ export function loadConfig(source: ConfigSource = process.env): AppConfig {
       forcePathStyle: source["S3_FORCE_PATH_STYLE"],
       checkpointPrefix: source["S3_CHECKPOINT_PREFIX"],
       evidencePrefix: source["S3_EVIDENCE_PREFIX"],
+      conditionalWrites: source["S3_CHECKPOINT_CONDITIONAL_WRITES"],
     },
     staging: {
       databaseUrl: source["DATABASE_URL"],

@@ -108,6 +108,28 @@ test("update write issues PutObject with IfMatch:<etag> verbatim", async () => {
   expect(putInput(putCommand).IfNoneMatch).toBeUndefined();
 });
 
+test("conditionalWrites:false issues an unconditional create PutObject", async () => {
+  const commands: SentCommand[] = [];
+  const store = capturingStore(commands, { ETag: '"etag-created"' }, false);
+  await store.write({ checkpoint: makeCheckpoint(), slug });
+  const [putCommand] = commands as [SentCommand];
+  expect(putInput(putCommand).IfNoneMatch).toBeUndefined();
+  expect(putInput(putCommand).IfMatch).toBeUndefined();
+});
+
+test("conditionalWrites:false omits IfMatch even with a prior etag", async () => {
+  const commands: SentCommand[] = [];
+  const store = capturingStore(commands, { ETag: '"etag-updated"' }, false);
+  await store.write({
+    checkpoint: makeCheckpoint(),
+    etag: '"etag-prior"',
+    slug,
+  });
+  const [putCommand] = commands as [SentCommand];
+  expect(putInput(putCommand).IfMatch).toBeUndefined();
+  expect(putInput(putCommand).IfNoneMatch).toBeUndefined();
+});
+
 test("412 triggers re-read + merge keeping max(lastCompletedPage) then retry", async () => {
   const puts: PutInput[] = [];
   const store = casStore(
@@ -182,6 +204,7 @@ test("createS3CheckpointStoreFromConfig builds a configured store", () => {
     accessKeyId: "access-key",
     bucket: checkpointBucket,
     checkpointPrefix,
+    conditionalWrites: true,
     evidencePrefix: "runs",
     endpoint: "https://s3.example.test",
     forcePathStyle: true,

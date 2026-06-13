@@ -81,9 +81,10 @@ export function s3Error(name: string, status: number): S3ServiceException {
 
 type Send = (command: SentCommand) => Promise<SenderResponse>;
 
-function baseStore(send: Send): Store {
+function baseStore(send: Send, conditionalWrites = true): Store {
   return createS3CheckpointStore({
     bucket: checkpointBucket,
+    conditionalWrites,
     prefix: checkpointPrefix,
     random: noRandom,
     sender: { send },
@@ -102,15 +103,20 @@ export function throwingStore(error: S3ServiceException): Store {
   });
 }
 
-/** Store that records every command into `commands` and resolves `response`. */
+/**
+ * Store that records every command into `commands` and resolves `response`.
+ * `conditionalWrites` toggles the CAS headers (default true) so a test can
+ * assert the unconditional-PUT fallback.
+ */
 export function capturingStore(
   commands: SentCommand[],
   response: SenderResponse,
+  conditionalWrites = true,
 ): Store {
   return baseStore((command): Promise<SenderResponse> => {
     commands.push(command);
     return Promise.resolve(response);
-  });
+  }, conditionalWrites);
 }
 
 /**

@@ -678,11 +678,13 @@ async function writePageCheckpoint(
     // Carry the object's new ETag forward so the next write's IfMatch matches
     // the current object instead of 412-ing on a stale start ETag (CR-01).
     return result.etag;
-  } catch {
+  } catch (error) {
     // A transient (non-precondition) checkpoint-write error must never fail the
-    // run. The ETag is unchanged on failure, so reuse the one we held.
+    // run. The ETag is unchanged on failure, so reuse the one we held. Log the
+    // error itself so a persistent failure (e.g. a backend that rejects the CAS
+    // conditional headers) is diagnosable instead of silently degrading resume.
     input.log?.warn(
-      { page: page.lastCompletedPage, slug: page.slug },
+      { error, page: page.lastCompletedPage, slug: page.slug },
       "checkpoint write failed; continuing run",
     );
 
