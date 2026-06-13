@@ -29,8 +29,8 @@
 
 ### Formatting — Oxfmt (FMT)
 
-- [ ] **FMT-01**: Prettier is removed; Oxfmt is the formatter (`pnpm format` / `format:check` run oxfmt).
-- [ ] **FMT-02**: The repo-wide reformat lands as a single format-only commit.
+- [x] **FMT-01**: Prettier is removed; Oxfmt is the formatter (`pnpm format` / `format:check` run oxfmt).
+- [x] **FMT-02**: The repo-wide reformat lands as a single format-only commit.
 
 ### Build — tsdown (BLD)
 
@@ -87,8 +87,8 @@ Filled during roadmap creation.
 | CLN-02 | Phase 14 | Complete |
 | CLN-03 | Phase 14 | Complete |
 | CLN-04 | Phase 14 | Complete |
-| FMT-01 | Phase 15 | Pending |
-| FMT-02 | Phase 15 | Pending |
+| FMT-01 | Phase 15 | Complete |
+| FMT-02 | Phase 15 | Complete |
 | LNT-01 | Phase 16 | Pending |
 | LNT-02 | Phase 16 | Pending |
 | LNT-03 | Phase 16 | Pending |

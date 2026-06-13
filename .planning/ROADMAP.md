@@ -56,7 +56,7 @@ Behavior-preserving toolchain migration. The `verify` gate must stay green at 10
     3. Redundant `eslint-disable`/suppressions removed; ignore files tightened.
     4. Convention-skill review passes; ingest-boundary invariants intact; `pnpm verify` green.
 
-- [ ] **Phase 15: Oxfmt Formatter Migration** — FMT-01, FMT-02
+- [x] **Phase 15: Oxfmt Formatter Migration** — FMT-01, FMT-02 (completed 2026-06-13)
   - Goal: Replace Prettier with Oxfmt (shared `.oxfmtrc` preset) and land the repo-wide reformat as a single isolated commit before the linter swap, so format churn does not collide with lint changes.
   - Success criteria:
     1. Prettier removed; `pnpm format`/`format:check` run oxfmt against the shared preset.
@@ -136,7 +136,8 @@ Plans:
   3. `pnpm verify` green.
 
 Plans:
-- [ ] 15-01-PLAN.md — Swap prettier→oxfmt 0.54.0 (deps + .oxfmtrc.json + .prettierignore + scripts/verify), then isolated repo-wide reformat (FMT-01, FMT-02)
+
+- [x] 15-01-PLAN.md — Swap prettier→oxfmt 0.54.0 (deps + .oxfmtrc.json + .prettierignore + scripts/verify), then isolated repo-wide reformat (FMT-01, FMT-02)
 
 ---
 
@@ -194,7 +195,7 @@ Plans:
 | 12. Source Contract Guards | v2.0 | 2/2 | Complete | 2026-06-12 |
 | 13. Shared @solid-stats/ts-toolchain Bootstrap | v3.0 | 3/3 | Complete   | 2026-06-13 |
 | 14. Repository Cleanup & Convention Compliance | v3.0 | 4/4 | Complete   | 2026-06-13 |
-| 15. Oxfmt Formatter Migration | v3.0 | 0/? | Pending | — |
+| 15. Oxfmt Formatter Migration | v3.0 | 1/1 | Complete   | 2026-06-13 |
 | 16. Oxlint Migration & Import Hygiene | v3.0 | 0/? | Pending | — |
 | 17. tsdown Build & Docker Smoke | v3.0 | 0/? | Pending | — |
 | 18. lefthook Hooks & CI Verify Convergence | v3.0 | 0/? | Pending | — |

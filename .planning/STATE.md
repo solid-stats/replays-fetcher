@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Track C Toolchain Convergence
-status: executing
+status: verifying
 stopped_at: Completed 11-01-PLAN.md
-last_updated: "2026-06-13T20:34:22.400Z"
+last_updated: "2026-06-13T20:41:56.753Z"
 last_activity: 2026-06-13 -- Phase 15 execution started
 progress:
   total_phases: 6
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 8
-  completed_plans: 7
-  percent: 33
+  completed_plans: 8
+  percent: 50
 ---
 
 # Project State
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 
 Phase: 15 (oxfmt-formatter-migration) — EXECUTING
 Plan: 1 of 1
-Status: Executing Phase 15
+Status: Phase complete — ready for verification
 Last activity: 2026-06-13 -- Phase 15 execution started
 
 ## Verify Gate: GREEN ✅
@@ -125,6 +125,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: toDetailsRecord helper avoids unnecessary-type-assertion (checkpoint-conflict-error.ts pattern)
 - [Phase ?]: Named .max() bound constants — no magic numbers (Phase 10-01 ESLint decision)
 - [Phase ?]: CLN-04c: RunSummary (9 типов) перенесён в src/types/run-summary.ts; run/types.ts — barrel; fence #1 закрыт в evidence-адаптере
+- [Phase 15]: oxfmt@0.54.0 pinned без ^ (FMT-01 supply-chain); package.json в .prettierignore (oxfmt 0.54 false-positive workaround); format/format:check разделены (write vs check gate)
 
 ### Roadmap Evolution
 
@@ -218,9 +219,10 @@ Behavioral fixes from the live parity-baseline run (registry `plans/product/PARI
 | Phase 14 P01 | 10min | 3 tasks | 5 files |
 | Phase 14 P02 | 15 | 2 tasks | 5 files |
 | Phase 14 P03 | 120 | 2 tasks | 3 files |
+| Phase 15 P01 | 10min | 3 tasks | 4 files |
 
 ## Session
 
-**Last session:** 2026-06-13T19:23:18.216Z
+**Last session:** 2026-06-13T20:40:15.369Z
 **Stopped at:** Completed 11-01-PLAN.md
 **Resume file:** .planning/phases/11-progress-events-and-compact-evidence/11-CONTEXT.md
