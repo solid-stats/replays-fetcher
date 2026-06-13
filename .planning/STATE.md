@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.0
-milestone_name: Full-Corpus Ingest Resilience
-status: Awaiting next milestone
-stopped_at: Completed 11-01-PLAN.md
-last_updated: "2026-06-12T09:56:50.385Z"
-last_activity: 2026-06-12 — Milestone v2.0 completed and archived
+milestone: v3.0
+milestone_name: Track C Toolchain Convergence
+status: planning
+last_updated: "2026-06-13T12:51:01.826Z"
+last_activity: 2026-06-13
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 24
-  completed_plans: 24
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -25,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 
 ## Current Position
 
-Phase: Milestone v2.0 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-06-12 — Milestone v2.0 completed and archived
+Status: Defining requirements
+Last activity: 2026-06-13 — Milestone v3.0 started
 
 ## Verify Gate: GREEN ✅
 

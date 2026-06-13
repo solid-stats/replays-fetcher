@@ -10,18 +10,20 @@ The service is intentionally narrow. It fetches replay bytes and records source 
 
 Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
 
-## Current Milestone: v2.0 Full-Corpus Ingest Resilience
+## Current Milestone: v3.0 Track C Toolchain Convergence (pilot)
 
-**Goal:** Make full-corpus replay ingest reliable enough that a failed source request or pod restart does not waste hours or leave operators guessing what completed. The output is durable full-run input for `server-2` parity and infrastructure diff readiness.
+**Goal:** Migrate `replays-fetcher` off ESLint/Prettier/tsc onto the VoidZero toolchain (Oxlint + Oxfmt + tsdown + Vitest) sourced from a new shared `@solidstats/config` git repo, plus lefthook pre-commit/pre-push hooks — the pilot that proves the pattern before `server-2` and `web`. `verify` stays green at 100% coverage and behavior is preserved.
 
 **Target features:**
-- Source-failure diagnostics that preserve HTTP status, low-level error name/message, page number, and detail URL, plus bounded retry/backoff that distinguishes transient failures from permanently malformed source data.
-- Checkpoint and resume so a restarted run continues from the first incomplete page or candidate instead of restarting at page 1.
-- Dynamic source-range discovery (drop hardcoded `REPLAY_SOURCE_MAX_PAGES`) with bounded concurrency, operator-configurable pacing, and pages/candidates-per-minute plus ETA.
-- Compact progress events during the run, with the final summary reduced to counts and failure categories and detailed per-candidate evidence kept in an opt-in artifact.
-- Source-contract guard tests and an operator contract check that proves raw bytes are fetched from the JSON data endpoint without writing S3 or PostgreSQL state.
+- Bootstrap a standalone `@solidstats/config` git repo holding the shared presets (tsconfig / oxlint / oxfmt / vitest / `lefthook.yml`), consumed by the fetcher as a pnpm git-dependency.
+- Repository cleanup: dead code, stale TODO/FIXME, unused config/scripts, redundant `eslint-disable` suppressions, tightened ignores.
+- Refactor into compliance with the convention skills (`solidstats-fetcher-ts-*`), resolving findings.
+- Linter migration ESLint → Oxlint: port each vocalclub rule's options (not severities), drop `eslint-plugin-import` (tsc + dependency-cruiser + knip cover the gap), keep `no-await-in-loop` off, re-validate type-aware (tsgolint alpha) on real code.
+- Formatter migration Prettier → Oxfmt as one isolated reformat commit.
+- Build migration `tsc` → tsdown with a Docker smoke-run of the bundled CLI.
+- lefthook hooks: pre-commit (Oxfmt + Oxlint on staged), pre-push (tsc typecheck + Vitest), config shipped from `@solidstats/config`, mirroring — not replacing — the CI `verify` gate.
 
-**Key context:** Grounded in the 2026-05-11 full run over `sg.zone/replays` (786 pages, ~23.5k replays) that failed twice on `source_unavailable` (p=129, p=259) and restarted from page 1, wasting hours. The dependency on `server-2` full-run-readiness and export contracts is satisfied (shipped in `server-2` v2.0). Boundaries are unchanged: S3 raw objects plus staging rows only.
+**Key context:** Per product `RELEASE-PLAN.md` Phase 0 Track 1. D4 spike-gate satisfied — spikes 001–004 VALIDATED (OQ-1b/1c/2 closed), decisions locked in `plans/product/TS-TOOLCHAIN-CONVERGENCE.md` and `.planning/spikes/MANIFEST.md` (port options not severities; drop import-plugin; type-aware re-validate per repo). Fetcher ingest boundaries are untouched (no parsing, S3-raw + staging only). First in rollout order `replays-fetcher → server-2 → web`.
 
 ## Requirements
 
@@ -38,7 +40,15 @@ Reliably discover and stage new replay files without corrupting `server-2` busin
 
 ### Active
 
-None — v2.0 Full-Corpus Ingest Resilience shipped 2026-06-12. Define the next milestone via `/gsd-new-milestone`.
+<!-- v3.0 Track C Toolchain Convergence (pilot) — scoped in REQUIREMENTS.md -->
+
+- [ ] Bootstrap shared `@solidstats/config` git repo (presets + `lefthook.yml`), consumed as a pnpm git-dependency.
+- [ ] Repository cleanup (dead code, stale TODO/FIXME, redundant suppressions).
+- [ ] Refactor into convention-skill compliance.
+- [ ] Migrate linter ESLint → Oxlint (ported vocalclub rule options, import-plugin dropped, type-aware re-validated).
+- [ ] Migrate formatter Prettier → Oxfmt.
+- [ ] Migrate build `tsc` → tsdown with Docker smoke-run.
+- [ ] Wire lefthook pre-commit / pre-push hooks mirroring CI `verify`.
 
 ### Out of Scope
 
@@ -142,4 +152,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state.
 
 ---
-*Last updated: 2026-06-12 after v2.0 (Full-Corpus Ingest Resilience) milestone*
+*Last updated: 2026-06-13 after starting v3.0 (Track C Toolchain Convergence) milestone*
