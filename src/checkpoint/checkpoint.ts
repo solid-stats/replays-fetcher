@@ -153,9 +153,7 @@ const statusRanks: Readonly<Record<CheckpointStatus, number>> = {
   running: 1,
 };
 
-const statusRank = (status: CheckpointStatus): number => {
-  return statusRanks[status];
-};
+const statusRank = (status: CheckpointStatus): number => statusRanks[status];
 
 const pickHigherProgress = (local: Checkpoint, remote: Checkpoint): Checkpoint => {
   if (local.lastCompletedPage > remote.lastCompletedPage) {

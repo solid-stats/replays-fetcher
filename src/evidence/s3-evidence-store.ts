@@ -25,7 +25,7 @@ import type { AppConfig } from "../config.js";
 import type { RunSummary } from "../types/run-summary.js";
 
 export interface S3EvidenceSender {
-  send(command: PutObjectCommand): Promise<{ readonly ETag?: string }>;
+  send: (command: PutObjectCommand) => Promise<{ readonly ETag?: string }>;
 }
 
 export interface EvidenceWriteInput {
@@ -40,7 +40,7 @@ interface CreateS3EvidenceStoreOptions {
 }
 
 export interface S3EvidenceStore {
-  write(input: EvidenceWriteInput): Promise<void>;
+  write: (input: EvidenceWriteInput) => Promise<void>;
 }
 
 const putEvidence = async (
@@ -60,18 +60,14 @@ const putEvidence = async (
 
 export const createS3EvidenceStore = (
   options: CreateS3EvidenceStoreOptions,
-): S3EvidenceStore => {
-  return {
-    write(input): Promise<void> {
-      return putEvidence(options, input);
-    },
-  };
-};
+): S3EvidenceStore => ({
+  write: (input): Promise<void> => putEvidence(options, input),
+});
 
 export const createS3EvidenceStoreFromConfig = (
   config: AppConfig["s3"],
-): S3EvidenceStore => {
-  return createS3EvidenceStore({
+): S3EvidenceStore =>
+  createS3EvidenceStore({
     bucket: config.bucket,
     prefix: config.evidencePrefix,
     sender: new S3Client({
@@ -84,4 +80,3 @@ export const createS3EvidenceStoreFromConfig = (
       region: config.region,
     }),
   });
-};

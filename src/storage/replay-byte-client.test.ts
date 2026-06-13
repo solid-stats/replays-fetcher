@@ -1,7 +1,9 @@
 /* eslint-disable max-lines -- Replay-byte client transport tests keep direct and SSH behavior together. */
 import { afterEach, expect, test, vi } from "vitest";
 
-import { loadSourceConfig, type SourceConfig } from "../config.js";
+import { loadSourceConfig } from "../config.js";
+
+import type { SourceConfig } from "../config.js";
 import { AppError } from "../errors/app-error.js";
 
 import {

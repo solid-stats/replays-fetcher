@@ -31,9 +31,7 @@ const candidate: ReplayCandidate = {
   },
 };
 
-const noopCleanup = (): Promise<void> => {
-  return Promise.resolve();
-};
+const noopCleanup = (): Promise<void> => Promise.resolve();
 
 let stopContainer = noopCleanup;
 

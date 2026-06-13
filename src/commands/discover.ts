@@ -4,10 +4,9 @@ import {
   loadDryRunSourceConfig,
   loadStoreRawConfig,
   writeJson,
-  type BuildCliDependencies,
-  type StoreRawResources,
 } from "./shared.js";
 
+import type { BuildCliDependencies, StoreRawResources } from "./shared.js";
 import type { AppConfig } from "../config.js";
 import type { DiscoveryReport, SourceClient } from "../discovery/types.js";
 import type { IngestStagingResult } from "../staging/types.js";
@@ -40,39 +39,35 @@ interface StagingCounts {
 const countRawStorage = (
   discoveryReport: DiscoveryReport,
   storageResults: readonly StoreRawReplayResult[],
-): RawStorageCounts => {
-  return {
-    candidates: discoveryReport.candidates.length,
-    conflict: storageResults.filter((result) => result.status === "conflict")
-      .length,
-    diagnostics: discoveryReport.diagnostics.length,
-    failed: storageResults.filter((result) => result.status === "failed")
-      .length,
-    skipped: storageResults.filter((result) => result.status === "skipped")
-      .length,
-    stored: storageResults.filter((result) => result.status === "stored")
-      .length,
-  };
-};
+): RawStorageCounts => ({
+  candidates: discoveryReport.candidates.length,
+  conflict: storageResults.filter((result) => result.status === "conflict")
+    .length,
+  diagnostics: discoveryReport.diagnostics.length,
+  failed: storageResults.filter((result) => result.status === "failed")
+    .length,
+  skipped: storageResults.filter((result) => result.status === "skipped")
+    .length,
+  stored: storageResults.filter((result) => result.status === "stored")
+    .length,
+});
 
 const countStaging = (
   stagingResults: readonly IngestStagingResult[],
-): StagingCounts => {
-  return {
-    alreadyStaged: stagingResults.filter(
-      (result) => result.status === "already_staged",
-    ).length,
-    conflict: stagingResults.filter((result) => result.status === "conflict")
-      .length,
-    failed: stagingResults.filter((result) => result.status === "failed")
-      .length,
-    skipped: stagingResults.filter(
-      (result) => result.status === "not_stageable",
-    ).length,
-    staged: stagingResults.filter((result) => result.status === "staged")
-      .length,
-  };
-};
+): StagingCounts => ({
+  alreadyStaged: stagingResults.filter(
+    (result) => result.status === "already_staged",
+  ).length,
+  conflict: stagingResults.filter((result) => result.status === "conflict")
+    .length,
+  failed: stagingResults.filter((result) => result.status === "failed")
+    .length,
+  skipped: stagingResults.filter(
+    (result) => result.status === "not_stageable",
+  ).length,
+  staged: stagingResults.filter((result) => result.status === "staged")
+    .length,
+});
 
 const storeRawMode = (
   shouldStage: boolean,
@@ -191,7 +186,6 @@ const runStoreRawDiscovery = async (
   if (discoveryReport.ok) {
     for (const candidate of discoveryReport.candidates) {
       // Raw replay storage is intentionally sequential for clear source/storage evidence.
-      // eslint-disable-next-line no-await-in-loop -- sequential raw storage maintains clear source/storage evidence ordering.
       const result = await dependencies.storeRawReplay({
         byteClient: resources.byteClient,
         candidate,
@@ -201,7 +195,6 @@ const runStoreRawDiscovery = async (
 
       if (shouldStage) {
         // Staging follows the raw evidence for the same candidate in order.
-        // eslint-disable-next-line no-await-in-loop -- staging follows raw evidence for the same candidate in order.
         const stagingResult = await stageRawEvidence(
           dependencies,
           resources.stagingRepository,

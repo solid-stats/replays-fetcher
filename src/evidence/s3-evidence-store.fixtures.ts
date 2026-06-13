@@ -52,50 +52,44 @@ type Store = ReturnType<typeof createS3EvidenceStore>;
  * userinfo-stripped sourceUrl only, no replay bytes, secrets, or HTML
  * (threat T-11-02).
  */
-export const makeRunSummary = (runId = evidenceRunId): RunSummary => {
-  return {
-    candidates: [],
-    counts,
-    diagnostics: [],
-    failureCategories: [],
-    finishedAt: timestamp,
-    mode: "run-once",
-    ok: true,
-    rawStorage: [],
-    runId,
-    sourceUrl: "https://sg.zone/replays",
-    staging: [],
-    startedAt: timestamp,
-    status: "complete",
-  };
-};
+export const makeRunSummary = (runId = evidenceRunId): RunSummary => ({
+  candidates: [],
+  counts,
+  diagnostics: [],
+  failureCategories: [],
+  finishedAt: timestamp,
+  mode: "run-once",
+  ok: true,
+  rawStorage: [],
+  runId,
+  sourceUrl: "https://sg.zone/replays",
+  staging: [],
+  startedAt: timestamp,
+  status: "complete",
+});
 
-export const putInput = (command: SentCommand): PutInput => {
-  return command.input as PutInput;
-};
+export const putInput = (command: SentCommand): PutInput =>
+  command.input as PutInput;
 
 type Send = (command: SentCommand) => Promise<SenderResponse>;
 
-const baseStore = (send: Send): Store => {
-  return createS3EvidenceStore({
+const baseStore = (send: Send): Store =>
+  createS3EvidenceStore({
     bucket: evidenceBucket,
     prefix: evidencePrefix,
     sender: { send },
   });
-};
 
 /** Store that records every command into `commands` and resolves `response`. */
 export const capturingStore = (
   commands: SentCommand[],
   response: SenderResponse,
-): Store => {
-  return baseStore((command): Promise<SenderResponse> => {
+): Store =>
+  baseStore((command): Promise<SenderResponse> => {
     commands.push(command);
     return Promise.resolve(response);
   });
-};
 
 /** Store whose sender always rejects with `error`. */
-export const rejectingStore = (error: Error): Store => {
-  return baseStore((): Promise<SenderResponse> => Promise.reject(error));
-};
+export const rejectingStore = (error: Error): Store =>
+  baseStore((): Promise<SenderResponse> => Promise.reject(error));

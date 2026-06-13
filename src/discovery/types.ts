@@ -76,5 +76,5 @@ export interface SourceFetchOptions {
 }
 
 export interface SourceClient {
-  fetchText(url: URL, options?: SourceFetchOptions): Promise<string>;
+  fetchText: (url: URL, options?: SourceFetchOptions) => Promise<string>;
 }

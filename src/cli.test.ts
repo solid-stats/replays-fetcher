@@ -152,43 +152,37 @@ const ignoredProjectDirectories = new Set([
   "node_modules",
 ]);
 
-const parseCheckOutput = (writes: readonly string[]): CheckOutput => {
-  return JSON.parse(writes.join("")) as CheckOutput;
-};
+const parseCheckOutput = (writes: readonly string[]): CheckOutput =>
+  JSON.parse(writes.join("")) as CheckOutput;
 
-const parseCliOutput = (writes: readonly string[]): CliOutput => {
-  return JSON.parse(writes.join("")) as CliOutput;
-};
+const parseCliOutput = (writes: readonly string[]): CliOutput =>
+  JSON.parse(writes.join("")) as CliOutput;
 
-const createCandidate = (externalId: string): ReplayCandidate => {
-  return {
-    identity: {
-      filename: `replay-${externalId}.ocap`,
-    },
-    source: {
-      externalId,
-      url: `https://example.test/replays/${externalId}`,
-    },
-  };
-};
+const createCandidate = (externalId: string): ReplayCandidate => ({
+  identity: {
+    filename: `replay-${externalId}.ocap`,
+  },
+  source: {
+    externalId,
+    url: `https://example.test/replays/${externalId}`,
+  },
+});
 
 const createDiscoveryReport = (
   candidates: readonly ReplayCandidate[],
-): DiscoveryReport => {
-  return {
-    candidates,
-    counts: {
-      candidates: candidates.length,
-      diagnostics: 0,
-      discovered: candidates.length,
-    },
-    diagnostics: [],
-    generatedAt: "2026-05-09T12:00:00.000Z",
-    mode: "dry-run",
-    ok: true,
-    sourceUrl: validEnvironment.REPLAY_SOURCE_URL,
-  };
-};
+): DiscoveryReport => ({
+  candidates,
+  counts: {
+    candidates: candidates.length,
+    diagnostics: 0,
+    discovered: candidates.length,
+  },
+  diagnostics: [],
+  generatedAt: "2026-05-09T12:00:00.000Z",
+  mode: "dry-run",
+  ok: true,
+  sourceUrl: validEnvironment.REPLAY_SOURCE_URL,
+});
 
 const createStorageResult = (
   candidate: ReplayCandidate,
@@ -249,33 +243,31 @@ const createStagingResult = (
   };
 };
 
-const createRunSummary = (overrides: Partial<RunSummary> = {}): RunSummary => {
-  return {
-    candidates: [],
-    counts: {
-      conflict: 0,
-      diagnostics: 0,
-      discovered: 0,
-      duplicate: 0,
-      failed: 0,
-      fetched: 0,
-      skipped: 0,
-      staged: 0,
-      stored: 0,
-    },
-    diagnostics: [],
-    failureCategories: [],
-    finishedAt: "2026-05-09T12:00:05.000Z",
-    mode: "run-once",
-    ok: true,
-    rawStorage: [],
-    runId: "run-fixed",
-    sourceUrl: validEnvironment.REPLAY_SOURCE_URL,
-    staging: [],
-    startedAt: "2026-05-09T12:00:00.000Z",
-    ...overrides,
-  };
-};
+const createRunSummary = (overrides: Partial<RunSummary> = {}): RunSummary => ({
+  candidates: [],
+  counts: {
+    conflict: 0,
+    diagnostics: 0,
+    discovered: 0,
+    duplicate: 0,
+    failed: 0,
+    fetched: 0,
+    skipped: 0,
+    staged: 0,
+    stored: 0,
+  },
+  diagnostics: [],
+  failureCategories: [],
+  finishedAt: "2026-05-09T12:00:05.000Z",
+  mode: "run-once",
+  ok: true,
+  rawStorage: [],
+  runId: "run-fixed",
+  sourceUrl: validEnvironment.REPLAY_SOURCE_URL,
+  staging: [],
+  startedAt: "2026-05-09T12:00:00.000Z",
+  ...overrides,
+});
 
 const stubValidEnvironment = (): void => {
   for (const [key, value] of Object.entries(validEnvironment)) {
@@ -283,9 +275,8 @@ const stubValidEnvironment = (): void => {
   }
 };
 
-const readProjectFile = async (filePath: string): Promise<string> => {
-  return readFile(new URL(`../${filePath}`, import.meta.url), "utf8");
-};
+const readProjectFile = async (filePath: string): Promise<string> =>
+  readFile(new URL(`../${filePath}`, import.meta.url), "utf8");
 
 const listProjectFiles = async (
   directory: URL,
@@ -1479,16 +1470,13 @@ interface CompactRunOutput {
   readonly resumeInvocation?: string;
 }
 
-const parseCompactOutput = (writes: readonly string[]): CompactRunOutput => {
-  return JSON.parse(writes.join("")) as CompactRunOutput;
-};
+const parseCompactOutput = (writes: readonly string[]): CompactRunOutput =>
+  JSON.parse(writes.join("")) as CompactRunOutput;
 
 const createMinimalRunOnceResult = (summary: RunSummary): {
   readonly exitCode: 0;
   readonly summary: RunSummary;
-} => {
-  return { exitCode: 0 as const, summary };
-};
+} => ({ exitCode: 0 as const, summary });
 
 test("buildCli run-once stdout is exactly one compact JSON document (no heavy arrays)", async () => {
   stubValidEnvironment();
@@ -1537,8 +1525,7 @@ test("buildCli run-once stdout is exactly one compact JSON document (no heavy ar
 const buildRealRunOnceDeps = (
   evidenceWrites: { runId: string; summary: RunSummary }[],
   fileWrites: { body: string; path: string }[],
-): Parameters<typeof buildCli>[0] => {
-  return {
+): Parameters<typeof buildCli>[0] => ({
     createPostgresStagingRepositoryFromDatabaseUrl: () => ({ stage: vi.fn() }),
     createReplayByteClient: () => ({ fetchBytes: vi.fn() }),
     createS3CheckpointStoreFromConfig: () => ({
@@ -1571,8 +1558,7 @@ const buildRealRunOnceDeps = (
         sourceUrl: input.sourceUrl.toString(),
       };
     },
-  };
-};
+});
 
 test("buildCli run-once --emit-evidence: stdout still compact AND evidenceStore.write receives full summary", async () => {
   stubValidEnvironment();

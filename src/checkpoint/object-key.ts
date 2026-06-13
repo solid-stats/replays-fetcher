@@ -22,12 +22,11 @@ const rollingObjectName = "latest.json";
  * Derive a deterministic, S3-safe slug from a source URL's host + pathname.
  * Exposed so the read path (Plan 05) and the store can share one derivation.
  */
-export const toSourceSlug = (sourceUrl: URL): string => {
-  return `${sourceUrl.host}${sourceUrl.pathname}`
+export const toSourceSlug = (sourceUrl: URL): string =>
+  `${sourceUrl.host}${sourceUrl.pathname}`
     .toLowerCase()
     .replaceAll(unsafeSlugRunPattern, "-")
     .replaceAll(leadingTrailingDashPattern, "");
-};
 
 /**
  * Build the rolling checkpoint object key for a source URL. Lowercases

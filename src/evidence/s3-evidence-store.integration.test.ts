@@ -16,9 +16,7 @@ import type { RunSummary } from "../run/types.js";
 const bucket = "solid-stats-replays";
 const prefix = "runs";
 
-const noopCleanup = (): Promise<void> => {
-  return Promise.resolve();
-};
+const noopCleanup = (): Promise<void> => Promise.resolve();
 
 let stopContainer = noopCleanup;
 

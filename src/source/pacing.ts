@@ -18,15 +18,13 @@ export interface PacerOptions {
 }
 
 export interface Pacer {
-  awaitFloor(): Promise<void>;
+  awaitFloor: () => Promise<void>;
 }
 
 const noFloorRemaining = 0;
 
 /* v8 ignore next 3 -- exercised through injected stubs in pacing.test.ts */
-const defaultNow = (): number => {
-  return Date.now();
-};
+const defaultNow = (): number => Date.now();
 
 /* v8 ignore next 5 -- exercised through injected stubs in pacing.test.ts */
 const defaultSleep = async (milliseconds: number): Promise<void> => {

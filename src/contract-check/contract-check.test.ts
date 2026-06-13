@@ -8,8 +8,9 @@ import { SourceFetchError } from "../discovery/source-client.js";
 
 import {
   runContractCheck,
-  type ContractCheckReason,
 } from "./contract-check.js";
+
+import type { ContractCheckReason } from "./contract-check.js";
 
 import type { SourceClient } from "../discovery/types.js";
 
@@ -30,29 +31,25 @@ const RAW_JSON = JSON.stringify({ entities: [], version: "0.3.11" });
 /** Source client backed by an inline URL → body map (analog: discover.test.ts). */
 const stringClient = (
   responses: ReadonlyMap<string, string>,
-): SourceClient => {
-  return {
-    async fetchText(url: URL): Promise<string> {
-      return responses.get(url.toString()) ?? "";
-    },
-  };
-};
+): SourceClient => ({
+  async fetchText(url: URL): Promise<string> {
+    return responses.get(url.toString()) ?? "";
+  },
+});
 
 /** Source client that throws at one URL and serves bodies otherwise. */
 const throwingClient = (
   failingUrl: string,
   error: unknown,
   bodies: ReadonlyMap<string, string>,
-): SourceClient => {
-  return {
-    async fetchText(url: URL): Promise<string> {
-      if (url.toString() === failingUrl) {
-        throw error;
-      }
-      return bodies.get(url.toString()) ?? "";
-    },
-  };
-};
+): SourceClient => ({
+  async fetchText(url: URL): Promise<string> {
+    if (url.toString() === failingUrl) {
+      throw error;
+    }
+    return bodies.get(url.toString()) ?? "";
+  },
+});
 
 const happyResponses = new Map<string, string>([
   [LIST_PAGE_URL, LIST_HTML],
@@ -279,9 +276,8 @@ const contractCheckMutationTokens = [
   ["with", "Retry"].join(""),
 ] as const;
 
-const readSourceFile = async (filePath: string): Promise<string> => {
-  return readFile(new URL(`../../${filePath}`, import.meta.url), "utf8");
-};
+const readSourceFile = async (filePath: string): Promise<string> =>
+  readFile(new URL(`../../${filePath}`, import.meta.url), "utf8");
 
 describe("contract-check source — GUARD-04 no-mutation guard", () => {
   test("contract-check.ts contains no S3, staging, or retry tokens", async () => {

@@ -7,8 +7,9 @@ import { registerDiscoverCommand } from "./commands/discover.js";
 import { registerRunOnceCommand } from "./commands/run-once.js";
 import {
   resolveDependencies,
-  type BuildCliDependencies,
 } from "./commands/shared.js";
+
+import type { BuildCliDependencies } from "./commands/shared.js";
 
 export const buildCli = (dependencies: BuildCliDependencies = {}): Command => {
   const cliDependencies = resolveDependencies(dependencies);

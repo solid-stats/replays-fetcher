@@ -23,14 +23,13 @@ const scriptedClock = (): () => number => {
   };
 };
 
-const makeController = (): ReturnType<typeof createThrottleController> => {
-  return createThrottleController({
+const makeController = (): ReturnType<typeof createThrottleController> =>
+  createThrottleController({
     baseConcurrency,
     min: minConcurrency,
     max: maxConcurrency,
     baseSpacingMs,
   });
-};
 
 const signalRateLimited = (
   controller: ReturnType<typeof createThrottleController>,

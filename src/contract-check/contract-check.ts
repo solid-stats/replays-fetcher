@@ -22,8 +22,9 @@ import {
 import { SourceFetchError } from "../discovery/source-client.js";
 import {
   classifyFailure,
-  type ClassifyInput,
 } from "../source/classify-failure.js";
+
+import type { ClassifyInput } from "../source/classify-failure.js";
 
 import type { SourceClient } from "../discovery/types.js";
 

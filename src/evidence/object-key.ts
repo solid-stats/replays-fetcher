@@ -17,12 +17,11 @@ const leadingTrailingDashPattern = /^-+|-+$/gu;
 const s3SafeKeyPattern = /^[a-z0-9._/-]+$/u;
 const evidenceObjectName = "evidence.json";
 
-const toRunSlug = (runId: string): string => {
-  return runId
+const toRunSlug = (runId: string): string =>
+  runId
     .toLowerCase()
     .replaceAll(unsafeRunPattern, "-")
     .replaceAll(leadingTrailingDashPattern, "");
-};
 
 /**
  * Build the write-once evidence object key for a run. Lowercases the `runId`,

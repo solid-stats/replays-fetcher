@@ -18,9 +18,9 @@ import {
   readingStore,
   s3Error,
   throwingStore,
-  type PutInput,
-  type SentCommand,
 } from "./s3-checkpoint-store.fixtures.js";
+
+import type { PutInput, SentCommand } from "./s3-checkpoint-store.fixtures.js";
 import { createS3CheckpointStoreFromConfig } from "./s3-checkpoint-store.js";
 
 import type { Checkpoint } from "./checkpoint.js";

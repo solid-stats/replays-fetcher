@@ -2,7 +2,9 @@ import { connectivityOk } from "../check/connectivity.js";
 import { redactConfig } from "../config.js";
 import { ConfigValidationError } from "../errors/config-validation-error.js";
 
-import { writeJson, type BuildCliDependencies } from "./shared.js";
+import { writeJson } from "./shared.js";
+
+import type { BuildCliDependencies } from "./shared.js";
 
 import type { Command } from "commander";
 

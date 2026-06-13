@@ -1,4 +1,4 @@
-/* eslint-disable max-lines -- Discovery orchestration is split once storage/staging phases add separate modules. */
+/* oxlint-disable max-lines -- Discovery orchestration is split once storage/staging phases add separate modules. */
 import { extractFilenameFromDetailHtml, extractReplayRows } from "./html.js";
 import { SourceFetchError } from "./source-client.js";
 
@@ -110,9 +110,8 @@ export const toRawReplayUrl = (filename: string, detailUrl: URL): string => {
     .replaceAll("%2F", "/");
 };
 
-const isValidFixtureUrl = (value: string): boolean => {
-  return URL.parse(value) !== null;
-};
+const isValidFixtureUrl = (value: string): boolean =>
+  URL.parse(value) !== null;
 
 const toPageUrl = (sourceUrl: URL, page: number): URL => {
   if (page === 1) {
@@ -459,7 +458,6 @@ const discoverPageCandidates = async (input: {
       });
     } else {
       // Source requests are intentionally sequential to avoid aggressive polling.
-      // eslint-disable-next-line no-await-in-loop -- source requests are intentionally sequential to avoid aggressive polling.
       const candidate = await discoverRowCandidate({
         detailReadOptions: input.detailReadOptions,
         row,
@@ -678,11 +676,9 @@ export const discoverReplaysDryRun = async (
       const pageUrl = toPageUrl(options.sourceUrl, page);
       const listReadOptions = buildReadOptions(options, page, "list");
       // Source requests are intentionally sequential to preserve source order.
-      // eslint-disable-next-line no-await-in-loop -- source requests are intentionally sequential to preserve source order.
       const sourceText = await sourceClient.fetchText(pageUrl, listReadOptions);
       const fixture = parseSourceFixture(sourceText);
       // Page detail fetches are part of the same source-order sequence.
-      // eslint-disable-next-line no-await-in-loop -- page detail fetches are part of the same source-order sequence.
       const pageCandidates = await discoverPageCandidates({
         detailReadOptions: buildReadOptions(options, page, "detail"),
         fixture,

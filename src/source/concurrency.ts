@@ -15,6 +15,5 @@ import pLimit from "p-limit";
 
 export type { LimitFunction } from "p-limit";
 
-export const createLimiter = (concurrency: number): ReturnType<typeof pLimit> => {
-  return pLimit(concurrency);
-}
+export const createLimiter = (concurrency: number): ReturnType<typeof pLimit> =>
+  pLimit(concurrency);

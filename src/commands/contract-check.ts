@@ -1,8 +1,9 @@
 import {
   loadDryRunSourceConfig,
   writeJson,
-  type BuildCliDependencies,
 } from "./shared.js";
+
+import type { BuildCliDependencies } from "./shared.js";
 
 import type { Command } from "commander";
 

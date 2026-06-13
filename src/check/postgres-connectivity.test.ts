@@ -3,8 +3,9 @@ import { expect, test } from "vitest";
 import {
   checkPostgresConnectivity,
   checkPostgresConnectivityFromDatabaseUrl,
-  type PostgresConnectivityQueryClient,
 } from "./postgres-connectivity.js";
+
+import type { PostgresConnectivityQueryClient } from "./postgres-connectivity.js";
 
 interface QueryCall {
   readonly text: string;

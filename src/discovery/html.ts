@@ -22,23 +22,20 @@ interface MutableReplayRowSource {
   url?: string;
 }
 
-const getMatchGroup = (match: RegExpMatchArray, group: string): string => {
-  /* v8 ignore next -- regexes using this helper always declare the group. */
-  return match.groups?.[group] ?? "";
-};
+/* v8 ignore next -- regexes using this helper always declare the group. */
+const getMatchGroup = (match: RegExpMatchArray, group: string): string =>
+  match.groups?.[group] ?? "";
 
-const decodeHtmlEntities = (value: string): string => {
-  return value
+const decodeHtmlEntities = (value: string): string =>
+  value
     .replaceAll("&amp;", "&")
     .replaceAll("&quot;", '"')
     .replaceAll("&#39;", "'")
     .replaceAll("&lt;", "<")
     .replaceAll("&gt;", ">");
-};
 
-const stripTags = (html: string): string => {
-  return decodeHtmlEntities(html.replaceAll(/<[^>]+>/gu, " "));
-};
+const stripTags = (html: string): string =>
+  decodeHtmlEntities(html.replaceAll(/<[^>]+>/gu, " "));
 
 const hrefToUrl = (
   href: string | undefined,

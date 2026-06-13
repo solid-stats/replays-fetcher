@@ -2,7 +2,9 @@
 import { expect, test, vi } from "vitest";
 
 import { retryAfterCapMs } from "./backoff.js";
-import { type RetryAttemptEvent, withRetry } from "./retry.js";
+import { withRetry } from "./retry.js";
+
+import type { RetryAttemptEvent } from "./retry.js";
 
 import type { FailureClassification } from "./classify-failure.js";
 
@@ -24,9 +26,7 @@ const attempts = Number("3");
 const retryAfterMs = Number("9000");
 const baseRetryUrl = "https://example.test/replays";
 
-const neverSignal = (): AbortSignal => {
-  return new AbortController().signal;
-};
+const neverSignal = (): AbortSignal => new AbortController().signal;
 
 const noopSleep = async (): Promise<undefined> => undefined;
 

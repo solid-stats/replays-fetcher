@@ -70,90 +70,94 @@ const fakeCheckpointStore = (
   };
 };
 
-const makeCheckpoint = (overrides: Partial<Checkpoint> = {}): Checkpoint => {
-  return {
-    counts: { discovered: 1, failed: 0, staged: 1, stored: 1 },
-    createdAt: startedAt,
-    discoveredLastPage: twoPages,
-    lastCompletedPage: twoPages,
-    pages: {},
-    runId: "run-prior",
-    sourceUrl: "https://example.test/replays",
-    status: "running",
-    updatedAt: finishedAt,
-    ...overrides,
-  };
-};
+const makeCheckpoint = (overrides: Partial<Checkpoint> = {}): Checkpoint => ({
+  counts: { discovered: 1, failed: 0, staged: 1, stored: 1 },
+  createdAt: startedAt,
+  discoveredLastPage: twoPages,
+  lastCompletedPage: twoPages,
+  pages: {},
+  runId: "run-prior",
+  sourceUrl: "https://example.test/replays",
+  status: "running",
+  updatedAt: finishedAt,
+  ...overrides,
+});
 
 const discoveryReport = (
   overrides: Partial<DiscoveryReport> = {},
-): DiscoveryReport => {
-  return {
-    candidates: [candidate],
-    counts: {
-      candidates: 1,
-      diagnostics: 0,
-      discovered: 1,
-    },
-    diagnostics: [],
-    generatedAt: startedAt,
-    mode: "dry-run",
-    ok: true,
-    sourceUrl: "https://example.test/replays",
-    ...overrides,
-  };
-};
+): DiscoveryReport => ({
+  candidates: [candidate],
+  counts: {
+    candidates: 1,
+    diagnostics: 0,
+    discovered: 1,
+  },
+  diagnostics: [],
+  generatedAt: startedAt,
+  mode: "dry-run",
+  ok: true,
+  sourceUrl: "https://example.test/replays",
+  ...overrides,
+});
 
-const rawStored = (): StoreRawReplayResult => {
-  return {
-    bucket: "solid-stats-replays",
-    byteSize: Number("1234"),
-    checksum,
-    fetchedAt: finishedAt,
-    objectKey: `raw/sha256/${checksum}.ocap`,
-    source: candidate.source,
-    sourceFilename: candidate.identity.filename,
-    status: "stored",
-  };
-};
+const rawStored = (): StoreRawReplayResult => ({
+  bucket: "solid-stats-replays",
+  byteSize: Number("1234"),
+  checksum,
+  fetchedAt: finishedAt,
+  objectKey: `raw/sha256/${checksum}.ocap`,
+  source: candidate.source,
+  sourceFilename: candidate.identity.filename,
+  status: "stored",
+});
 
-const rawSkipped = (): StoreRawReplayResult => {
-  return {
-    bucket: "solid-stats-replays",
-    byteSize: Number("1234"),
-    checksum,
-    discoveredAt: finishedAt,
-    fetchedAt: finishedAt,
-    objectKey: `raw/sha256/${checksum}.ocap`,
-    source: candidate.source,
-    sourceFilename: candidate.identity.filename,
-    status: "skipped",
-  };
-};
+const rawSkipped = (): StoreRawReplayResult => ({
+  bucket: "solid-stats-replays",
+  byteSize: Number("1234"),
+  checksum,
+  discoveredAt: finishedAt,
+  fetchedAt: finishedAt,
+  objectKey: `raw/sha256/${checksum}.ocap`,
+  source: candidate.source,
+  sourceFilename: candidate.identity.filename,
+  status: "skipped",
+});
 
-const rawFetchFailed = (): StoreRawReplayResult => {
-  return {
-    failureCategory: "fetch_failed",
-    fetchedAt: finishedAt,
-    message: "Replay byte request failed",
-    source: candidate.source,
-    sourceFilename: candidate.identity.filename,
-    status: "failed",
-  };
-};
+const rawFetchFailed = (): StoreRawReplayResult => ({
+  failureCategory: "fetch_failed",
+  fetchedAt: finishedAt,
+  message: "Replay byte request failed",
+  source: candidate.source,
+  sourceFilename: candidate.identity.filename,
+  status: "failed",
+});
 
 const replayCandidate = (
   externalId: string,
   filename: string,
-): ReplayCandidate => {
-  return {
-    identity: {
-      filename,
-    },
-    source: {
-      externalId,
-      url: `https://example.test/replays/${externalId}`,
-    },
+): ReplayCandidate => ({
+  identity: {
+    filename,
+  },
+  source: {
+    externalId,
+    url: `https://example.test/replays/${externalId}`,
+  },
+});
+
+const createClock = (values: readonly string[]): () => Date => {
+  let index = 0;
+  const lastValueIndex = values.length - 1;
+
+  return () => {
+    const value = values[index] ?? values.at(lastValueIndex);
+    index += 1;
+
+    if (value === undefined) {
+      throw new Error("Clock fixture must contain at least one timestamp");
+    }
+
+    return new Date(value);
   };
 };
 
@@ -956,22 +960,6 @@ test("runOnce persists only identifiers in the checkpoint and summary (no leak)"
   expect(JSON.stringify(result.summary)).not.toContain(secret);
 });
 
-const createClock = (values: readonly string[]): () => Date => {
-  let index = 0;
-  const lastValueIndex = values.length - 1;
-
-  return () => {
-    const value = values[index] ?? values.at(lastValueIndex);
-    index += 1;
-
-    if (value === undefined) {
-      throw new Error("Clock fixture must contain at least one timestamp");
-    }
-
-    return new Date(value);
-  };
-};
-
 interface InspectableLimiter {
   readonly assignments: number[];
   readonly limit: LimitFunction;
@@ -1099,8 +1087,8 @@ const spyThrottle = (scripted: readonly number[]): SpyThrottle => {
   };
 };
 
-const rateLimitedReport = (sourceUrl: string): DiscoveryReport => {
-  return discoveryReport({
+const rateLimitedReport = (sourceUrl: string): DiscoveryReport =>
+  discoveryReport({
     candidates: [],
     diagnostics: [
       {
@@ -1112,7 +1100,6 @@ const rateLimitedReport = (sourceUrl: string): DiscoveryReport => {
     ok: false,
     sourceUrl,
   });
-};
 
 test("runOnce runs past the old single-page bound and stops complete on the first empty page", async () => {
   const lastContentPage = 3;

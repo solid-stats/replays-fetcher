@@ -16,9 +16,8 @@ interface ToIngestStagingPayloadOptions {
 
 const isStageable = (
   evidence: RawReplayStorageEvidence,
-): evidence is StageableRawReplayEvidence => {
-  return evidence.status === "stored" || evidence.status === "skipped";
-};
+): evidence is StageableRawReplayEvidence =>
+  evidence.status === "stored" || evidence.status === "skipped";
 
 /**
  * Strip any `username`/`password` userinfo from the source URL before it lands
@@ -122,7 +121,7 @@ const toPayload = (
   if (runId !== undefined) {
     promotionEvidence = {
       ...promotionEvidence,
-      // eslint-disable-next-line camelcase -- run_id is the cross-service promotion_evidence jsonb contract key (RESUME-04), not a local identifier
+      // oxlint-disable-next-line camelcase -- run_id is the cross-service promotion_evidence jsonb contract key (RESUME-04), not a local identifier
       run_id: runId,
     };
   }

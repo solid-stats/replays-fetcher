@@ -185,21 +185,19 @@ const readSourceConfigInput = (source: ConfigSource): {
   readonly sourceTimeoutMs: string | boolean | undefined;
   readonly sourceTransport: SourceTransport | undefined;
   readonly sourceUrl: string | boolean | undefined;
-} => {
-  return {
-    sourceConcurrency: source["REPLAY_SOURCE_CONCURRENCY"],
-    sourceMaxPages: source["REPLAY_SOURCE_MAX_PAGES"],
-    sourceRequestSpacingMs: source["REPLAY_SOURCE_REQUEST_SPACING_MS"],
-    sourceUrl: source["REPLAY_SOURCE_URL"],
-    sourceTransport: sourceTransportOrUndefined(
-      source["REPLAY_SOURCE_TRANSPORT"],
-    ),
-    sourceSshHost: stringOrUndefined(source["REPLAY_SOURCE_SSH_HOST"]),
-    sourceSshCommand: stringOrUndefined(source["REPLAY_SOURCE_SSH_COMMAND"]),
-    sourceTimeoutMs: source["REPLAY_SOURCE_TIMEOUT_MS"],
-    sourceRetryAttempts: source["REPLAY_SOURCE_RETRY_ATTEMPTS"],
-  };
-};
+} => ({
+  sourceConcurrency: source["REPLAY_SOURCE_CONCURRENCY"],
+  sourceMaxPages: source["REPLAY_SOURCE_MAX_PAGES"],
+  sourceRequestSpacingMs: source["REPLAY_SOURCE_REQUEST_SPACING_MS"],
+  sourceUrl: source["REPLAY_SOURCE_URL"],
+  sourceTransport: sourceTransportOrUndefined(
+    source["REPLAY_SOURCE_TRANSPORT"],
+  ),
+  sourceSshHost: stringOrUndefined(source["REPLAY_SOURCE_SSH_HOST"]),
+  sourceSshCommand: stringOrUndefined(source["REPLAY_SOURCE_SSH_COMMAND"]),
+  sourceTimeoutMs: source["REPLAY_SOURCE_TIMEOUT_MS"],
+  sourceRetryAttempts: source["REPLAY_SOURCE_RETRY_ATTEMPTS"],
+});
 
 export const loadConfig = (source: ConfigSource = process.env): AppConfig => {
   const sourceConfig = readSourceConfigInput(source);
@@ -248,17 +246,15 @@ export const loadSourceConfig = (
   return result.data;
 };
 
-export const redactConfig = (config: AppConfig): RedactedAppConfig => {
-  return {
-    ...config,
-    s3: {
-      ...config.s3,
-      accessKeyId: redactSecret(config.s3.accessKeyId),
-      secretAccessKey: redactSecret(config.s3.secretAccessKey),
-    },
-    sourceSshCommand: "[redacted-source-ssh-command]",
-    staging: {
-      databaseUrl: "[redacted-database-url]",
-    },
-  };
-};
+export const redactConfig = (config: AppConfig): RedactedAppConfig => ({
+  ...config,
+  s3: {
+    ...config.s3,
+    accessKeyId: redactSecret(config.s3.accessKeyId),
+    secretAccessKey: redactSecret(config.s3.secretAccessKey),
+  },
+  sourceSshCommand: "[redacted-source-ssh-command]",
+  staging: {
+    databaseUrl: "[redacted-database-url]",
+  },
+});

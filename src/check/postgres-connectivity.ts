@@ -7,10 +7,10 @@ interface QueryResult<Row> {
 }
 
 export interface PostgresConnectivityQueryClient {
-  query<Row>(
+  query: <Row>(
     text: string,
     values?: readonly unknown[],
-  ): Promise<QueryResult<Row>>;
+  ) => Promise<QueryResult<Row>>;
 }
 
 interface CheckPostgresConnectivityInput {

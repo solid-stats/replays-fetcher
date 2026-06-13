@@ -1,4 +1,4 @@
-/* eslint-disable max-lines -- Replay-byte client keeps the direct + SSH adapters, shared-classifier wiring, and the identifiers-only diagnostic builder co-located so the failure/retry contract reads as one unit (mirrors source-client.ts). */
+/* oxlint-disable max-lines -- Replay-byte client keeps the direct + SSH adapters, shared-classifier wiring, and the identifiers-only diagnostic builder co-located so the failure/retry contract reads as one unit (mirrors source-client.ts). */
 import { execFile as execFileCallback } from "node:child_process";
 import { promisify } from "node:util";
 
@@ -6,16 +6,13 @@ import { AppError } from "../errors/app-error.js";
 import { parseRetryAfter } from "../source/backoff.js";
 import {
   classifyFailure,
-  type ClassifyInput,
-  type FailureClassification,
-  type FailureKind,
 } from "../source/classify-failure.js";
 import {
   withRetry,
-  type RetryAttemptEvent,
-  type RetrySourceReadOptions,
-  type SourceReadPhase,
 } from "../source/retry.js";
+
+import type { ClassifyInput, FailureClassification, FailureKind } from "../source/classify-failure.js";
+import type { RetryAttemptEvent, RetrySourceReadOptions, SourceReadPhase } from "../source/retry.js";
 
 import type { SourceConfig } from "../config.js";
 
@@ -54,7 +51,7 @@ export interface ByteFetchOptions {
 }
 
 export interface ReplayByteClient {
-  fetchBytes(url: URL, options?: ByteFetchOptions): Promise<Uint8Array>;
+  fetchBytes: (url: URL, options?: ByteFetchOptions) => Promise<Uint8Array>;
 }
 
 /**
@@ -67,8 +64,8 @@ export interface ReplayByteClient {
 export class ReplayByteFetchError extends AppError<
   "fetch_failed" | "rate_limited"
 > {
-  // eslint-disable-next-line @typescript-eslint/no-useless-constructor -- exposes a public constructor over AppError's protected one and narrows options to omit isOperational.
-  constructor(
+  // oxlint-disable-next-line typescript/no-useless-constructor -- exposes a public constructor over AppError's protected one and narrows options to omit isOperational.
+  public constructor(
     code: ReplayByteFetchError["code"],
     message: string,
     options?: {
@@ -77,6 +74,7 @@ export class ReplayByteFetchError extends AppError<
     },
   ) {
     super(code, message, options);
+    this.name = "ReplayByteFetchError";
   }
 }
 
@@ -92,9 +90,8 @@ const initialTry = 1;
  * Total byte-read tries the wrapper is configured to make: the initial read
  * plus the bounded retry rounds. Reported in `details.attempts` (DIAG-01).
  */
-const totalTries = (options: ByteFetchOptions | undefined): number => {
-  return (options?.attempts ?? noRetryAttempts) + initialTry;
-};
+const totalTries = (options: ByteFetchOptions | undefined): number =>
+  (options?.attempts ?? noRetryAttempts) + initialTry;
 
 /**
  * Maps the shared classifier's tri-state kind onto the narrow
@@ -111,9 +108,9 @@ const toByteCode = (kind: FailureKind): ReplayByteFetchError["code"] => {
   return "fetch_failed";
 };
 
-interface RetryWiring<T> {
+interface RetryWiring<TResult> {
   readonly classify: (error: unknown) => FailureClassification;
-  readonly read: (signal: AbortSignal) => Promise<T>;
+  readonly read: (signal: AbortSignal) => Promise<TResult>;
   readonly retryAfterMs?: (
     error: unknown,
     now: () => number,
@@ -127,14 +124,14 @@ interface RetryWiring<T> {
  * options are supplied, `attempts` defaults to 0 so a single try is made,
  * preserving the legacy single-shot behavior for existing callers.
  */
-const runWithRetry = async <T,>(
-  wiring: RetryWiring<T>,
+const runWithRetry = async <TResult,>(
+  wiring: RetryWiring<TResult>,
   options?: ByteFetchOptions,
-): Promise<T> => {
+): Promise<TResult> => {
   const attempts = options?.attempts ?? noRetryAttempts;
   const callerSignal = options?.signal ?? new AbortController().signal;
 
-  let retryOptions: RetrySourceReadOptions<T> = {
+  let retryOptions: RetrySourceReadOptions<TResult> = {
     attempts,
     classify: wiring.classify,
     phase: bytesPhase,
@@ -306,9 +303,8 @@ const classifyDirect = (error: unknown): FailureClassification => {
   return classifyFailure({ error });
 };
 
-const classifySsh = (error: unknown): FailureClassification => {
-  return classifyFailure({ error });
-};
+const classifySsh = (error: unknown): FailureClassification =>
+  classifyFailure({ error });
 
 interface DirectByteErrorInput {
   readonly error: unknown;
@@ -357,9 +353,8 @@ const toDirectByteError = (
 
 const createDirectReplayByteClient = (
   config: SourceConfig,
-): ReplayByteClient => {
-  return {
-    async fetchBytes(url, options): Promise<Uint8Array> {
+): ReplayByteClient => ({
+  async fetchBytes(url, options): Promise<Uint8Array> {
       const read = async (callerSignal: AbortSignal): Promise<Uint8Array> => {
         const controller = new AbortController();
         const timeout = setTimeout(() => {
@@ -399,8 +394,7 @@ const createDirectReplayByteClient = (
         throw toDirectByteError({ error, options, url });
       });
     },
-  };
-};
+});
 
 interface SshByteErrorInput {
   readonly error: unknown;
@@ -435,9 +429,8 @@ const getSshHost = (config: SourceConfig): string => {
 const createSshReplayByteClient = (
   config: SourceConfig,
   execFile: ExecFile,
-): ReplayByteClient => {
-  return {
-    async fetchBytes(url, options): Promise<Uint8Array> {
+): ReplayByteClient => ({
+  async fetchBytes(url, options): Promise<Uint8Array> {
       const host = getSshHost(config);
 
       const read = async (callerSignal: AbortSignal): Promise<Uint8Array> => {
@@ -476,8 +469,7 @@ const createSshReplayByteClient = (
         },
       );
     },
-  };
-};
+});
 
 export const createReplayByteClient = (
   config: SourceConfig,

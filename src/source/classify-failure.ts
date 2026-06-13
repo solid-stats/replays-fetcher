@@ -142,23 +142,19 @@ const unwrapCause = (error: unknown): UnwrappedCause => {
   return result;
 };
 
-const isTransientCauseCode = (code: string): boolean => {
-  return (
-    transientNetworkCodes.has(code) ||
-    transientTlsCodes.has(code) ||
-    code.startsWith(undiciCodePrefix) ||
-    code.startsWith(tlsCodePrefix) ||
-    code.startsWith(certCodePrefix)
-  );
-};
+const isTransientCauseCode = (code: string): boolean => (
+  transientNetworkCodes.has(code) ||
+  transientTlsCodes.has(code) ||
+  code.startsWith(undiciCodePrefix) ||
+  code.startsWith(tlsCodePrefix) ||
+  code.startsWith(certCodePrefix)
+);
 
-const isServerError = (status: number): boolean => {
-  return status >= httpServerErrorFloor && status < httpServerErrorCeiling;
-};
+const isServerError = (status: number): boolean =>
+  status >= httpServerErrorFloor && status < httpServerErrorCeiling;
 
-const isClientError = (status: number): boolean => {
-  return status >= httpClientErrorFloor && status < httpServerErrorFloor;
-};
+const isClientError = (status: number): boolean =>
+  status >= httpClientErrorFloor && status < httpServerErrorFloor;
 
 const classifyByStatus = (status: number): FailureKind | undefined => {
   if (status === httpTooManyRequestsStatus) {

@@ -9,9 +9,9 @@ import {
   createStoreRawResources,
   loadStoreRawConfig,
   writeJson,
-  type BuildCliDependencies,
 } from "./shared.js";
 
+import type { BuildCliDependencies } from "./shared.js";
 import type { StagingRepository } from "../staging/stage-raw-replay.js";
 import type { Command } from "commander";
 import type { Logger } from "pino";

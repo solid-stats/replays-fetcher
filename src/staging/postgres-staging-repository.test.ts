@@ -1,4 +1,4 @@
-/* eslint-disable camelcase -- PostgreSQL row fixtures intentionally use database column names. */
+/* oxlint-disable camelcase -- PostgreSQL row fixtures intentionally use database column names. */
 import { readFile } from "node:fs/promises";
 
 import { expect, test } from "vitest";
@@ -6,8 +6,9 @@ import { expect, test } from "vitest";
 import {
   createPostgresStagingRepository,
   createPostgresStagingRepositoryFromDatabaseUrl,
-  type StagingQueryClient,
 } from "./postgres-staging-repository.js";
+
+import type { StagingQueryClient } from "./postgres-staging-repository.js";
 
 import type { IngestStagingPayload } from "./types.js";
 
@@ -50,6 +51,43 @@ const payload: IngestStagingPayload = {
   status: "pending",
 };
 const insertedStagingId = "00000000-0000-4000-8000-000000000001";
+
+class UniqueViolationError extends Error {
+  public readonly code = "23505";
+
+  public constructor() {
+    super("unique violation");
+    this.name = "UniqueViolationError";
+  }
+}
+
+const normalizeSql = (sql: string): string =>
+  sql.replaceAll(/\s+/gu, " ").trim().toLowerCase();
+
+const createUniqueViolationClient = (
+  sourceRows: readonly StagingRow[],
+  objectRows: readonly StagingRow[] = [],
+): StagingQueryClient => {
+  let selectCount = 0;
+
+  const client = {
+    async query(text: string) {
+      if (normalizeSql(text).startsWith("insert into ingest_staging_records")) {
+        throw new UniqueViolationError();
+      }
+
+      selectCount += 1;
+
+      if (selectCount === 1) {
+        return { rows: sourceRows };
+      }
+
+      return { rows: objectRows };
+    },
+  } as StagingQueryClient;
+
+  return client;
+};
 
 test("PostgresStagingRepository should insert pending ingest staging records", async () => {
   const calls: QueryCall[] = [];
@@ -244,40 +282,3 @@ test("PostgresStagingRepository source should not mutate forbidden server-2 busi
   expect(source).toMatch(/insert\s+into\s+ingest_staging_records/iu);
 });
 
-class UniqueViolationError extends Error {
-  readonly code = "23505";
-
-  constructor() {
-    super("unique violation");
-    this.name = "UniqueViolationError";
-  }
-}
-
-const normalizeSql = (sql: string): string => {
-  return sql.replaceAll(/\s+/gu, " ").trim().toLowerCase();
-};
-
-const createUniqueViolationClient = (
-  sourceRows: readonly StagingRow[],
-  objectRows: readonly StagingRow[] = [],
-): StagingQueryClient => {
-  let selectCount = 0;
-
-  const client = {
-    async query(text: string) {
-      if (normalizeSql(text).startsWith("insert into ingest_staging_records")) {
-        throw new UniqueViolationError();
-      }
-
-      selectCount += 1;
-
-      if (selectCount === 1) {
-        return { rows: sourceRows };
-      }
-
-      return { rows: objectRows };
-    },
-  } as StagingQueryClient;
-
-  return client;
-};

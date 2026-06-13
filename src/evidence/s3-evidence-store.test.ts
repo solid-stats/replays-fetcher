@@ -10,8 +10,9 @@ import {
   makeRunSummary,
   putInput,
   rejectingStore,
-  type SentCommand,
 } from "./s3-evidence-store.fixtures.js";
+
+import type { SentCommand } from "./s3-evidence-store.fixtures.js";
 import { createS3EvidenceStoreFromConfig } from "./s3-evidence-store.js";
 
 const onlyCommand = (commands: SentCommand[]): SentCommand => {

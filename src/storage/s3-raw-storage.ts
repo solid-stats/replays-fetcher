@@ -13,7 +13,7 @@ import type { AppConfig } from "../config.js";
 import type { ReplayCandidate } from "../discovery/types.js";
 
 interface S3Sender {
-  send(command: HeadObjectCommand | PutObjectCommand): Promise<{
+  send: (command: HeadObjectCommand | PutObjectCommand) => Promise<{
     readonly ContentLength?: number;
     readonly Metadata?: Record<string, string>;
   }>;
@@ -25,9 +25,9 @@ interface CreateS3RawReplayStorageOptions {
 }
 
 export interface S3RawReplayStorage {
-  storeRawReplay(
+  storeRawReplay: (
     input: RawReplayStorageInput,
-  ): Promise<RawReplayStorageEvidence>;
+  ) => Promise<RawReplayStorageEvidence>;
 }
 
 const isNotFound = (error: unknown): boolean => {
@@ -70,9 +70,8 @@ const toBaseEvidence = (input: {
 
 export const createS3RawReplayStorage = (
   options: CreateS3RawReplayStorageOptions,
-): S3RawReplayStorage => {
-  return {
-    async storeRawReplay(input): Promise<RawReplayStorageEvidence> {
+): S3RawReplayStorage => ({
+  async storeRawReplay(input): Promise<RawReplayStorageEvidence> {
       const baseEvidence = toBaseEvidence({
         bucket: options.bucket,
         candidate: input.candidate,
@@ -139,14 +138,13 @@ export const createS3RawReplayStorage = (
           status: "failed",
         };
       }
-    },
-  };
-};
+  },
+});
 
 export const createS3RawReplayStorageFromConfig = (
   config: AppConfig["s3"],
-): S3RawReplayStorage => {
-  return createS3RawReplayStorage({
+): S3RawReplayStorage =>
+  createS3RawReplayStorage({
     bucket: config.bucket,
     sender: new S3Client({
       credentials: {
@@ -158,4 +156,3 @@ export const createS3RawReplayStorageFromConfig = (
       region: config.region,
     }),
   });
-};

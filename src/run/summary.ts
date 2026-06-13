@@ -80,39 +80,29 @@ const NO_PAGE_COMPLETED = 0;
 const countStatus = (
   staging: readonly IngestStagingResult[],
   status: IngestStagingResult["status"],
-): number => {
-  return staging.filter((result) => result.status === status).length;
-};
+): number => staging.filter((result) => result.status === status).length;
 
 const countRawStatus = (
   rawStorage: readonly StoreRawReplayResult[],
   status: "skipped" | "stored",
-): number => {
-  return rawStorage.filter((result) => result.status === status).length;
-};
+): number => rawStorage.filter((result) => result.status === status).length;
 
 const countRawConflicts = (
   rawStorage: readonly StoreRawReplayResult[],
-): number => {
-  return rawStorage.filter((result) => result.status === "conflict").length;
-};
+): number => rawStorage.filter((result) => result.status === "conflict").length;
 
 const countRawFailures = (
   rawStorage: readonly StoreRawReplayResult[],
-): number => {
-  return rawStorage.filter((result) => result.status === "failed").length;
-};
+): number => rawStorage.filter((result) => result.status === "failed").length;
 
 const uniqueCategories = (
   categories: readonly RunFailureCategory[],
-): readonly RunFailureCategory[] => {
-  return [...new Set(categories)].toSorted();
-};
+): readonly RunFailureCategory[] => [...new Set(categories)].toSorted();
 
 const stagingFailureCategories = (
   staging: readonly IngestStagingResult[],
-): readonly RunFailureCategory[] => {
-  return staging.flatMap((result) => {
+): readonly RunFailureCategory[] =>
+  staging.flatMap((result) => {
     if (result.status === "conflict") {
       return ["staging_conflict" as const];
     }
@@ -127,12 +117,11 @@ const stagingFailureCategories = (
 
     return [];
   });
-};
 
 const rawFailureCategories = (
   rawStorage: readonly StoreRawReplayResult[],
-): readonly RunFailureCategory[] => {
-  return rawStorage.flatMap((result) => {
+): readonly RunFailureCategory[] =>
+  rawStorage.flatMap((result) => {
     if (result.status === "conflict") {
       return ["storage_conflict" as const];
     }
@@ -147,49 +136,40 @@ const rawFailureCategories = (
 
     return ["storage_failed" as const];
   });
-};
 
 const sourceFailureCategories = (
   discoveryReport: DiscoveryReport,
-): readonly RunFailureCategory[] => {
-  if (discoveryReport.ok) {
-    return [];
-  }
-
-  return ["source_unavailable"];
-};
+): readonly RunFailureCategory[] =>
+  discoveryReport.ok ? [] : ["source_unavailable"];
 
 const collectFailureCategories = (
   discoveryReport: DiscoveryReport,
   rawStorage: readonly StoreRawReplayResult[],
   staging: readonly IngestStagingResult[],
-): readonly RunFailureCategory[] => {
-  return uniqueCategories([
+): readonly RunFailureCategory[] =>
+  uniqueCategories([
     ...sourceFailureCategories(discoveryReport),
     ...rawFailureCategories(rawStorage),
     ...stagingFailureCategories(staging),
   ]);
-};
 
 const countRun = (
   discoveryReport: DiscoveryReport,
   rawStorage: readonly StoreRawReplayResult[],
   staging: readonly IngestStagingResult[],
-): RunSummaryCounts => {
-  return {
-    conflict: countRawConflicts(rawStorage) + countStatus(staging, "conflict"),
-    diagnostics: discoveryReport.diagnostics.length,
-    discovered: discoveryReport.candidates.length,
-    duplicate: countStatus(staging, "already_staged"),
-    failed: countRawFailures(rawStorage) + countStatus(staging, "failed"),
-    fetched: rawStorage.length,
-    skipped:
-      countRawStatus(rawStorage, "skipped") +
-      countStatus(staging, "not_stageable"),
-    staged: countStatus(staging, "staged"),
-    stored: countRawStatus(rawStorage, "stored"),
-  };
-};
+): RunSummaryCounts => ({
+  conflict: countRawConflicts(rawStorage) + countStatus(staging, "conflict"),
+  diagnostics: discoveryReport.diagnostics.length,
+  discovered: discoveryReport.candidates.length,
+  duplicate: countStatus(staging, "already_staged"),
+  failed: countRawFailures(rawStorage) + countStatus(staging, "failed"),
+  fetched: rawStorage.length,
+  skipped:
+    countRawStatus(rawStorage, "skipped") +
+    countStatus(staging, "not_stageable"),
+  staged: countStatus(staging, "staged"),
+  stored: countRawStatus(rawStorage, "stored"),
+});
 
 const sourceFailureClassification = (
   code: DiagnosticCode,
@@ -263,16 +243,10 @@ export const deriveSourceFailure = (
   return buildSourceFailure(diagnostic, classification);
 };
 
-const isRecoverable = (sourceFailure?: RunSourceFailure): boolean => {
-  if (sourceFailure === undefined) {
-    return false;
-  }
-
-  return (
-    sourceFailure.classification === "rate_limited" ||
-    sourceFailure.classification === "transient"
-  );
-};
+const isRecoverable = (sourceFailure?: RunSourceFailure): boolean =>
+  sourceFailure !== undefined &&
+  (sourceFailure.classification === "rate_limited" ||
+    sourceFailure.classification === "transient");
 
 /**
  * Maps a run's page-loop outcome to the RunStatus taxonomy (RESUME-05):
@@ -482,18 +456,16 @@ export const toCompactSummary = (summary: RunSummary): CompactRunSummary => {
 
 export const buildConfigInvalidRunSummary = (
   input: BuildConfigInvalidRunSummaryInput,
-): RunConfigFailureSummary => {
-  return {
-    counts: emptyCounts,
-    failureCategories: ["config_invalid"],
-    finishedAt: input.finishedAt,
-    issues: input.issues,
-    mode: "run-once",
-    ok: false,
-    runId: input.runId,
-    startedAt: input.startedAt,
-  };
-};
+): RunConfigFailureSummary => ({
+  counts: emptyCounts,
+  failureCategories: ["config_invalid"],
+  finishedAt: input.finishedAt,
+  issues: input.issues,
+  mode: "run-once",
+  ok: false,
+  runId: input.runId,
+  startedAt: input.startedAt,
+});
 
 export const runExitCode = (summary: {
   readonly ok: boolean;

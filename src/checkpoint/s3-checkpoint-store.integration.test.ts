@@ -18,9 +18,7 @@ const expectedKey = "checkpoints/sg.zone-replays/latest.json";
 const slug = checkpointSourceUrl;
 const CONCURRENT_PAGE = 7;
 
-const noopCleanup = (): Promise<void> => {
-  return Promise.resolve();
-};
+const noopCleanup = (): Promise<void> => Promise.resolve();
 
 let stopContainer = noopCleanup;
 

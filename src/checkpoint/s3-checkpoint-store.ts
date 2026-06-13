@@ -41,8 +41,9 @@ import { fullJitterDelay } from "../source/backoff.js";
 import {
   mergeCheckpoints,
   parseCheckpoint,
-  type Checkpoint,
 } from "./checkpoint.js";
+
+import type { Checkpoint } from "./checkpoint.js";
 import { toCheckpointObjectKey } from "./object-key.js";
 
 import type { AppConfig } from "../config.js";
@@ -54,14 +55,14 @@ const MAX_CAS_ROUNDS = 5;
 const CREATE_IF_ABSENT_CONDITION = "*";
 
 interface S3CheckpointSenderOutput {
-  readonly Body?: { transformToString(): Promise<string> };
+  readonly Body?: { transformToString: () => Promise<string> };
   readonly ETag?: string;
 }
 
 interface S3CheckpointSender {
-  send(
+  send: (
     command: GetObjectCommand | PutObjectCommand,
-  ): Promise<S3CheckpointSenderOutput>;
+  ) => Promise<S3CheckpointSenderOutput>;
 }
 
 interface CreateS3CheckpointStoreOptions {
@@ -92,27 +93,23 @@ export interface CheckpointWriteResult {
 }
 
 export interface S3CheckpointStore {
-  read(slug: string): Promise<CheckpointReadResult>;
-  write(input: CheckpointWriteInput): Promise<CheckpointWriteResult>;
+  read: (slug: string) => Promise<CheckpointReadResult>;
+  write: (input: CheckpointWriteInput) => Promise<CheckpointWriteResult>;
 }
 
-const isNotFound = (error: unknown): boolean => {
-  return (
-    error instanceof S3ServiceException &&
-    (error.name === "NotFound" ||
-      error.$metadata.httpStatusCode === HTTP_NOT_FOUND)
-  );
-};
+const isNotFound = (error: unknown): boolean => (
+  error instanceof S3ServiceException &&
+  (error.name === "NotFound" ||
+    error.$metadata.httpStatusCode === HTTP_NOT_FOUND)
+);
 
-const isPreconditionFailed = (error: unknown): boolean => {
-  return (
-    error instanceof S3ServiceException &&
-    (error.name === "PreconditionFailed" ||
-      error.name === "ConditionalRequestConflict" ||
-      error.$metadata.httpStatusCode === HTTP_PRECONDITION_FAILED ||
-      error.$metadata.httpStatusCode === HTTP_CONDITIONAL_REQUEST_CONFLICT)
-  );
-};
+const isPreconditionFailed = (error: unknown): boolean => (
+  error instanceof S3ServiceException &&
+  (error.name === "PreconditionFailed" ||
+    error.name === "ConditionalRequestConflict" ||
+    error.$metadata.httpStatusCode === HTTP_PRECONDITION_FAILED ||
+    error.$metadata.httpStatusCode === HTTP_CONDITIONAL_REQUEST_CONFLICT)
+);
 
 const etagResult = (
   checkpoint: Checkpoint | undefined,
@@ -211,7 +208,7 @@ const writeCheckpoint = async (
 
   for (let round = 0; round < MAX_CAS_ROUNDS; round += 1) {
     try {
-      // eslint-disable-next-line no-await-in-loop -- bounded sequential CAS rounds are intentional.
+      // oxlint-disable-next-line no-await-in-loop -- bounded sequential CAS rounds are intentional.
       return await putCheckpoint(options, {
         checkpoint: intended,
         etag,
@@ -222,9 +219,9 @@ const writeCheckpoint = async (
         throw error;
       }
 
-      // eslint-disable-next-line no-await-in-loop -- full-jitter backoff between CAS rounds.
+      // oxlint-disable-next-line no-await-in-loop -- full-jitter backoff between CAS rounds.
       await delay(fullJitterDelay(round, random));
-      // eslint-disable-next-line no-await-in-loop -- re-read the winner before merging.
+      // oxlint-disable-next-line no-await-in-loop -- re-read the winner before merging.
       const fresh = await readCheckpoint(options, input.slug);
       if (fresh.checkpoint !== undefined) {
         intended = mergeCheckpoints(intended, fresh.checkpoint);
@@ -246,19 +243,15 @@ export const createS3CheckpointStore = (
   const random = options.random ?? Math.random;
 
   return {
-    read(slug): Promise<CheckpointReadResult> {
-      return readCheckpoint(options, slug);
-    },
-    write(input): Promise<CheckpointWriteResult> {
-      return writeCheckpoint(options, random, input);
-    },
+    read: (slug): Promise<CheckpointReadResult> => readCheckpoint(options, slug),
+    write: (input): Promise<CheckpointWriteResult> => writeCheckpoint(options, random, input),
   };
 };
 
 export const createS3CheckpointStoreFromConfig = (
   config: AppConfig["s3"],
-): S3CheckpointStore => {
-  return createS3CheckpointStore({
+): S3CheckpointStore =>
+  createS3CheckpointStore({
     bucket: config.bucket,
     conditionalWrites: config.conditionalWrites,
     prefix: config.checkpointPrefix,
@@ -272,4 +265,3 @@ export const createS3CheckpointStoreFromConfig = (
       region: config.region,
     }),
   });
-};

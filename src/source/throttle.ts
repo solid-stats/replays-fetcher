@@ -44,8 +44,8 @@ export interface ThrottleController {
   readonly effectiveConcurrency: number;
   readonly pacingFloorMs: number;
   readonly lastSignalAtMs: number;
-  onRateLimited(nowMs: number): void;
-  onCleanWindow(nowMs: number): void;
+  onRateLimited: (nowMs: number) => void;
+  onCleanWindow: (nowMs: number) => void;
 }
 
 export const createThrottleController = (

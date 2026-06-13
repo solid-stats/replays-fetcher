@@ -29,7 +29,7 @@ const timestamp = "2026-06-09T00:00:00.000Z";
 export type SentCommand = GetObjectCommand | PutObjectCommand;
 
 export interface SenderResponse {
-  readonly Body?: { transformToString(): Promise<string> };
+  readonly Body?: { transformToString: () => Promise<string> };
   readonly ETag?: string;
 }
 
@@ -47,61 +47,52 @@ const noRandom = (): number => 0;
 export const makeCheckpoint = (
   lastCompletedPage = 1,
   runId = "run-local",
-): Checkpoint => {
-  return {
-    counts,
-    createdAt: timestamp,
-    discoveredLastPage: lastCompletedPage,
-    lastCompletedPage,
-    pages: { "1": { counts, status: "complete" } },
-    runId,
-    sourceUrl: checkpointSourceUrl,
-    status: "running",
-    updatedAt: timestamp,
-  };
-};
+): Checkpoint => ({
+  counts,
+  createdAt: timestamp,
+  discoveredLastPage: lastCompletedPage,
+  lastCompletedPage,
+  pages: { "1": { counts, status: "complete" } },
+  runId,
+  sourceUrl: checkpointSourceUrl,
+  status: "running",
+  updatedAt: timestamp,
+});
 
-export const putInput = (command: SentCommand): PutInput => {
-  return command.input as PutInput;
-};
+export const putInput = (command: SentCommand): PutInput =>
+  command.input as PutInput;
 
 export const bodyOf = (json: string): {
-  transformToString(): Promise<string>;
-} => {
-  return { transformToString: (): Promise<string> => Promise.resolve(json) };
-};
+  transformToString: () => Promise<string>;
+} => ({ transformToString: (): Promise<string> => Promise.resolve(json) });
 
-export const s3Error = (name: string, status: number): S3ServiceException => {
-  return new S3ServiceException({
+export const s3Error = (name: string, status: number): S3ServiceException =>
+  new S3ServiceException({
     $fault: "client",
     $metadata: { httpStatusCode: status },
     name,
   });
-};
 
 type Send = (command: SentCommand) => Promise<SenderResponse>;
 
-const baseStore = (send: Send, conditionalWrites = true): Store => {
-  return createS3CheckpointStore({
+const baseStore = (send: Send, conditionalWrites = true): Store =>
+  createS3CheckpointStore({
     bucket: checkpointBucket,
     conditionalWrites,
     prefix: checkpointPrefix,
     random: noRandom,
     sender: { send },
   });
-};
 
 /** Store whose sender resolves `response` for every command. */
-export const readingStore = (response: SenderResponse): Store => {
-  return baseStore((): Promise<SenderResponse> => Promise.resolve(response));
-};
+export const readingStore = (response: SenderResponse): Store =>
+  baseStore((): Promise<SenderResponse> => Promise.resolve(response));
 
 /** Store whose sender always throws `error`. */
-export const throwingStore = (error: S3ServiceException): Store => {
-  return baseStore((): never => {
+export const throwingStore = (error: S3ServiceException): Store =>
+  baseStore((): never => {
     throw error;
   });
-};
 
 /**
  * Store that records every command into `commands` and resolves `response`.
@@ -112,12 +103,11 @@ export const capturingStore = (
   commands: SentCommand[],
   response: SenderResponse,
   conditionalWrites = true,
-): Store => {
-  return baseStore((command): Promise<SenderResponse> => {
+): Store =>
+  baseStore((command): Promise<SenderResponse> => {
     commands.push(command);
     return Promise.resolve(response);
   }, conditionalWrites);
-};
 
 /**
  * Store that fails the FIRST put with `putError`, succeeds afterwards, and
@@ -157,8 +147,8 @@ export const casStore = (
 export const failingPutStore = (
   putError: S3ServiceException,
   remote: Checkpoint,
-): Store => {
-  return baseStore((command): Promise<SenderResponse> => {
+): Store =>
+  baseStore((command): Promise<SenderResponse> => {
     if (command instanceof PutObjectCommand) {
       throw putError;
     }
@@ -167,4 +157,3 @@ export const failingPutStore = (
       ETag: '"etag-fresh"',
     });
   });
-};

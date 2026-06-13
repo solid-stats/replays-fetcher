@@ -39,7 +39,7 @@ const toDetailsRecord = (
  * (app-error.ts:9-12 — do not restore it).
  */
 export class CheckpointConflictError extends AppError<"checkpoint-conflict"> {
-  constructor(
+  public constructor(
     details: CheckpointConflictDetails,
     options?: { readonly cause?: unknown },
   ) {
@@ -52,5 +52,6 @@ export class CheckpointConflictError extends AppError<"checkpoint-conflict"> {
         isOperational: true,
       },
     );
+    this.name = "CheckpointConflictError";
   }
 }

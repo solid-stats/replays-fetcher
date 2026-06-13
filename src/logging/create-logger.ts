@@ -1,4 +1,6 @@
-import { pino, type Logger, type LoggerOptions } from "pino";
+import { pino } from "pino";
+
+import type { Logger, LoggerOptions } from "pino";
 
 export interface CreateLoggerOptions {
   readonly level?: string;

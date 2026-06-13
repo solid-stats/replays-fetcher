@@ -1,10 +1,13 @@
-/* eslint-disable max-lines -- the run-once orchestrator keeps the page loop, resume/checkpoint wiring, and the per-page checkpoint builders co-located so the ingest cycle reads as one unit. */
-import { createLimiter, type LimitFunction } from "../source/concurrency.js";
-import { createPacer, type Pacer } from "../source/pacing.js";
+/* oxlint-disable max-lines -- the run-once orchestrator keeps the page loop, resume/checkpoint wiring, and the per-page checkpoint builders co-located so the ingest cycle reads as one unit. */
+import { createLimiter } from "../source/concurrency.js";
+import { createPacer } from "../source/pacing.js";
 import {
   createThrottleController,
-  type ThrottleController,
 } from "../source/throttle.js";
+
+import type { LimitFunction } from "../source/concurrency.js";
+import type { Pacer } from "../source/pacing.js";
+import type { ThrottleController } from "../source/throttle.js";
 
 import {
   buildRunSummary,
@@ -114,21 +117,19 @@ const toPageUrl = (sourceUrl: URL, page: number): URL => {
   return pageUrl;
 };
 
-const emptyDiscoveryReport = (sourceUrl: string): MutableDiscoveryReport => {
-  return {
-    candidates: [],
-    counts: {
-      candidates: 0,
-      diagnostics: 0,
-      discovered: 0,
-    },
-    diagnostics: [],
-    generatedAt: new Date().toISOString(),
-    mode: "dry-run",
-    ok: true,
-    sourceUrl,
-  };
-};
+const emptyDiscoveryReport = (sourceUrl: string): MutableDiscoveryReport => ({
+  candidates: [],
+  counts: {
+    candidates: 0,
+    diagnostics: 0,
+    discovered: 0,
+  },
+  diagnostics: [],
+  generatedAt: new Date().toISOString(),
+  mode: "dry-run",
+  ok: true,
+  sourceUrl,
+});
 
 /**
  * Normalize the source URL for durable persistence: drop any `username`/
@@ -144,9 +145,7 @@ const sanitizeSourceUrl = (sourceUrl: URL): string => {
   return cleaned.toString();
 };
 
-const defaultPacer = (spacingMs: number): Pacer => {
-  return createPacer({ spacingMs });
-};
+const defaultPacer = (spacingMs: number): Pacer => createPacer({ spacingMs });
 
 interface MutablePageCounts {
   discovered: number;
@@ -155,9 +154,12 @@ interface MutablePageCounts {
   stored: number;
 }
 
-const newPageCounts = (discovered: number): MutablePageCounts => {
-  return { discovered, failed: 0, staged: 0, stored: 0 };
-};
+const newPageCounts = (discovered: number): MutablePageCounts => ({
+  discovered,
+  failed: 0,
+  staged: 0,
+  stored: 0,
+});
 
 /**
  * Pure rolling page rate: pages completed per minute over the elapsed window
@@ -374,15 +376,14 @@ const rethrowProgrammerError = (
 
 const fulfilledInOrder = (
   settled: readonly PromiseSettledResult<SettledCandidate>[],
-): readonly SettledCandidate[] => {
-  return settled
+): readonly SettledCandidate[] =>
+  settled
     .filter(
       (result): result is PromiseFulfilledResult<SettledCandidate> =>
         result.status === "fulfilled",
     )
     .map((result) => result.value)
     .toSorted((left, right) => left.index - right.index);
-};
 
 const deriveCandidatesPerMinute = (
   pageTimestampsMs: readonly number[],
@@ -861,11 +862,9 @@ const runPageLoop = async (
   ) {
     // RANGE-04 list-page floor: await the pacer's remaining floor BEFORE each
     // sequential list read (never compounded with withRetry backoff).
-    // eslint-disable-next-line no-await-in-loop -- RANGE-04: pacer floor must be awaited before each sequential list read.
     await context.pacer.awaitFloor();
     const pageUrl = toPageUrl(input.sourceUrl, page);
     // Each page is discovered, stored, and staged before moving on so parser work can run in parallel.
-    // eslint-disable-next-line no-await-in-loop -- each page is discovered, stored and staged sequentially before moving on.
     const pageReport = await input.discoverReplays(
       buildDiscoverInput(input, pageUrl),
     );
@@ -898,7 +897,6 @@ const runPageLoop = async (
     }
 
     const currentEtag = state.etag;
-    // eslint-disable-next-line no-await-in-loop -- ok page processing is sequential; checkpoint is written before next page.
     const nextEtag = await completeOkPage(input, {
       candidates: pageReport.candidates,
       etag: currentEtag,
@@ -912,9 +910,9 @@ const runPageLoop = async (
       startedAt: context.startedAt,
       throttle: context.throttle,
     });
-    // eslint-disable-next-line require-atomic-updates -- loop is strictly sequential (no concurrent iteration); nextEtag is derived from currentEtag captured before the await.
+    // oxlint-disable-next-line require-atomic-updates -- loop is strictly sequential (no concurrent iteration); nextEtag is derived from currentEtag captured before the await.
     state.etag = nextEtag;
-    // eslint-disable-next-line require-atomic-updates -- loop is strictly sequential; page is the current iteration value, not read from state before the await.
+    // oxlint-disable-next-line require-atomic-updates -- loop is strictly sequential; page is the current iteration value, not read from state before the await.
     state.lastCompletedPage = page;
   }
 };

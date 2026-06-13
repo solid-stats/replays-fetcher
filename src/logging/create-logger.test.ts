@@ -25,13 +25,12 @@ const createCaptureSink = (): CaptureSink => {
   return { chunks, stream };
 };
 
-const parseLines = (chunks: readonly string[]): Record<string, unknown>[] => {
-  return chunks
+const parseLines = (chunks: readonly string[]): Record<string, unknown>[] =>
+  chunks
     .join("")
     .split("\n")
     .filter((line) => line.length > 0)
     .map((line) => JSON.parse(line) as Record<string, unknown>);
-};
 
 test("createLogger child emits runId on every record", () => {
   const sink = createCaptureSink();
