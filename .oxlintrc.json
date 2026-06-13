@@ -1,0 +1,38 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "extends": [
+    "./node_modules/@solid-stats/ts-toolchain/oxlint/base.oxlintrc.json"
+  ],
+  "rules": {
+    "no-await-in-loop": "off",
+    "typescript/require-await": "off",
+    "unicorn/prevent-abbreviations": [
+      "error",
+      {
+        "allowList": {
+          "cli": true,
+          "env": true,
+          "s3": true
+        }
+      }
+    ],
+    "typescript/no-magic-numbers": [
+      "warn",
+      {
+        "ignore": [-2, 0, 1, 2, 4],
+        "ignoreArrayIndexes": true,
+        "ignoreDefaultValues": true,
+        "ignoreEnums": true,
+        "ignoreReadonlyClassProperties": true
+      }
+    ]
+  },
+  "ignorePatterns": [
+    "dist/**",
+    "coverage/**",
+    ".agents/**",
+    ".claude/**",
+    ".planning/**",
+    "node_modules/**"
+  ]
+}
