@@ -112,6 +112,14 @@ Behavior-preserving toolchain migration. The `verify` gate must stay green at 10
   3. Redundant `eslint-disable`/suppressions removed; ignore files tightened.
   4. Convention-skill review passes; ingest-boundary invariants intact; `pnpm verify` green.
 
+**Plans:** 4 plans
+
+Plans:
+- [ ] 14-01-PLAN.md — CLN-01/02/03: remove deprecated pnpm field, confirm 0 TODO/FIXME, justify 9 no-await-in-loop suppressions (Wave 1)
+- [ ] 14-02-PLAN.md — CLN-04a/b: ConfigError → ConfigValidationError extends AppError; add .max() bounds to 11 config fields (Wave 2)
+- [ ] 14-03-PLAN.md — CLN-04c: move RunSummary contract to src/types/, fix evidence→run boundary fence (Wave 3)
+- [ ] 14-04-PLAN.md — CLN-04d: split the 822-line cli.ts god-file into src/commands/ (HIGH risk, isolated last wave) (Wave 4)
+
 ---
 
 ### Phase 15: Oxfmt Formatter Migration
