@@ -196,11 +196,11 @@ async function runPageLoop(
   ) {
     // RANGE-04 list-page floor: await the pacer's remaining floor BEFORE each
     // sequential list read (never compounded with withRetry backoff).
-    // eslint-disable-next-line no-await-in-loop
+    // eslint-disable-next-line no-await-in-loop -- RANGE-04: pacer floor must be awaited before each sequential list read.
     await context.pacer.awaitFloor();
     const pageUrl = toPageUrl(input.sourceUrl, page);
     // Each page is discovered, stored, and staged before moving on so parser work can run in parallel.
-    // eslint-disable-next-line no-await-in-loop
+    // eslint-disable-next-line no-await-in-loop -- each page is discovered, stored and staged sequentially before moving on.
     const pageReport = await input.discoverReplays(
       buildDiscoverInput(input, pageUrl),
     );
@@ -233,7 +233,7 @@ async function runPageLoop(
     }
 
     const currentEtag = state.etag;
-    // eslint-disable-next-line no-await-in-loop
+    // eslint-disable-next-line no-await-in-loop -- ok page processing is sequential; checkpoint is written before next page.
     const nextEtag = await completeOkPage(input, {
       candidates: pageReport.candidates,
       etag: currentEtag,

@@ -565,7 +565,7 @@ async function runStoreRawDiscovery(
   if (discoveryReport.ok) {
     for (const candidate of discoveryReport.candidates) {
       // Raw replay storage is intentionally sequential for clear source/storage evidence.
-      // eslint-disable-next-line no-await-in-loop
+      // eslint-disable-next-line no-await-in-loop -- sequential raw storage maintains clear source/storage evidence ordering.
       const result = await dependencies.storeRawReplay({
         byteClient: resources.byteClient,
         candidate,
@@ -575,7 +575,7 @@ async function runStoreRawDiscovery(
 
       if (shouldStage) {
         // Staging follows the raw evidence for the same candidate in order.
-        // eslint-disable-next-line no-await-in-loop
+        // eslint-disable-next-line no-await-in-loop -- staging follows raw evidence for the same candidate in order.
         const stagingResult = await stageRawEvidence(
           dependencies,
           resources.stagingRepository,

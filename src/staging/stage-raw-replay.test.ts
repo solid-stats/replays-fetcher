@@ -100,7 +100,7 @@ test("stageRawReplay should skip non-stageable fetch or storage failures", async
   for (const rawResult of rawResults) {
     results.push(
       // Sequential loop keeps the assertion close to the raw result under test.
-      // eslint-disable-next-line no-await-in-loop
+      // eslint-disable-next-line no-await-in-loop -- sequential loop keeps the assertion close to the raw result under test.
       await stageRawReplay({
         rawResult,
         repository: {

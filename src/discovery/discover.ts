@@ -109,11 +109,11 @@ export async function discoverReplaysDryRun(
       const pageUrl = toPageUrl(options.sourceUrl, page);
       const listReadOptions = buildReadOptions(options, page, "list");
       // Source requests are intentionally sequential to preserve source order.
-      // eslint-disable-next-line no-await-in-loop
+      // eslint-disable-next-line no-await-in-loop -- source requests are intentionally sequential to preserve source order.
       const sourceText = await sourceClient.fetchText(pageUrl, listReadOptions);
       const fixture = parseSourceFixture(sourceText);
       // Page detail fetches are part of the same source-order sequence.
-      // eslint-disable-next-line no-await-in-loop
+      // eslint-disable-next-line no-await-in-loop -- page detail fetches are part of the same source-order sequence.
       const pageCandidates = await discoverPageCandidates({
         detailReadOptions: buildReadOptions(options, page, "detail"),
         fixture,
@@ -331,7 +331,7 @@ async function discoverPageCandidates(input: {
       });
     } else {
       // Source requests are intentionally sequential to avoid aggressive polling.
-      // eslint-disable-next-line no-await-in-loop
+      // eslint-disable-next-line no-await-in-loop -- source requests are intentionally sequential to avoid aggressive polling.
       const candidate = await discoverRowCandidate({
         detailReadOptions: input.detailReadOptions,
         row,
