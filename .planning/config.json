@@ -84,46 +84,46 @@
   "model_overrides": null,
   "agent_skills": {
     "gsd-phase-researcher": [
-      ".agents/skills/solidstats-backend-ts-conventions"
+      ".agents/skills/solidstats-fetcher-ts-conventions"
     ],
     "gsd-planner": [
-      ".agents/skills/solidstats-backend-ts-conventions"
+      ".agents/skills/solidstats-fetcher-ts-conventions"
     ],
     "gsd-plan-checker": [
-      ".agents/skills/solidstats-backend-ts-conventions"
+      ".agents/skills/solidstats-fetcher-ts-conventions"
     ],
     "gsd-executor": [
-      ".agents/skills/solidstats-backend-ts-conventions",
-      ".agents/skills/solidstats-backend-ts-tests"
+      ".agents/skills/solidstats-fetcher-ts-conventions",
+      ".agents/skills/solidstats-fetcher-ts-tests"
     ],
     "gsd-verifier": [
-      ".agents/skills/solidstats-backend-ts-conventions",
-      ".agents/skills/solidstats-backend-ts-tests"
+      ".agents/skills/solidstats-fetcher-ts-conventions",
+      ".agents/skills/solidstats-fetcher-ts-tests"
     ],
     "gsd-nyquist-auditor": [
-      ".agents/skills/solidstats-backend-ts-conventions",
-      ".agents/skills/solidstats-backend-ts-tests"
+      ".agents/skills/solidstats-fetcher-ts-conventions",
+      ".agents/skills/solidstats-fetcher-ts-tests"
     ],
     "gsd-code-reviewer": [
-      ".agents/skills/solidstats-backend-ts-code-review"
+      ".agents/skills/solidstats-fetcher-ts-code-review"
     ],
     "gsd-code-fixer": [
-      ".agents/skills/solidstats-backend-ts-conventions"
+      ".agents/skills/solidstats-fetcher-ts-conventions"
     ],
     "gsd-debugger": [
-      ".agents/skills/solidstats-backend-ts-conventions"
+      ".agents/skills/solidstats-fetcher-ts-conventions"
     ],
     "gsd-integration-checker": [
-      ".agents/skills/solidstats-backend-ts-conventions"
+      ".agents/skills/solidstats-fetcher-ts-conventions"
     ],
     "gsd-security-auditor": [
-      ".agents/skills/solidstats-backend-ts-conventions"
+      ".agents/skills/solidstats-fetcher-ts-conventions"
     ],
     "gsd-codebase-mapper": [
-      ".agents/skills/solidstats-backend-ts-conventions"
+      ".agents/skills/solidstats-fetcher-ts-conventions"
     ],
     "gsd-pattern-mapper": [
-      ".agents/skills/solidstats-backend-ts-conventions"
+      ".agents/skills/solidstats-fetcher-ts-conventions"
     ]
   },
   "planning": {
