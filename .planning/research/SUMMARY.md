@@ -1,106 +1,48 @@
-# Project Research Summary
+# Project Research Summary — v3.0 Track C Toolchain Convergence
 
-**Project:** replays-fetcher  
-**Domain:** scheduled replay ingest service, S3 raw storage, PostgreSQL staging integration  
-**Researched:** 2026-05-09  
-**Confidence:** MEDIUM
+**Project:** replays-fetcher
+**Milestone:** v3.0 Track C Toolchain Convergence (pilot)
+**Synthesized:** 2026-06-13
 
-## Executive Summary
-
-`replays-fetcher` should be a narrow ingest service, not a backend or parser replacement. The best v1 shape is a TypeScript scheduled job that discovers replay candidates from the external replay source, fetches raw files, writes them to S3-compatible storage under a raw-object prefix, and writes staging/outbox rows for `server-2` to promote.
-
-The most important boundary is that `server-2` remains the source of truth. `replays-fetcher` may write staging evidence, but it must not create canonical `replays`, `parse_jobs`, `parse_results`, identity rows, stats, requests, or moderation records. `server-2` owns deduplication decisions, manual conflict review, parse job lifecycle, RabbitMQ publication, retry policy, and admin visibility.
+> Authored inline from the authoritative locked sources (the parallel research subagents fabricated their output and wrote nothing; this summary is grounded in the real spike manifest, spike conventions, and the toolchain-convergence brief).
 
 ## Key Findings
 
-### Recommended Service Shape
+**This is a toolchain-layer swap, not feature work.** The five-band ingest pipeline, CLI, S3/PostgreSQL boundaries, and `src/` are frozen. Behavior is preserved; `verify` stays green at 100% coverage at every step.
 
-Use TypeScript for v1. The service should expose a small command surface:
+**The de-risk is already done.** D4 spike-gate satisfied — spikes 001–004 VALIDATED (OQ-1b/1c/2 closed). Locked, spike-proven choices:
+- **Oxlint 1.69.0** replaces ESLint. Port each rule's **options** not severities (severity-only = 1336 false positives). `typescript/` prefix. Drop `js.configs.all`; `unicorn/no-null` off; `no-await-in-loop` off (backend); keep size/magic rules.
+- **Oxfmt 0.54.0** replaces Prettier. `oxfmt --migrate=prettier` seed; one isolated reformat commit; `@stylistic` loss accepted.
+- **tsdown 0.22.2** replaces `tsc` emit. Single entry `src/cli.ts` → ESM `cli.mjs`; deps externalized by default; Docker smoke is the runtime gate.
+- **eslint-plugin-import dropped entirely** → `tsc` (no-unresolved) + dependency-cruiser (no-cycle/boundaries) + knip (unused/dep hygiene). Maybe a tiny `import/order` residual (decide at plan-phase).
+- **lefthook** hooks: pre-commit (Oxfmt+Oxlint staged), pre-push (tsc+Vitest); preset from `@solidstats/config`; mirrors CI verify, bypassable `--no-verify`.
+- **Vitest 4 stays**; `typescript`/`tsc --noEmit` stays as the type gate.
 
-- `run-once` for one scheduled fetch cycle.
-- `discover --dry-run` for source inspection without writes.
-- `check` for config/storage/database connectivity validation.
+**`@solidstats/config` (DECIDED): separate git repo, pnpm git-dependency.** Built and hardened here first (pilot), then reused by server-2 → web. Ships tsconfig/oxlint/oxfmt/vitest presets + `lefthook.yml`. Backends consume the VoidZero **subset** — no full Vite+ runtime/PM management for a CLI.
 
-The implementation should be deterministic and idempotent. Running the same discovery cycle twice should not create duplicate promoted product state. Staging rows should include enough evidence for `server-2` to make safe promotion decisions.
+## Implications for Roadmap
 
-### Recommended Stack
+Natural phase order (each keeps `verify` green):
+1. **Bootstrap `@solidstats/config`** repo + tag (self-validating) — gates everything downstream.
+2. **Cleanup + convention-skill refactor** on the still-ESLint baseline (clean code before the new linter audits it).
+3. **Oxfmt** migration — one isolated reformat commit.
+4. **Oxlint** migration — port rule options, document rule-delta, drop import-plugin, type-aware non-blocking.
+5. **dependency-cruiser + knip** gates (cover the dropped import plugin).
+6. **tsdown** build + Docker smoke + Dockerfile update.
+7. **lefthook** hooks + CI `verify` rewrite onto the new command surface.
 
-- Node.js Active LTS at implementation time; Node.js 24 is Active LTS as of 2026-05-09.
-- Strict TypeScript, with the exact compiler/module target locked in Phase 1.
-- AWS SDK for JavaScript v3 for S3-compatible raw object writes.
-- `pg` for explicit PostgreSQL staging/outbox writes unless `server-2` schema ownership requires another migration path.
-- Vitest for unit tests.
-- Testcontainers or local mocks for PostgreSQL and MinIO/S3-compatible integration coverage.
-- Structured JSON logging, with Pino as a likely default if a logging library is introduced.
+(2–4 can be folded/re-ordered; the roadmapper decides granularity. ~5–7 phases is the likely shape.)
 
-### Data Ownership
-
-The accepted ownership model is:
-
-- `replays-fetcher`: external source metadata, raw replay bytes in S3, ingestion staging/outbox records.
-- `server-2`: canonical replay records, parse jobs, deduplication/conflict status, RabbitMQ parse requests, parsed result persistence, final stats.
-- `replay-parser-2`: parser artifact/failure production after a parse job exists.
-- `web`: user-facing and admin UI through `server-2` APIs.
-
-Direct writes from `replays-fetcher` into business tables are a high-risk override because they bypass backend validation, status machines, operator visibility, and future API/admin assumptions.
-
-### Required Staging Evidence
-
-The exact schema belongs in an implementation phase, but staging records should preserve:
-
-- External source name.
-- External source replay ID when available.
-- Source URL.
-- Discovered timestamp.
-- Fetched timestamp.
-- S3 bucket and object key.
-- SHA-256 checksum.
-- Byte size.
-- Content type or source response metadata where useful.
-- Fetch status and error evidence.
-- Promotion status owned or interpreted by `server-2`.
-
-### S3 Layout
-
-Use separate prefixes in one S3-compatible bucket by default:
-
-- `raw/` for fetched replay files.
-- `artifacts/` for parser-produced artifacts written later by `replay-parser-2`.
-
-The fetcher should only write `raw/`. Parser artifact keying remains owned by `replay-parser-2` and `server-2` integration.
-
-### Risks
-
-1. **Boundary creep into backend state** - Direct business-table writes would make job status and duplicate handling inconsistent.
-2. **Unsafe deduplication** - Checksum-only or source-only logic can lose lineage or produce duplicate stats; use both as evidence and leave conflicts to `server-2`.
-3. **Non-idempotent scheduled runs** - Repeat runs must not create duplicate staging entries or overwrite evidence destructively.
-4. **External source instability** - Source HTML/API shape, rate limits, and missing metadata need defensive handling and tests.
-5. **Operational opacity** - Scheduled jobs need structured summaries, clear failures, and enough state for admin visibility.
-
-## Recommended Roadmap Implications
-
-1. Start with repo foundation, planning docs, TypeScript skeleton, config validation, and source adapter contracts.
-2. Build source discovery in dry-run mode before writing storage/database state.
-3. Add S3 raw object storage, checksum calculation, and idempotent object keying.
-4. Add PostgreSQL staging/outbox writes and align promotion semantics with `server-2`.
-5. Harden scheduled operation, retries, structured logs, run summaries, and integration tests.
-
-## Gaps To Address
-
-- Exact external replay source URL/API/HTML structure.
-- Exact staging table name and columns.
-- Whether staging rows live in the `server-2` database or a separate ingest database/schema.
-- Exact S3 object key format for raw replay files.
-- Rate-limit/backoff expectations for the external source.
-- Authentication, cookies, or anti-bot constraints, if any, for fetching the source.
-- Operator path for duplicate conflict review in `server-2`/`web`.
+## Watch Out For
+- Silent lint-coverage loss → before/after rule-delta diff, document drops.
+- Alpha type-aware (tsgolint) flaking → keep non-blocking until clean on this repo.
+- tsdown runtime breakage → Docker cold-start smoke, not just a green build.
+- Reformat churn → isolated format-only commit.
+- pnpm git-dep drift → pin SHA + frozen-lockfile in CI/Docker.
+- `npm install` corrupts this pnpm repo → pnpm only, isolate experiments.
+- Coverage measuring fewer files → compare file-count/totals to baseline each phase.
 
 ## Sources
-
-- Node.js Releases: https://nodejs.org/en/about/releases/
-- TypeScript 5.9 release notes: https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-9.html
-- AWS SDK for JavaScript v3 guide: https://docs.aws.amazon.com/en_us/sdk-for-javascript/v3/developer-guide/welcome.html
-- node-postgres docs: https://node-postgres.com/
-- Vitest docs: https://main.vitest.dev/guide/learn/writing-tests
-- Testcontainers for Node.js: https://node.testcontainers.org/
-- User project brief: `gsd-briefs/replays-fetcher.md`
+- `.planning/spikes/MANIFEST.md`, `.planning/spikes/CONVENTIONS.md`
+- `plans/product/TS-TOOLCHAIN-CONVERGENCE.md`, `plans/product/RELEASE-PLAN.md` (Phase 0 Track 1)
+- `.planning/PROJECT.md`; spike outputs `001-oxlint-preset-port`, `002-oxfmt-format-diff`, `003-tsdown-docker-smoke`, `004-depcruise-knip-import-gap`
