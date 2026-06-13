@@ -67,6 +67,17 @@ const transientNetworkCodes = new Set<string>([
 
 const transientTlsCodes = new Set<string>(["EPROTO"]);
 
+/**
+ * Error `name`s that signal an aborted/timed-out transport read and must stay
+ * retryable (F2). The per-request timeout controller aborts the in-flight
+ * `fetch`, which rejects with a DOMException named `AbortError`
+ * (`AbortSignal.timeout()` yields `TimeoutError`). Its legacy `.code` is the
+ * numeric `ABORT_ERR` (20), not a string errno, so `readErrorCode` discards it
+ * and — without this name check — the generic fallback would map a recoverable
+ * timeout to `permanent`, killing the whole run instead of retrying the page.
+ */
+const transientErrorNames = new Set<string>(["AbortError", "TimeoutError"]);
+
 const undiciCodePrefix = "UND_ERR_";
 const tlsCodePrefix = "ERR_TLS_";
 const certCodePrefix = "CERT_";
@@ -74,6 +85,7 @@ const certCodePrefix = "CERT_";
 interface UnwrappedCause {
   readonly code?: string;
   readonly message?: string;
+  readonly name?: string;
 }
 
 function readErrorCode(error: Error): string | undefined {
@@ -118,15 +130,16 @@ function unwrapCause(error: unknown): UnwrappedCause {
   }
 
   const code = readErrorCode(current);
-  const result: UnwrappedCause = {
+  let result: UnwrappedCause = {
     message: current.message.slice(0, causeMessageMaxLength),
+    name: current.name,
   };
 
-  if (code === undefined) {
-    return result;
+  if (code !== undefined) {
+    result = { ...result, code };
   }
 
-  return { ...result, code };
+  return result;
 }
 
 function isTransientCauseCode(code: string): boolean {
@@ -216,6 +229,10 @@ function resolveKind(
   }
 
   if (cause.code !== undefined && isTransientCauseCode(cause.code)) {
+    return "transient";
+  }
+
+  if (cause.name !== undefined && transientErrorNames.has(cause.name)) {
     return "transient";
   }
 
