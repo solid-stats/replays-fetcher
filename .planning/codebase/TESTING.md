@@ -1,179 +1,427 @@
 # Testing Patterns
 
-**Analysis Date:** 2026-06-07
+**Analysis Date:** 2026-06-13
 
 ## Test Framework
 
 **Runner:**
-- Vitest 4 (`vitest`)
+- Vitest 4.1.5
 - Config: `vitest.config.ts`
+- TypeScript test execution via Vitest (no separate compilation step)
 
 **Assertion Library:**
-- Vitest built-in `expect`.
+- Vitest native `expect()` API (based on Vitest's built-in assertions)
+- No external assertion library required
 
 **Run Commands:**
 ```bash
-pnpm test                 # Unit tests only (excludes *.integration.test.ts)
-pnpm run test:integration # Integration tests via Testcontainers (serial, 120s timeouts)
-pnpm run test:coverage    # Unit run with V8 coverage + 100% thresholds
-pnpm run verify           # format + lint + typecheck + test + integration + coverage + build
+pnpm test                    # Run unit and normal tests (excludes .integration.test.ts)
+pnpm test:integration       # Run only integration tests (MinIO, PostgreSQL containers)
+pnpm test:coverage          # Run with V8 coverage reporting
+pnpm verify                 # Full verification: format + lint + typecheck + test + integration + coverage + build
 ```
 
-**Unit vs integration split (`vitest.config.ts`):**
-- Default run includes `src/**/*.test.ts` and excludes `src/**/*.integration.test.ts`.
-- When `VITEST_INTEGRATION=true` (or an `.integration.test.ts` path is in argv), include switches to `**/*.integration.test.ts` only.
-- Integration runs use `--no-file-parallelism` and 120s test/hook timeouts because they boot containers.
+**Test Filtering:**
+```bash
+vitest run --grep "checkpoint"  # Run tests matching pattern
+```
 
 ## Test File Organization
 
 **Location:**
-- Co-located with source files in the same directory (`src/storage/store-raw-replay.ts` + `src/storage/store-raw-replay.test.ts`).
+- Colocated: `*.test.ts` files sit beside source files in same directory
+- Example: `src/config.ts` pairs with `src/config.test.ts`
+- Never placed in separate `__tests__` or `tests/` directory
 
 **Naming:**
-- Unit: `<module>.test.ts`.
-- Integration: `<module>.integration.test.ts`.
+- Unit tests: `filename.test.ts`
+- Integration tests: `filename.integration.test.ts`
+- Fixtures: `filename.fixtures.ts` (shared test data builders)
 
 **Structure:**
 ```
 src/
-├── config.ts
-├── config.test.ts
-├── storage/
-│   ├── store-raw-replay.ts
-│   ├── store-raw-replay.test.ts
-│   ├── s3-raw-storage.ts
-│   ├── s3-raw-storage.test.ts
-│   └── s3-raw-storage.integration.test.ts
-└── staging/
-    ├── postgres-staging-repository.ts
-    ├── postgres-staging-repository.test.ts
-    └── postgres-staging-repository.integration.test.ts
+├── discovery/
+│   ├── discover.ts
+│   ├── discover.test.ts           # Unit tests
+│   ├── types.ts
+│   ├── source-client.ts
+│   └── source-client.test.ts      # Unit tests
+├── checkpoint/
+│   ├── s3-checkpoint-store.ts
+│   ├── s3-checkpoint-store.test.ts
+│   ├── s3-checkpoint-store.integration.test.ts  # Integration (MinIO)
+│   └── s3-checkpoint-store.fixtures.ts
+├── staging/
+│   ├── postgres-staging-repository.ts
+│   └── postgres-staging-repository.integration.test.ts  # Integration (PostgreSQL)
 ```
 
 ## Test Structure
 
 **Suite Organization:**
-- Flat, top-level `test("subject should <behavior>", async () => { ... })` calls — `describe` blocks are NOT used.
-- Test names follow `"<Unit> should <expected behavior>"`: `test("storeRawReplay should fetch bytes and return raw storage evidence", ...)`.
-- Imports come from `vitest`: `import { expect, test } from "vitest";` (add `afterEach`, `beforeEach`, `vi` as needed).
+```typescript
+import { expect, test, afterEach, vi } from "vitest";
+
+// Shared test helpers and constants at top
+const validEnvironment = { ... };
+
+interface TestOutput { ... }
+
+function parseOutput(writes: readonly string[]): TestOutput {
+  return JSON.parse(writes.join("")) as TestOutput;
+}
+
+// Individual test cases
+test("description of behavior", () => {
+  // Arrange
+  const input = createInput();
+  
+  // Act
+  const result = myFunction(input);
+  
+  // Assert
+  expect(result).toStrictEqual(expectedValue);
+});
+
+// Cleanup
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+```
 
 **Patterns:**
-- AAA shape: module-level fixtures (Arrange), a single call to the unit under test (Act), grouped `expect` assertions (Assert).
-- Shared fixtures (`bytes`, `checksum`, `candidate`, `payload`) are declared at module top as `const`.
-- Dependencies are injected as hand-written fakes; the clock is injected via `now: () => new Date(fetchedAt)` for deterministic timestamps.
+- **Arrange-Act-Assert (AAA):** Every test follows this structure with clear phases
+- **Setup:** Constants and builder functions defined at module scope (reused across tests)
+- **Factories:** `createCandidate()`, `createRunSummary()`, `createStorageResult()` functions create test fixtures
+- **Cleanup:** `afterEach()` with `vi.restoreAllMocks()`, `vi.unstubAllEnvs()`, `vi.unstubAllGlobals()`
+- **Descriptive names:** Test description is a complete sentence about behavior, not just "it works"
+
+**Example from `src/config.test.ts`:**
+```typescript
+test("loadConfig should load required source, S3, and staging settings when valid environment is provided", () => {
+  const config = loadConfig(validEnvironment);
+  
+  expect(config.sourceUrl).toBe("https://example.test/replays");
+  expect(config.s3.bucket).toBe("solid-stats-replays");
+  expect(config.staging.databaseUrl).toBe("postgres://...");
+});
+
+test("loadConfig should reject a zero source max pages cap", () => {
+  expect(() =>
+    loadConfig({ ...validEnvironment, REPLAY_SOURCE_MAX_PAGES: "0" }),
+  ).toThrow("sourceMaxPages");
+});
+```
 
 ## Mocking
 
-**Framework:** Primarily hand-written test doubles (plain object literals implementing the collaborator interface). Vitest `vi` is used only where global/timer stubbing is required.
+**Framework:** Vitest's built-in `vi` module (no external mock library)
 
-**Hand-written fakes (preferred):**
+**Patterns:**
 ```typescript
-const fetchedUrls: URL[] = [];
-const byteClient: ReplayByteClient = {
-  async fetchBytes(url) {
-    fetchedUrls.push(url);
-    return bytes;
-  },
-};
-const storage: S3RawReplayStorage = {
-  async storeRawReplay(input) {
-    storageCalls.push(input);
-    return { /* evidence */ };
-  },
-};
-```
-Call-capture arrays (`fetchedUrls`, `storageCalls`) typed with `Parameters<S3RawReplayStorage["storeRawReplay"]>[0][]` verify interactions.
+// Function mocking
+const mockFn = vi.fn();
+const mockFnWithImplementation = vi.fn(async (input) => ({
+  exitCode: 0,
+  summary: createRunSummary({ runId: input.runId }),
+}));
 
-**`vi` usage (only for globals/timers, `src/storage/replay-byte-client.test.ts`):**
-```typescript
-vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, /* ... */ })));
-vi.useFakeTimers();
-// cleanup:
+// Verifying calls
+expect(mockFn).toHaveBeenCalledWith(expectedArg);
+expect(mockFn).toHaveBeenCalledTimes(1);
+expect(mockFn).not.toHaveBeenCalled();
+
+// Module/global stubbing
+vi.stubEnv("REPLAY_SOURCE_URL", "https://example.test");
+vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, text: ... })));
+vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+  writes.push(String(chunk));
+  return true;
+});
+
+// Restoration
+vi.restoreAllMocks();
+vi.unstubAllEnvs();
 vi.unstubAllGlobals();
-vi.useRealTimers();
 ```
 
 **What to Mock:**
-- Network (`fetch`), child process (`execFile` injected as a fake), timers.
-- External collaborators behind interfaces (byte client, S3 storage, staging repository).
+- External network calls: `fetch`, SSH `execFile`
+- Environment variables: `process.env` via `vi.stubEnv()`
+- S3 clients and storage operations
+- PostgreSQL connections and queries
+- System time: `now: () => new Date("2026-05-09T12:00:00.000Z")`
 
 **What NOT to Mock:**
-- The unit under test and pure helpers (`calculateSha256`, `toRawReplayObjectKey`) — they run for real to keep fixtures consistent.
-- Real PostgreSQL/S3 in integration tests — use Testcontainers instead of mocks.
+- Config loading logic (test real Zod parsing)
+- Error classes and error wrapping
+- Type guards and discriminators
+- HTML parsing (test real DOM extraction)
+- Checksum calculation (test real SHA256)
+- JSON serialization/parsing (test real behavior)
 
 ## Fixtures and Factories
 
 **Test Data:**
-- Inline module-level `const` fixtures typed against the real domain interfaces, e.g. `const candidate: ReplayCandidate = { ... }` and `const payload: IngestStagingPayload = { ... }`.
-- Derived fixtures via spreading/omitting (`candidateWithoutMetadata = { identity, source }`).
-- `satisfies` used to validate evidence shapes: `} satisfies Omit<RawReplayStorageEvidence, "discoveredAt">`.
+```typescript
+// From src/cli.test.ts
+function createCandidate(externalId: string): ReplayCandidate {
+  return {
+    identity: {
+      filename: `replay-${externalId}.ocap`,
+    },
+    source: {
+      externalId,
+      url: `https://example.test/replays/${externalId}`,
+    },
+  };
+}
+
+function createDiscoveryReport(candidates: readonly ReplayCandidate[]): DiscoveryReport {
+  return {
+    candidates,
+    counts: {
+      candidates: candidates.length,
+      diagnostics: 0,
+      discovered: candidates.length,
+    },
+    diagnostics: [],
+    generatedAt: "2026-05-09T12:00:00.000Z",
+    mode: "dry-run",
+    ok: true,
+    sourceUrl: "https://example.test/replays",
+  };
+}
+
+function createStorageResult(
+  candidate: ReplayCandidate,
+  status: StoreRawReplayResult["status"],
+): StoreRawReplayResult {
+  if (status === "failed") {
+    return {
+      failureCategory: "fetch_failed",
+      fetchedAt: "2026-05-09T12:00:00.000Z",
+      message: "Replay byte request failed",
+      source: candidate.source,
+      sourceFilename: candidate.identity.filename,
+      status,
+    };
+  }
+  // ...
+}
+```
 
 **Location:**
-- No shared fixtures directory; data lives at the top of each test file.
+- Inline in test file for single-use fixtures
+- In `*.fixtures.ts` for shared across multiple test files (e.g., `s3-checkpoint-store.fixtures.ts`)
+- Example: `src/checkpoint/s3-checkpoint-store.fixtures.ts` exports `checkpointSourceUrl`, `makeCheckpoint`
+
+**Fixture Pattern:**
+- Factory functions over static constants (allows customization)
+- Sensible defaults (e.g., fixed ISO timestamps for deterministic tests)
+- Builders support partial override: `createRunSummary({ runId: "custom", counts: { ... } })`
 
 ## Coverage
 
-**Requirements:** 100% thresholds enforced for `branches`, `functions`, `lines`, `statements` (`vitest.config.ts`).
-- Provider: V8.
-- Coverage scope: `src/**/*.ts`, excluding `*.test.ts`, `dist/**`, `vitest.config.ts`.
-- Unreachable production-only branches are excluded with justified `/* v8 ignore next -- ... */` comments rather than lowering thresholds.
+**Requirements:**
+- V8 provider (configured in `vitest.config.ts`)
+- **100% coverage thresholds for reachable source code:**
+  - Branches: 100%
+  - Functions: 100%
+  - Lines: 100%
+  - Statements: 100%
+
+**Excluded from coverage:**
+- `dist/**` (compiled output)
+- `src/**/*.test.ts` (test files themselves)
+- `vitest.config.ts` (configuration file)
 
 **View Coverage:**
 ```bash
 pnpm run test:coverage
+# Outputs to coverage/index.html
 ```
+
+**Coverage Discipline:**
+- All reachable code paths tested (no dead code allowed)
+- Integration tests count toward coverage (PostgreSQL, MinIO helpers tested in place)
+- Fixture builders and test helpers are part of coverage (tested indirectly)
 
 ## Test Types
 
 **Unit Tests:**
-- Cover pure logic and orchestration with injected fakes. The majority of the ~138 tests are unit tests.
+- Scope: Single function or module in isolation
+- Mocking: External dependencies (network, storage, time)
+- Location: `*.test.ts` colocated with source
+- Run: `pnpm test` (excludes `.integration.test.ts`)
+- Examples:
+  - `src/config.test.ts` - Zod schema parsing, boundary conditions
+  - `src/discovery/html.test.ts` - DOM parsing and row extraction
+  - `src/evidence/object-key.test.ts` - Key sanitization and validation
+  - `src/cli.test.ts` - CLI command routing, exit codes, output serialization
 
 **Integration Tests:**
-- Use Testcontainers: `@testcontainers/postgresql` (`postgres:17-alpine`) and `@testcontainers/minio` for S3.
-- Spin up a real container, apply schema, exercise the real repository/client, then tear down.
-- Cleanup uses swap-to-noop guards in `afterEach` so partial setup still tears down safely:
-```typescript
-let stopContainer = noopCleanup;
-afterEach(async () => {
-  const stop = stopContainer;
-  stopContainer = noopCleanup;
-  await stop();
-});
-```
+- Scope: Real service (PostgreSQL, MinIO/S3-compatible) with mocked application code
+- Mocking: Application factories, crypto, S3 clients (but talking to real containers)
+- Location: `*.integration.test.ts` (separate run)
+- Run: `pnpm test:integration` (spawns Docker containers via Testcontainers)
+- Isolation: `afterEach()` cleanup with container stop and connection teardown
+- Examples:
+  - `src/checkpoint/s3-checkpoint-store.integration.test.ts` - MinIO conditional writes, 412 merge
+  - `src/staging/postgres-staging-repository.integration.test.ts` - PostgreSQL idempotent inserts
+  - `src/storage/s3-raw-storage.integration.test.ts` - S3 object storage
+  - `src/evidence/s3-evidence-store.integration.test.ts` - Evidence serialization to S3
 
 **E2E Tests:**
-- Not used.
+- Not used in v1 (integration tests cover end-to-end service behavior)
+- CLI tests in `src/cli.test.ts` validate command routing, exit codes, JSON output (close to E2E)
 
 ## Common Patterns
 
 **Async Testing:**
 ```typescript
-const result = await storeRawReplay({ byteClient, candidate, now, storage });
-expect(result).toMatchObject({ status: "stored", checksum, objectKey });
+test("function should handle async operations", async () => {
+  const result = await asyncFunction(input);
+  expect(result).toBeDefined();
+});
+
+test("function should resolve with correct payload", async () => {
+  const promise = asyncFunction();
+  const result = await expect(promise).resolves.toBe(expectedValue);
+});
+
+test("function should reject with specific error", async () => {
+  await expect(asyncFunction()).rejects.toThrow(ConfigError);
+});
 ```
 
 **Error Testing:**
 ```typescript
-// rejection identity
-await expect(
-  storeRawReplay({ byteClient, candidate, storage }),
-).rejects.toBe(error);
+test("function should throw ConfigError when required field is missing", () => {
+  expect(() => loadConfig({})).toThrow(ConfigError);
+});
 
-// failure-as-value (no throw)
-expect(result).toStrictEqual({
-  failureCategory: "fetch_failed",
-  status: "failed",
-  message: "Replay byte fetch failed",
-  /* ... */
+test("function should throw with correct error message", () => {
+  expect(() => loadConfig({ invalid: true })).toThrow("sourceUrl");
+});
+
+test("function should preserve error details", () => {
+  const error = new ConfigError(["field1: message", "field2: message"]);
+  expect(error.issues).toHaveLength(2);
+  expect(error.code).toBeUndefined(); // ConfigError doesn't extend AppError
 });
 ```
 
-**Assertion idioms:**
-- `toStrictEqual` for exact equality (including absence of extra keys).
-- `toMatchObject` for partial shape checks.
-- `JSON.stringify(result)).not.toContain("discoveredAt")` to assert an optional key was omitted (matches `exactOptionalPropertyTypes`).
-- Interaction verification by asserting captured call arrays with `toStrictEqual`.
+**Parametrized Tests (test.each):**
+```typescript
+const sourceConcurrencyBoundaryCases: readonly (readonly [string, number])[] = [
+  [String(minSourceConcurrency), minSourceConcurrency],
+  [String(maxSourceConcurrency), maxSourceConcurrency],
+];
+
+test.each(sourceConcurrencyBoundaryCases)(
+  "loadSourceConfig should accept source concurrency at boundary %s",
+  (environmentValue, expected) => {
+    const config = loadSourceConfig({
+      REPLAY_SOURCE_CONCURRENCY: environmentValue,
+      REPLAY_SOURCE_URL: "https://example.test/replays",
+    });
+    
+    expect(config.sourceConcurrency).toBe(expected);
+  },
+);
+```
+
+**Testcontainers Integration:**
+```typescript
+import { PostgreSqlContainer } from "@testcontainers/postgresql";
+import { MinioContainer } from "@testcontainers/minio";
+
+let stopContainer = noopCleanup;
+
+afterEach(async () => {
+  const stop = stopContainer;
+  stopContainer = noopCleanup;
+  await stop();
+});
+
+test("real PostgreSQL should insert and retrieve records", async () => {
+  const container = await new PostgreSqlContainer("postgres:17-alpine")
+    .withDatabase("solid_stats")
+    .withUsername("solid")
+    .withPassword("solid")
+    .start();
+  stopContainer = async (): Promise<void> => {
+    await container.stop();
+  };
+  
+  const pool = new Pool({ connectionString: container.getConnectionUri() });
+  // ... test against real PostgreSQL
+  await pool.end();
+});
+```
+
+**Spy and Stub Pattern:**
+```typescript
+test("function should call external service with correct argument", async () => {
+  const spy = vi.spyOn(module, "externalFunction").mockResolvedValue({ ok: true });
+  
+  const result = await myFunction(input);
+  
+  expect(spy).toHaveBeenCalledWith(expectedArg);
+  expect(result).toBeDefined();
+});
+
+test("should capture stdout writes", () => {
+  const writes: string[] = [];
+  vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+    writes.push(String(chunk));
+    return true;
+  });
+  
+  await cliCommand();
+  
+  const output = JSON.parse(writes.join(""));
+  expect(output).toHaveProperty("ok");
+});
+```
+
+**Fixture Verification:**
+```typescript
+test("created fixture should match expected shape", () => {
+  const candidate = createCandidate("100");
+  
+  expect(candidate).toStrictEqual({
+    identity: { filename: "replay-100.ocap" },
+    source: {
+      externalId: "100",
+      url: "https://example.test/replays/100",
+    },
+  });
+});
+```
+
+## Test Coverage Summary
+
+| Module | Type | Test Count | Coverage Focus |
+|--------|------|------------|-----------------|
+| `src/config.ts` | Unit | 30+ | Zod parsing, boundary conditions, redaction |
+| `src/discovery/` | Unit + Integration | 50+ | HTML parsing, source discovery, error classification |
+| `src/storage/` | Unit + Integration | 40+ | S3 operations, checksum calculation, key formatting |
+| `src/checkpoint/` | Unit + Integration | 20+ | Conditional writes, conflict resolution, merge logic |
+| `src/staging/` | Unit + Integration | 25+ | PostgreSQL idempotency, payload transformation |
+| `src/cli.ts` | Unit | 70+ | Command routing, exit codes, JSON output contract |
+| `src/errors/` | Unit | 10+ | Error class construction, detail discipline |
+| `src/logging/` | Unit | 10+ | Secret redaction, pino configuration |
+
+**Key Contract Tests:**
+- `src/cli.test.ts` includes boundary enforcement tests:
+  - Dry-run source should not contain mutation tokens
+  - Raw storage path should not write to business tables
+  - Staging path should only write `ingest_staging_records`
+  - Run-once orchestrator touches only checkpoint, storage, and staging
 
 ---
 
-*Testing analysis: 2026-06-07*
+*Testing analysis: 2026-06-13*
