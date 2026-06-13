@@ -20,6 +20,12 @@
  *
  * The persisted body is the identifiers-only `Checkpoint` (Plan 01 allowlist) —
  * never replay bytes, secrets, or HTML (threat T-09-01).
+ *
+ * `conditionalWrites: false` drops the `IfMatch` / `IfNoneMatch` headers and
+ * writes unconditionally — a fallback for S3 backends that don't implement
+ * conditional PUT (e.g. Timeweb S3, which otherwise fails every checkpoint
+ * write). It forfeits the concurrent-writer CAS guarantee, so it is only safe
+ * for the single-writer controlled run; keep it true on compliant backends.
  */
 
 import {
@@ -60,6 +66,11 @@ interface S3CheckpointSender {
 
 interface CreateS3CheckpointStoreOptions {
   readonly bucket: string;
+  // When false, checkpoint PUTs omit the If-Match / If-None-Match CAS headers —
+  // a fallback for S3 backends that don't implement conditional writes (e.g.
+  // Timeweb S3). Safe for the single-writer controlled run; loses the
+  // concurrent-writer CAS guarantee, so keep it true on compliant backends.
+  readonly conditionalWrites: boolean;
   readonly prefix: string;
   readonly random?: () => number;
   readonly sender: S3CheckpointSender;
@@ -184,7 +195,7 @@ async function putCheckpoint(
       Bucket: options.bucket,
       ContentType: "application/json",
       Key: key,
-      ...conditionalHeader(input.etag),
+      ...conditionalHeader(input.etag, options.conditionalWrites),
     }),
   );
 
@@ -193,7 +204,12 @@ async function putCheckpoint(
 
 function conditionalHeader(
   etag: string | undefined,
-): { IfMatch: string } | { IfNoneMatch: string } {
+  conditionalWrites: boolean,
+): { IfMatch: string } | { IfNoneMatch: string } | Record<string, never> {
+  if (!conditionalWrites) {
+    return {};
+  }
+
   if (etag === undefined) {
     return { IfNoneMatch: CREATE_IF_ABSENT_CONDITION };
   }
@@ -221,6 +237,7 @@ export function createS3CheckpointStoreFromConfig(
 ): S3CheckpointStore {
   return createS3CheckpointStore({
     bucket: config.bucket,
+    conditionalWrites: config.conditionalWrites,
     prefix: config.checkpointPrefix,
     sender: new S3Client({
       credentials: {

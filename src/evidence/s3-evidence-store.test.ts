@@ -74,6 +74,7 @@ test("createS3EvidenceStoreFromConfig builds a configured store", () => {
     accessKeyId: "access-key",
     bucket: evidenceBucket,
     checkpointPrefix: "checkpoints",
+    conditionalWrites: true,
     endpoint: "https://s3.example.test",
     evidencePrefix,
     forcePathStyle: true,

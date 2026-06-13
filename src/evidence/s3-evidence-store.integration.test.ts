@@ -51,6 +51,7 @@ test("S3 evidence store writes the full RunSummary as a single write-once object
     accessKeyId: "solid",
     bucket,
     checkpointPrefix: "checkpoints",
+    conditionalWrites: true,
     endpoint,
     evidencePrefix: prefix,
     forcePathStyle: true,
