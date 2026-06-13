@@ -85,9 +85,12 @@ status: complete
 | Параметр | Значение |
 |----------|---------|
 | WORKDIR | `/tmp/tmp.BAvCBWAanQ/ts-toolchain` |
-| Запушенный SHA master HEAD | `0d2f145eefb839cc332711515d96458f28c27077` |
+| Запушенный SHA master HEAD (initial) | `0d2f145eefb839cc332711515d96458f28c27077` |
+| **Текущий зелёный master HEAD (после CI-фикса)** | **`7563551087fad1415a0ddb969ef8ac477f957195`** |
 | SHA совпадает с origin/master | Да |
 | Fetcher `git status --short` | Чисто — план не тронул ни одного файла fetcher |
+
+> **Post-push CI fix (CFG-02 gate).** Первый CI-прогон на `0d2f145` упал: `pnpm/action-setup@v4` ругался `ERR_PNPM_BAD_PM_VERSION` — версия pnpm задавалась дважды (`version: 11` в action + `packageManager: "pnpm@11.0.9"` в package.json). Локальная валидация это не ловит (локально pnpm уже установлен, action-setup не запускается). Фикс: убрали `with: version: 11` из `.github/workflows/ci.yml`, оставив `packageManager` единственным источником версии. Новый master HEAD `7563551` — **CI зелёный** (run 27471882945, success). Плагин 13-02 режет тег именно на этом зелёном SHA.
 
 ## Deviations from Plan
 
