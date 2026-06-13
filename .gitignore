@@ -2,6 +2,9 @@ node_modules/
 dist/
 coverage/
 
+# GSD research web-fetch cache (transient; regenerated per research run)
+.planning/**/.cache/
+
 # === GSD (only GSD-owned paths ignored; never committed) ===
 # GSD installs into a REAL .claude/ (Claude Code native home). Ignore ONLY GSD's
 # own paths under BOTH .claude/ and .agents/ — the project-skill symlinks in
