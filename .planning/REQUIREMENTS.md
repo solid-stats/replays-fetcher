@@ -22,10 +22,10 @@
 
 ### Linting — Oxlint (LNT)
 
-- [ ] **LNT-01**: ESLint and its plugins are removed; Oxlint is the sole linter (`pnpm lint` runs oxlint).
-- [ ] **LNT-02**: The Oxlint preset ports each vocalclub rule's **options** (not just severities); `js.configs.all` is not used; `unicorn/no-null` and `no-await-in-loop` are off.
+- [x] **LNT-01**: ESLint and its plugins are removed; Oxlint is the sole linter (`pnpm lint` runs oxlint).
+- [x] **LNT-02**: The Oxlint preset ports each vocalclub rule's **options** (not just severities); `js.configs.all` is not used; `unicorn/no-null` and `no-await-in-loop` are off.
 - [ ] **LNT-03**: A before/after rule-delta is documented and every dropped rule is explicitly accepted.
-- [ ] **LNT-04**: Type-aware Oxlint (oxlint-tsgolint) is re-validated on this repo and kept non-blocking in `verify` until it validates clean.
+- [x] **LNT-04**: Type-aware Oxlint (oxlint-tsgolint) is re-validated on this repo and kept non-blocking in `verify` until it validates clean.
 
 ### Formatting — Oxfmt (FMT)
 
@@ -89,10 +89,10 @@ Filled during roadmap creation.
 | CLN-04 | Phase 14 | Complete |
 | FMT-01 | Phase 15 | Complete |
 | FMT-02 | Phase 15 | Complete |
-| LNT-01 | Phase 16 | Pending |
-| LNT-02 | Phase 16 | Pending |
+| LNT-01 | Phase 16 | Complete |
+| LNT-02 | Phase 16 | Complete |
 | LNT-03 | Phase 16 | Pending |
-| LNT-04 | Phase 16 | Pending |
+| LNT-04 | Phase 16 | Complete |
 | IMP-01 | Phase 16 | Pending |
 | IMP-02 | Phase 16 | Pending |
 | BLD-01 | Phase 17 | Pending |
