@@ -153,10 +153,10 @@ Plans:
   3. Type-aware oxlint (oxlint-tsgolint) re-validated on this repo and kept non-blocking in `verify`.
   4. dependency-cruiser (no-cycle/boundaries) + knip (unused/dep hygiene) wired into `verify`; a planted cycle is caught.
 
-**Plans:** 1/6 plans executed
+**Plans:** 2/6 plans executed
 
 - [x] 16-01-PLAN.md — oxlint swap: install oxlint@1.69.0, `.oxlintrc.json` (extends preset + ported options), lint/lint:types scripts, delete eslint.config.js
-- [ ] 16-02-PLAN.md — code-fix #1: func-style (`function`→`const`) across src/ (the bulk), 450 tests unchanged
+- [x] 16-02-PLAN.md — code-fix #1: func-style (`function`→`const`) across src/ (the bulk), 450 tests unchanged
 - [ ] 16-03-PLAN.md — code-fix #2: method-signature/member-accessibility/type-specifier/custom-error/id-length + disable-comment modernization → `pnpm lint` green
 - [ ] 16-04-PLAN.md — RULE-DELTA.md (32 dropped rules + dispositions) + lint:types re-validation (non-blocking)
 - [ ] 16-05-PLAN.md — dependency-cruiser (`--init`, no-cycle + boundary warn) + planted-cycle proof
@@ -205,7 +205,7 @@ Plans:
 | 13. Shared @solid-stats/ts-toolchain Bootstrap | v3.0 | 3/3 | Complete   | 2026-06-13 |
 | 14. Repository Cleanup & Convention Compliance | v3.0 | 4/4 | Complete   | 2026-06-13 |
 | 15. Oxfmt Formatter Migration | v3.0 | 1/1 | Complete   | 2026-06-13 |
-| 16. Oxlint Migration & Import Hygiene | v3.0 | 1/6 | In Progress|  |
+| 16. Oxlint Migration & Import Hygiene | v3.0 | 2/6 | In Progress|  |
 | 17. tsdown Build & Docker Smoke | v3.0 | 0/? | Pending | — |
 | 18. lefthook Hooks & CI Verify Convergence | v3.0 | 0/? | Pending | — |
 

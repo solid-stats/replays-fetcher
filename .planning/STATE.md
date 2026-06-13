@@ -4,13 +4,13 @@ milestone: v3.0
 milestone_name: Track C Toolchain Convergence
 status: executing
 stopped_at: Completed 11-01-PLAN.md
-last_updated: "2026-06-13T21:50:18.061Z"
+last_updated: "2026-06-13T23:01:36.993Z"
 last_activity: 2026-06-13 -- Phase 16 execution started
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 14
-  completed_plans: 9
+  completed_plans: 10
   percent: 50
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 ## Current Position
 
 Phase: 16 (oxlint-migration-import-hygiene) — EXECUTING
-Plan: 2 of 6
+Plan: 3 of 6
 Status: Ready to execute
 Last activity: 2026-06-13 -- Phase 16 execution started
 
@@ -126,6 +126,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: Named .max() bound constants — no magic numbers (Phase 10-01 ESLint decision)
 - [Phase ?]: CLN-04c: RunSummary (9 типов) перенесён в src/types/run-summary.ts; run/types.ts — barrel; fence #1 закрыт в evidence-адаптере
 - [Phase 15]: oxfmt@0.54.0 pinned без ^ (FMT-01 supply-chain); package.json в .prettierignore (oxfmt 0.54 false-positive workaround); format/format:check разделены (write vs check gate)
+- [Phase ?]: func-style: все top-level function-декларации переведены на const-arrow во всём src/
 
 ### Roadmap Evolution
 
@@ -220,9 +221,10 @@ Behavioral fixes from the live parity-baseline run (registry `plans/product/PARI
 | Phase 14 P02 | 15 | 2 tasks | 5 files |
 | Phase 14 P03 | 120 | 2 tasks | 3 files |
 | Phase 15 P01 | 10min | 3 tasks | 4 files |
+| Phase 16-oxlint-migration-import-hygiene P02 | 180 | 2 tasks | 57 files |
 
 ## Session
 
-**Last session:** 2026-06-13T21:50:18.058Z
+**Last session:** 2026-06-13T23:01:30.186Z
 **Stopped at:** Completed 11-01-PLAN.md
 **Resume file:** .planning/phases/11-progress-events-and-compact-evidence/11-CONTEXT.md
