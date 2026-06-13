@@ -163,6 +163,14 @@ None.
 | 2026-05-10 | clean-phase-02-validation-metadata | complete |
 | 2026-05-10 | fix-milestone-close-audit-false-positive | complete |
 
+### Parity-baseline fixes (F1/F2) — folded into Track C (2026-06-13)
+
+Behavioral fixes from the live parity-baseline run (registry `plans/product/PARITY-BASELINE-FINDINGS.md` §A, coordinated via `plans/product/PARITY-COORDINATION.md`), landed on the v3.0 Track C branch though they are NOT toolchain (CFG/CLN/FMT/LNT/BLD/HOK) requirements:
+
+- **F1 (resolved):** merged `fix/fetcher-checkpoint-resume` (`7e5ca97`) via merge `d980aa8`. Adds `S3_CHECKPOINT_CONDITIONAL_WRITES` (Zod, default true; `false` → unconditional PUT for S3 backends like Timeweb that reject `If-Match`/`If-None-Match`) + logs the previously-swallowed checkpoint-write error in run-once. Was: every checkpoint write threw → resume silently restarted from page 1.
+- **F2 (resolved, `3bea3dc`):** `src/source/classify-failure.ts` maps `AbortError`/`TimeoutError` (per-request fetch timeout, internal AbortController) → `transient`, so a timed-out detail page retries instead of killing the run. Was: timeouts classified `permanent` (never retried). sg.zone detail pages degrade to 20-35s under concurrency.
+- `pnpm verify` green at 100% coverage after both; branch pushed.
+
 ### Blockers/Concerns
 
 - **Subagent reliability (2026-06-13):** During v3.0 setup the 4 parallel `gsd-project-researcher` agents and the `gsd-roadmapper` agent returned fabricated output with `tool_uses: 0` — they hallucinated file reads/writes (inventing wrong spike names and decisions) and wrote nothing to disk. Research SUMMARY/STACK/FEATURES/ARCHITECTURE/PITFALLS and the ROADMAP/REQUIREMENTS traceability were therefore authored inline by the orchestrator from the real authoritative sources (`.planning/spikes/MANIFEST.md`, `.planning/spikes/CONVENTIONS.md`, `plans/product/TS-TOOLCHAIN-CONVERGENCE.md`). Watch for the same failure mode on later phases; verify subagent disk writes before trusting their summaries.
