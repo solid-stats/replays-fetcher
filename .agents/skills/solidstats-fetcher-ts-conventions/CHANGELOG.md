@@ -41,13 +41,13 @@
   smoke-test gap where agents couldn't know how to wire retry/throttle without guessing.
 
 ## 2026-06-13 — Initial (taxonomy V5 drafting pass)
-- Created as part of the V5 taxonomy split (see `plans/product/skills-taxonomy/RECOMMENDATION.md`):
+- Created as part of the V5 taxonomy split (see `skills/decisions/research/RECOMMENDATION.md`):
   replays-fetcher gets its own conventions trio; `solidstats-server-ts-conventions` narrows to
   server-2. Builds on `solidstats-shared-backend-ts-standards` →
   `solidstats-shared-ts-standards`; shared rules are cited as `[std: §X]`, never restated.
 - **§A Architecture** — the converged five-band ingest pipeline
   (Command / Orchestration / Capability / Adapter / Cross-cutting) from
-  `plans/product/skills-taxonomy/architecture-convergence.md` §1: Variant A's bands plus the four
+  `skills/decisions/research/architecture-convergence.md` §1: Variant A's bands plus the four
   research-driven adjustments (no port ceremony beyond factory contracts; flat capability dirs —
   no `stage/` re-nesting; `check/ contract-check/` as a read-only diagnostics band; idempotency =
   orchestration + staging unique natural key (checksum + source identity) with

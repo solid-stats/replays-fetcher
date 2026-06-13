@@ -12,7 +12,7 @@
   structural-limit + magic-number rules (test files are long/fixture-dense by nature). Repo-specific
   noise (TypeBox `Type.X` `new-cap`, parser `id-length`) stays in the repo's own config — never
   inline. Source files over a structural limit are **split**, never accommodated by raising the cap.
-- Basis: the team's lint-suppression triage (`plans/product/skills-taxonomy/eslint-disable-triage.md`).
+- Basis: the team's lint-suppression triage (`skills/decisions/research/eslint-disable-triage.md`).
 
 ## 2026-06-13 — §F utility libraries + §G test idioms; consumer list updated (taxonomy V5)
 

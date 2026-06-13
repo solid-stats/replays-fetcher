@@ -73,8 +73,8 @@ that [`solidstats-fetcher-ts-tests`](../solidstats-fetcher-ts-tests/SKILL.md) as
 > `.dependency-cruiser.cjs` preset and the fetcher reviewer's layer checks activate **when the
 > fetcher trio is wired into the `replays-fetcher` repo** (migration step) — until then the code
 > still predates the refactor (split `cli.ts`, move `RunSummary`, dedup the S3 client; see
-> `plans/product/skills-taxonomy/gate-suppression-backlog.md` §D). Debate record:
-> `plans/product/skills-taxonomy/` (`architecture-convergence.md` §1).
+> `skills/decisions/research/gate-suppression-backlog.md` §D). Debate record:
+> `skills/decisions/research/` (`architecture-convergence.md` §1).
 
 The fetcher is not a Fastify module tree — it is a pipeline. Five bands, dependencies point
 downward only:
@@ -160,7 +160,7 @@ the full lint-suppression policy.
    collapse into one shared client. This is the [std: correctness → External adapters] rule applied:
    a client is created once and injected, never per-adapter. The adapter *files* still stay per
    capability (fence layout) — only the client construction is shared. *(Code cleanup tracked in
-   `plans/product/skills-taxonomy/gate-suppression-backlog.md`.)*
+   `skills/decisions/research/gate-suppression-backlog.md`.)*
 
 ### Boundary fences (→ the future depcruise `forbidden` preset)
 
