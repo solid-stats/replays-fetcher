@@ -12,16 +12,16 @@ Reliably discover and stage new replay files without corrupting `server-2` busin
 
 ## Current Milestone: v3.0 Track C Toolchain Convergence (pilot)
 
-**Goal:** Migrate `replays-fetcher` off ESLint/Prettier/tsc onto the VoidZero toolchain (Oxlint + Oxfmt + tsdown + Vitest) sourced from a new shared `@solidstats/config` git repo, plus lefthook pre-commit/pre-push hooks — the pilot that proves the pattern before `server-2` and `web`. `verify` stays green at 100% coverage and behavior is preserved.
+**Goal:** Migrate `replays-fetcher` off ESLint/Prettier/tsc onto the VoidZero toolchain (Oxlint + Oxfmt + tsdown + Vitest) sourced from a new shared `@solid-stats/ts-toolchain` git repo, plus lefthook pre-commit/pre-push hooks — the pilot that proves the pattern before `server-2` and `web`. `verify` stays green at 100% coverage and behavior is preserved.
 
 **Target features:**
-- Bootstrap a standalone `@solidstats/config` git repo holding the shared presets (tsconfig / oxlint / oxfmt / vitest / `lefthook.yml`), consumed by the fetcher as a pnpm git-dependency.
+- Bootstrap a standalone `@solid-stats/ts-toolchain` git repo holding the shared presets (tsconfig / oxlint / oxfmt / vitest / `lefthook.yml`), consumed by the fetcher as a pnpm git-dependency.
 - Repository cleanup: dead code, stale TODO/FIXME, unused config/scripts, redundant `eslint-disable` suppressions, tightened ignores.
 - Refactor into compliance with the convention skills (`solidstats-fetcher-ts-*`), resolving findings.
 - Linter migration ESLint → Oxlint: port each vocalclub rule's options (not severities), drop `eslint-plugin-import` (tsc + dependency-cruiser + knip cover the gap), keep `no-await-in-loop` off, re-validate type-aware (tsgolint alpha) on real code.
 - Formatter migration Prettier → Oxfmt as one isolated reformat commit.
 - Build migration `tsc` → tsdown with a Docker smoke-run of the bundled CLI.
-- lefthook hooks: pre-commit (Oxfmt + Oxlint on staged), pre-push (tsc typecheck + Vitest), config shipped from `@solidstats/config`, mirroring — not replacing — the CI `verify` gate.
+- lefthook hooks: pre-commit (Oxfmt + Oxlint on staged), pre-push (tsc typecheck + Vitest), config shipped from `@solid-stats/ts-toolchain`, mirroring — not replacing — the CI `verify` gate.
 
 **Key context:** Per product `RELEASE-PLAN.md` Phase 0 Track 1. D4 spike-gate satisfied — spikes 001–004 VALIDATED (OQ-1b/1c/2 closed), decisions locked in `plans/product/TS-TOOLCHAIN-CONVERGENCE.md` and `.planning/spikes/MANIFEST.md` (port options not severities; drop import-plugin; type-aware re-validate per repo). Fetcher ingest boundaries are untouched (no parsing, S3-raw + staging only). First in rollout order `replays-fetcher → server-2 → web`.
 
@@ -42,7 +42,7 @@ Reliably discover and stage new replay files without corrupting `server-2` busin
 
 <!-- v3.0 Track C Toolchain Convergence (pilot) — scoped in REQUIREMENTS.md -->
 
-- [ ] Bootstrap shared `@solidstats/config` git repo (presets + `lefthook.yml`), consumed as a pnpm git-dependency.
+- [ ] Bootstrap shared `@solid-stats/ts-toolchain` git repo (presets + `lefthook.yml`), consumed as a pnpm git-dependency.
 - [ ] Repository cleanup (dead code, stale TODO/FIXME, redundant suppressions).
 - [ ] Refactor into convention-skill compliance.
 - [ ] Migrate linter ESLint → Oxlint (ported vocalclub rule options, import-plugin dropped, type-aware re-validated).
@@ -133,6 +133,7 @@ No active milestone. Define the next one through `/gsd-new-milestone`, with spec
 | Keep source discovery dry-run read-only | Operators need to inspect replay candidates safely before storage/staging phases; Phase 2 validates direct and SSH source reads without S3, database, parser, local replay-list, or `server-2` writes. | Accepted |
 | Preserve discovered timestamp as source evidence only | Source-discovered time belongs in promotion evidence; trusted replay time remains unset until parser/backend logic owns it. | Accepted |
 | Require Docker-backed S3 and PostgreSQL integration validation for v1 readiness | Fake adapters were not enough for milestone closure; MinIO and PostgreSQL Testcontainers now block `pnpm run verify`. | Accepted |
+| [v3.0] Shared TS toolchain lives in a standalone repo `@solid-stats/ts-toolchain` (`git@github.com:solid-stats/ts-toolchain.git`), consumed as a pinned pnpm git-dependency | Polyrepo single source of truth for Oxlint/Oxfmt/tsconfig/vitest/lefthook presets across the TS repos; name scoped to the TS toolchain (not "all of solidstats", not the Rust parser/infra). Built/hardened in the fetcher pilot, then reused by `server-2` → `web`. | Accepted |
 
 ## Evolution
 

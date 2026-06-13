@@ -2,15 +2,15 @@
 
 **Defined:** 2026-06-13
 **Core Value:** Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
-**Milestone goal:** Migrate the fetcher onto the VoidZero toolchain (Oxlint + Oxfmt + tsdown + Vitest) via a new shared `@solidstats/config` git repo, plus lefthook hooks — behavior-preserving, `verify` green at 100% coverage. Pilot before `server-2` and `web`.
+**Milestone goal:** Migrate the fetcher onto the VoidZero toolchain (Oxlint + Oxfmt + tsdown + Vitest) via a new shared `@solid-stats/ts-toolchain` git repo, plus lefthook hooks — behavior-preserving, `verify` green at 100% coverage. Pilot before `server-2` and `web`.
 
 ## v1 Requirements (this milestone)
 
 ### Shared Config (CFG)
 
-- [ ] **CFG-01**: A standalone `@solidstats/config` git repo exists, holding the shared tsconfig / oxlint / oxfmt / vitest presets and a `lefthook.yml`.
+- [ ] **CFG-01**: A standalone `@solid-stats/ts-toolchain` git repo exists at `git@github.com:solid-stats/ts-toolchain.git`, holding the shared tsconfig / oxlint / oxfmt / vitest presets and a `lefthook.yml`.
 - [ ] **CFG-02**: The config repo self-validates in its own CI (lint/format/typecheck on the preset files) before a consumable tag is cut.
-- [ ] **CFG-03**: `replays-fetcher` consumes `@solidstats/config` as a pnpm git-dependency pinned by tag/commit so the lockfile is reproducible.
+- [ ] **CFG-03**: `replays-fetcher` consumes `@solid-stats/ts-toolchain` as a pnpm git-dependency (`github:solid-stats/ts-toolchain#<tag>`, or `git+ssh://git@github.com/solid-stats/ts-toolchain.git#<tag>`) pinned by tag/commit so the lockfile is reproducible.
 - [ ] **CFG-04**: The fetcher's config files (tsconfig, `.oxlintrc.json`, `.oxfmtrc.json`, vitest, `lefthook.yml`) reference the shared presets instead of duplicating rule content.
 
 ### Cleanup & Convention Compliance (CLN)
@@ -46,7 +46,7 @@
 
 - [ ] **HOK-01**: lefthook pre-commit runs Oxfmt + Oxlint on staged files.
 - [ ] **HOK-02**: lefthook pre-push runs `tsc` typecheck + Vitest.
-- [ ] **HOK-03**: Hook config is sourced from `@solidstats/config`, mirrors (does not replace) the CI `verify` gate, and is bypassable with `--no-verify`.
+- [ ] **HOK-03**: Hook config is sourced from `@solid-stats/ts-toolchain`, mirrors (does not replace) the CI `verify` gate, and is bypassable with `--no-verify`.
 
 ### Pipeline & Coverage (VRF)
 
@@ -58,7 +58,7 @@
 
 ### Drift Guard (DFT)
 
-- **DFT-01**: A CI check diffs the repo's `.oxlintrc.json` against the `@solidstats/config` baseline to catch preset drift.
+- **DFT-01**: A CI check diffs the repo's `.oxlintrc.json` against the `@solid-stats/ts-toolchain` baseline to catch preset drift.
 - **DFT-02**: A residual `import/order` rule (`simple-import-sort`) is added only if depcruise/knip leave import ordering uncovered.
 
 ## Out of Scope

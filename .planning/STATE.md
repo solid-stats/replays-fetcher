@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 
 ## Current Position
 
-Phase: 13 (Shared @solidstats/config Bootstrap) — not yet planned
+Phase: 13 (Shared @solid-stats/ts-toolchain Bootstrap) — not yet planned
 Plan: —
 Status: Roadmap complete; ready for `/gsd-plan-phase 13`
 Last activity: 2026-06-13 — Milestone v3.0 started; requirements + roadmap authored
@@ -163,7 +163,7 @@ None.
 
 ## Next Step
 
-Plan Phase 13 (Shared @solidstats/config Bootstrap) with `/gsd-plan-phase 13`.
+Plan Phase 13 (Shared @solid-stats/ts-toolchain Bootstrap) with `/gsd-plan-phase 13`.
 
 ## Operator Next Steps
 

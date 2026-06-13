@@ -4,7 +4,7 @@
 
 - [x] **v1.0 Initial Ingest Service** — Phases 1-6, shipped 2026-05-10. Full archive: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 - [x] **v2.0 Full-Corpus Ingest Resilience** — Phases 7-12, shipped 2026-06-12. Full archive: [milestones/v2.0-ROADMAP.md](milestones/v2.0-ROADMAP.md)
-- [ ] **v3.0 Track C Toolchain Convergence (pilot)** — Phases 13-18, started 2026-06-13. Migrate the fetcher onto Oxlint + Oxfmt + tsdown + Vitest via a shared `@solidstats/config` git repo, plus lefthook hooks. Behavior-preserving; `verify` green at 100% coverage. Pilot before `server-2` and `web`.
+- [ ] **v3.0 Track C Toolchain Convergence (pilot)** — Phases 13-18, started 2026-06-13. Migrate the fetcher onto Oxlint + Oxfmt + tsdown + Vitest via a shared `@solid-stats/ts-toolchain` git repo, plus lefthook hooks. Behavior-preserving; `verify` green at 100% coverage. Pilot before `server-2` and `web`.
 
 ## Phases
 
@@ -36,10 +36,10 @@
 
 Behavior-preserving toolchain migration. The `verify` gate must stay green at 100% coverage at every phase boundary.
 
-- [ ] **Phase 13: Shared `@solidstats/config` Bootstrap** — CFG-01, CFG-02, CFG-03, CFG-04
-  - Goal: Stand up the shared config git repo (tsconfig/oxlint/oxfmt/vitest presets + `lefthook.yml`) with self-validating CI, and wire the fetcher to consume it as a tag/commit-pinned pnpm git-dependency, proven end-to-end by `tsconfig.json` extending the shared base.
+- [ ] **Phase 13: Shared `@solid-stats/ts-toolchain` Bootstrap** — CFG-01, CFG-02, CFG-03, CFG-04
+  - Goal: Stand up the shared config git repo `git@github.com:solid-stats/ts-toolchain.git` (tsconfig/oxlint/oxfmt/vitest presets + `lefthook.yml`) with self-validating CI, and wire the fetcher to consume it as a tag/commit-pinned pnpm git-dependency (`github:solid-stats/ts-toolchain#<tag>`), proven end-to-end by `tsconfig.json` extending the shared base.
   - Success criteria:
-    1. `@solidstats/config` repo exists with the five presets + `lefthook.yml`.
+    1. `@solid-stats/ts-toolchain` repo exists with the five presets + `lefthook.yml`.
     2. Its own CI lints/formats/typechecks the preset files before a consumable tag is cut.
     3. Fetcher `package.json` carries the git-dep pinned by tag/commit; `pnpm-lock.yaml` is reproducible (frozen-lockfile install works in CI + Docker).
     4. Fetcher `tsconfig.json` extends the shared base; `pnpm verify` stays green.
@@ -77,7 +77,7 @@ Behavior-preserving toolchain migration. The `verify` gate must stay green at 10
 - [ ] **Phase 18: lefthook Hooks & CI Verify Convergence** — HOK-01, HOK-02, HOK-03, VRF-01, VRF-02, VRF-03
   - Goal: Wire client-side lefthook hooks from the shared preset and finalize the full new `verify` pipeline + CI on the new command surface at 100% coverage.
   - Success criteria:
-    1. lefthook pre-commit (Oxfmt + Oxlint staged) + pre-push (`tsc` + Vitest) installed from `@solidstats/config`, mirroring CI, bypassable with `--no-verify`.
+    1. lefthook pre-commit (Oxfmt + Oxlint staged) + pre-push (`tsc` + Vitest) installed from `@solid-stats/ts-toolchain`, mirroring CI, bypassable with `--no-verify`.
     2. `pnpm verify` runs the full new surface (oxfmt → oxlint → tsc → unit → integration → coverage → tsdown → depcruise → knip) green from a clean checkout.
     3. V8 coverage stays 100% reachable source; the measured file set is not reduced.
     4. CI is rewritten onto the new command surface.
@@ -93,7 +93,7 @@ Behavior-preserving toolchain migration. The `verify` gate must stay green at 10
 | 10. Dynamic Source Range and Rate Limiting | v2.0 | 5/5 | Complete | 2026-06-11 |
 | 11. Progress Events and Compact Evidence | v2.0 | 5/5 | Complete | 2026-06-12 |
 | 12. Source Contract Guards | v2.0 | 2/2 | Complete | 2026-06-12 |
-| 13. Shared @solidstats/config Bootstrap | v3.0 | 0/? | Pending | — |
+| 13. Shared @solid-stats/ts-toolchain Bootstrap | v3.0 | 0/? | Pending | — |
 | 14. Repository Cleanup & Convention Compliance | v3.0 | 0/? | Pending | — |
 | 15. Oxfmt Formatter Migration | v3.0 | 0/? | Pending | — |
 | 16. Oxlint Migration & Import Hygiene | v3.0 | 0/? | Pending | — |
