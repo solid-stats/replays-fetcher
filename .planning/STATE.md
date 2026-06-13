@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 
 Phase: 13 (Shared @solid-stats/ts-toolchain Bootstrap) — not yet planned
 Plan: —
-Status: Roadmap complete; ready for `/gsd-plan-phase 13`
+Status: Roadmap complete + research re-run. Gate before planning: re-run `/gsd-map-codebase` (existing map is stale, 2026-06-08), then `/gsd-plan-phase 13`
 Last activity: 2026-06-13 — Milestone v3.0 started; requirements + roadmap authored
 
 ## Verify Gate: GREEN ✅
@@ -163,11 +163,12 @@ None.
 
 ## Next Step
 
-Plan Phase 13 (Shared @solid-stats/ts-toolchain Bootstrap) with `/gsd-plan-phase 13`.
+1. **Re-run `/gsd-map-codebase` BEFORE planning Phase 13** — the existing `.planning/codebase/` map is dated 2026-06-08 (pre-v2.0-close, pre-Track-C); refresh it so the planner works against current reality. (User-requested gate, 2026-06-13.)
+2. Then plan Phase 13 (Shared `@solid-stats/ts-toolchain` Bootstrap) with `/gsd-plan-phase 13`.
 
 ## Operator Next Steps
 
-- `/clear`, then `/gsd-plan-phase 13` to plan the first v3.0 phase (or `/gsd-discuss-phase 13` to gather context first).
+- `/clear`, then `/gsd-map-codebase` to refresh codebase intel, then `/gsd-plan-phase 13` to plan the first v3.0 phase.
 
 ## Performance Metrics
 
