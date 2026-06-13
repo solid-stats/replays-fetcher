@@ -1,7 +1,8 @@
 import { z } from "zod";
 
-import type { SourceTransport } from "./discovery/types.js";
 import { ConfigValidationError } from "./errors/config-validation-error.js";
+
+import type { SourceTransport } from "./discovery/types.js";
 
 const booleanFromEnvironment = z
   .union([z.boolean(), z.string()])
@@ -35,6 +36,25 @@ const MIN_SPACING_MS = 0;
 const MAX_SPACING_MS = 5000;
 const defaultSourceRequestSpacingMs = 250;
 
+// Upper-bound constants for externally-sourced string/URL config fields (CLN-04b).
+// Unbounded externally-sourced fields are a DoS vector (solidstats-shared-backend-ts-standards §D).
+// MAX_URL_LEN: conservative HTTP URL limit (RFC 7230 / common server caps)
+const MAX_URL_LEN = 2048;
+// MAX_HOSTNAME_LEN: RFC 1123 maximum DNS hostname length
+const MAX_HOSTNAME_LEN = 253;
+// MAX_SSH_COMMAND_LEN: generous shell command; matches MAX_URL_LEN
+const MAX_SSH_COMMAND_LEN = 2048;
+// MAX_S3_REGION_LEN: AWS region identifiers are short; 64 is ample
+const MAX_S3_REGION_LEN = 64;
+// MAX_S3_BUCKET_LEN: S3 bucket name limit (AWS docs)
+const MAX_S3_BUCKET_LEN = 63;
+// MAX_S3_KEY_ID_LEN: AWS access key ID upper bound
+const MAX_S3_KEY_ID_LEN = 128;
+// MAX_S3_SECRET_LEN: AWS secret access key upper bound
+const MAX_S3_SECRET_LEN = 256;
+// MAX_S3_PREFIX_LEN: S3 object key prefix; 1024 char key limit; prefix stays shorter
+const MAX_S3_PREFIX_LEN = 256;
+
 const sourceConfigSchema = z
   .object({
     sourceMaxPages: z.coerce.number().int().positive().optional(),
@@ -50,10 +70,14 @@ const sourceConfigSchema = z
       .min(MIN_SPACING_MS)
       .max(MAX_SPACING_MS)
       .default(defaultSourceRequestSpacingMs),
-    sourceUrl: z.url(),
+    sourceUrl: z.url().max(MAX_URL_LEN),
     sourceTransport: z.enum(["direct", "ssh"]).default("direct"),
-    sourceSshHost: z.string().min(1).optional(),
-    sourceSshCommand: z.string().min(1).default("curl -fsSL --max-time 30"),
+    sourceSshHost: z.string().min(1).max(MAX_HOSTNAME_LEN).optional(),
+    sourceSshCommand: z
+      .string()
+      .min(1)
+      .max(MAX_SSH_COMMAND_LEN)
+      .default("curl -fsSL --max-time 30"),
     sourceTimeoutMs: z.coerce
       .number()
       .int()
@@ -81,14 +105,18 @@ const sourceConfigSchema = z
 
 const configSchema = sourceConfigSchema.extend({
   s3: z.object({
-    endpoint: z.url(),
-    region: z.string().min(1),
-    bucket: z.string().min(1),
-    accessKeyId: z.string().min(1),
-    secretAccessKey: z.string().min(1),
+    endpoint: z.url().max(MAX_URL_LEN),
+    region: z.string().min(1).max(MAX_S3_REGION_LEN),
+    bucket: z.string().min(1).max(MAX_S3_BUCKET_LEN),
+    accessKeyId: z.string().min(1).max(MAX_S3_KEY_ID_LEN),
+    secretAccessKey: z.string().min(1).max(MAX_S3_SECRET_LEN),
     forcePathStyle: booleanFromEnvironment,
-    checkpointPrefix: z.string().min(1).default("checkpoints"),
-    evidencePrefix: z.string().min(1).default("runs"),
+    checkpointPrefix: z
+      .string()
+      .min(1)
+      .max(MAX_S3_PREFIX_LEN)
+      .default("checkpoints"),
+    evidencePrefix: z.string().min(1).max(MAX_S3_PREFIX_LEN).default("runs"),
     // Conditional checkpoint writes (If-Match / If-None-Match CAS) are off on
     // S3 backends that don't implement them (e.g. Timeweb S3). Default true
     // keeps the CAS guarantee on compliant backends; set false to fall back to
@@ -96,7 +124,7 @@ const configSchema = sourceConfigSchema.extend({
     conditionalWrites: booleanFromEnvironment,
   }),
   staging: z.object({
-    databaseUrl: z.url(),
+    databaseUrl: z.url().max(MAX_URL_LEN),
   }),
 });
 

@@ -23,10 +23,10 @@ import {
   type AppConfig,
   type SourceConfig,
 } from "./config.js";
-import { ConfigValidationError } from "./errors/config-validation-error.js";
 import { runContractCheck } from "./contract-check/contract-check.js";
 import { discoverReplaysDryRun } from "./discovery/discover.js";
 import { createSourceClient } from "./discovery/source-client.js";
+import { ConfigValidationError } from "./errors/config-validation-error.js";
 import {
   createS3EvidenceStoreFromConfig,
   type S3EvidenceStore,

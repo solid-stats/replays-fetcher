@@ -26,14 +26,18 @@ export class ConfigValidationError extends AppError<"config_invalid"> {
   readonly issues: readonly string[];
 
   constructor(issues: string[]) {
-    super(
-      "config_invalid",
-      `Invalid configuration: ${issues.join("; ")}`,
-      {
-        details: { issues } as Readonly<Record<string, unknown>>,
-        isOperational: true,
-      },
-    );
+    super("config_invalid", `Invalid configuration: ${issues.join("; ")}`, {
+      details: toDetailsRecord(issues),
+      isOperational: true,
+    });
     this.issues = issues;
   }
+}
+
+/**
+ * Flatten the issues array into a plain record for the `AppError` base.
+ * Keeps the payload identifiers-only (threat T-07-01) with no `as` cast.
+ */
+function toDetailsRecord(issues: string[]): Readonly<Record<string, unknown>> {
+  return { issues };
 }
