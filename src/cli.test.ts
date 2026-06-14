@@ -8,8 +8,10 @@ import { buildCli } from "./cli.js";
 import * as configModule from "./config.js";
 import { createLogger } from "./logging/create-logger.js";
 
+import type { S3Client } from "@aws-sdk/client-s3";
 import type { ConnectivityCheck } from "./check/connectivity.js";
-import type { AppConfig, SourceConfig } from "./config.js";
+import type { Pool } from "pg";
+import type { SourceConfig } from "./config.js";
 import type { DiscoveryReport, ReplayCandidate } from "./discovery/types.js";
 import type { RunSummary } from "./run/types.js";
 import type { IngestStagingResult } from "./staging/types.js";
@@ -329,11 +331,7 @@ test("buildCli should write redacted real check output when valid configuration 
   });
 
   await buildCli({
-    async checkPostgresConnectivityFromDatabaseUrl(databaseUrl) {
-      expect(databaseUrl).toBe(
-        "postgres://user:password@localhost:5432/replays",
-      );
-
+    async checkPostgresConnectivity() {
       return { status: "passed" };
     },
     async checkS3Connectivity({ bucket }) {
@@ -348,11 +346,18 @@ test("buildCli should write redacted real check output when valid configuration 
 
       return { status: "passed" };
     },
-    createS3ConnectivitySenderFromConfig(config) {
+    createPgPool(databaseUrl) {
+      expect(databaseUrl).toBe(
+        "postgres://user:password@localhost:5432/replays",
+      );
+
+      return { end: vi.fn(), query: vi.fn() } as unknown as Pool;
+    },
+    createS3Client(config) {
       expect(config.accessKeyId).toBe("access-key");
       expect(config.secretAccessKey).toBe("secret-key");
 
-      return { send: vi.fn() };
+      return { send: vi.fn() } as unknown as S3Client;
     },
     createSourceClient(config) {
       expect(config.sourceSshCommand).toBe(
@@ -402,7 +407,7 @@ test("buildCli should set a failing exit code for failed connectivity checks", a
   });
 
   await buildCli({
-    async checkPostgresConnectivityFromDatabaseUrl() {
+    async checkPostgresConnectivity() {
       return { failureCategory: "staging_unavailable", status: "failed" };
     },
     async checkS3Connectivity() {
@@ -415,7 +420,8 @@ test("buildCli should set a failing exit code for failed connectivity checks", a
     async checkSourceConnectivity() {
       return { status: "passed" };
     },
-    createS3ConnectivitySenderFromConfig: () => ({ send: vi.fn() }),
+    createPgPool: () => ({ end: vi.fn(), query: vi.fn() }) as unknown as Pool,
+    createS3Client: () => ({ send: vi.fn() }) as unknown as S3Client,
     createSourceClient: () => ({ fetchText: vi.fn() }),
   }).parseAsync(["node", "replays-fetcher", "check"]);
 
@@ -450,7 +456,7 @@ test("buildCli should set a failing exit code when required configuration is mis
   });
 
   await buildCli({
-    checkPostgresConnectivityFromDatabaseUrl: checkPostgres,
+    checkPostgresConnectivity: checkPostgres,
     checkS3Connectivity: checkS3,
     checkSourceConnectivity: checkSource,
   }).parseAsync(["node", "replays-fetcher", "check"]);
@@ -759,8 +765,8 @@ test("buildCli should discover and store raw replay candidates with structured c
       expect(config.sourceUrl).toBe(validEnvironment.REPLAY_SOURCE_URL);
       return { fetchBytes: vi.fn() };
     },
-    createS3RawReplayStorageFromConfig(config: AppConfig["s3"]) {
-      expect(config.bucket).toBe(validEnvironment.S3_BUCKET);
+    createS3RawReplayStorage(options) {
+      expect(options.bucket).toBe(validEnvironment.S3_BUCKET);
       return { storeRawReplay: vi.fn() };
     },
     createSourceClient(config: SourceConfig) {
@@ -814,7 +820,7 @@ test("buildCli should report successful raw storage when all candidates store cl
 
   await buildCli({
     createReplayByteClient: () => ({ fetchBytes: vi.fn() }),
-    createS3RawReplayStorageFromConfig: () => ({ storeRawReplay: vi.fn() }),
+    createS3RawReplayStorage: () => ({ storeRawReplay: vi.fn() }),
     createSourceClient: () => ({ fetchText: vi.fn() }),
     async discoverReplaysDryRun() {
       return createDiscoveryReport(candidates);
@@ -860,12 +866,13 @@ test("buildCli should discover, store raw objects, and stage successful raw evid
   });
 
   await buildCli({
-    createPostgresStagingRepositoryFromDatabaseUrl(databaseUrl) {
+    createPgPool(databaseUrl) {
       expect(databaseUrl).toBe(validEnvironment.DATABASE_URL);
-      return { stage: vi.fn() };
+      return { end: vi.fn(), query: vi.fn() } as unknown as Pool;
     },
+    createPostgresStagingRepository: () => ({ stage: vi.fn() }),
     createReplayByteClient: () => ({ fetchBytes: vi.fn() }),
-    createS3RawReplayStorageFromConfig: () => ({ storeRawReplay: vi.fn() }),
+    createS3RawReplayStorage: () => ({ storeRawReplay: vi.fn() }),
     createSourceClient: () => ({ fetchText: vi.fn() }),
     async discoverReplaysDryRun() {
       return createDiscoveryReport(candidates);
@@ -968,7 +975,7 @@ test("buildCli should not store raw candidates when discovery fails", async () =
 
   await buildCli({
     createReplayByteClient: () => ({ fetchBytes: vi.fn() }),
-    createS3RawReplayStorageFromConfig: () => ({ storeRawReplay: vi.fn() }),
+    createS3RawReplayStorage: () => ({ storeRawReplay: vi.fn() }),
     createSourceClient: () => ({ fetchText: vi.fn() }),
     async discoverReplaysDryRun() {
       return {
@@ -1086,10 +1093,10 @@ test("buildCli run-once should keep checkpoint warn logs on stderr while stdout 
   // summary must remain a single parseable JSON document.
   await buildCli({
     ...createCapturingLogger(logLines),
-    createPostgresStagingRepositoryFromDatabaseUrl: () => ({ stage: vi.fn() }),
+    createPostgresStagingRepository: () => ({ stage: vi.fn() }),
     createReplayByteClient: () => ({ fetchBytes: vi.fn() }),
     createRunId: () => "run-stderr-isolation",
-    createS3CheckpointStoreFromConfig: () => ({
+    createS3CheckpointStore: () => ({
       async read() {
         return {};
       },
@@ -1097,7 +1104,7 @@ test("buildCli run-once should keep checkpoint warn logs on stderr while stdout 
         throw new Error("transient checkpoint failure");
       },
     }),
-    createS3RawReplayStorageFromConfig: () => ({ storeRawReplay: vi.fn() }),
+    createS3RawReplayStorage: () => ({ storeRawReplay: vi.fn() }),
     createSourceClient: () => ({ fetchText: vi.fn() }),
     now: () => new Date("2026-05-09T12:00:00.000Z"),
     async discoverReplaysDryRun(input) {
@@ -1155,20 +1162,21 @@ test("buildCli run-once should execute one scheduled cycle and write a structure
   });
 
   await buildCli({
-    createPostgresStagingRepositoryFromDatabaseUrl(databaseUrl) {
+    createPgPool(databaseUrl) {
       expect(databaseUrl).toBe(validEnvironment.DATABASE_URL);
-      return stagingRepository;
+      return { end: vi.fn(), query: vi.fn() } as unknown as Pool;
     },
+    createPostgresStagingRepository: () => stagingRepository,
     createReplayByteClient(config) {
       expect(config.sourceUrl).toBe(validEnvironment.REPLAY_SOURCE_URL);
       return byteClient;
     },
-    createS3CheckpointStoreFromConfig(config) {
-      expect(config.bucket).toBe(validEnvironment.S3_BUCKET);
+    createS3CheckpointStore(options) {
+      expect(options.bucket).toBe(validEnvironment.S3_BUCKET);
       return checkpointStore;
     },
-    createS3RawReplayStorageFromConfig(config) {
-      expect(config.bucket).toBe(validEnvironment.S3_BUCKET);
+    createS3RawReplayStorage(options) {
+      expect(options.bucket).toBe(validEnvironment.S3_BUCKET);
       return storage;
     },
     createSourceClient(config) {
@@ -1246,13 +1254,13 @@ test("buildCli run-once should thread the optional max-pages safety-valve cap in
   });
 
   await buildCli({
-    createPostgresStagingRepositoryFromDatabaseUrl: () => ({ stage: vi.fn() }),
+    createPostgresStagingRepository: () => ({ stage: vi.fn() }),
     createReplayByteClient: () => ({ fetchBytes: vi.fn() }),
-    createS3CheckpointStoreFromConfig: () => ({
+    createS3CheckpointStore: () => ({
       read: vi.fn(),
       write: vi.fn(),
     }),
-    createS3RawReplayStorageFromConfig: () => ({ storeRawReplay: vi.fn() }),
+    createS3RawReplayStorage: () => ({ storeRawReplay: vi.fn() }),
     createSourceClient: () => ({ fetchText: vi.fn() }),
     now: () => new Date("2026-05-09T12:00:00.000Z"),
     runOnce: injectedRunOnce,
@@ -1273,14 +1281,14 @@ test("buildCli run-once should set exit code 2 for expected operational failures
   });
 
   await buildCli({
-    createPostgresStagingRepositoryFromDatabaseUrl: () => ({ stage: vi.fn() }),
+    createPostgresStagingRepository: () => ({ stage: vi.fn() }),
     createReplayByteClient: () => ({ fetchBytes: vi.fn() }),
     createRunId: () => "run-failed",
-    createS3CheckpointStoreFromConfig: () => ({
+    createS3CheckpointStore: () => ({
       read: vi.fn(),
       write: vi.fn(),
     }),
-    createS3RawReplayStorageFromConfig: () => ({ storeRawReplay: vi.fn() }),
+    createS3RawReplayStorage: () => ({ storeRawReplay: vi.fn() }),
     createSourceClient: () => ({ fetchText: vi.fn() }),
     runOnce: vi.fn(async () => ({
       exitCode: 2 as const,
@@ -1329,10 +1337,10 @@ test("buildCli run-once --resume should thread resume true into runOnce and feed
   });
 
   await buildCli({
-    createPostgresStagingRepositoryFromDatabaseUrl: () => ({ stage: vi.fn() }),
+    createPostgresStagingRepository: () => ({ stage: vi.fn() }),
     createReplayByteClient: () => ({ fetchBytes: vi.fn() }),
-    createS3CheckpointStoreFromConfig: () => checkpointStore,
-    createS3RawReplayStorageFromConfig: () => ({ storeRawReplay: vi.fn() }),
+    createS3CheckpointStore: () => checkpointStore,
+    createS3RawReplayStorage: () => ({ storeRawReplay: vi.fn() }),
     createSourceClient: () => ({ fetchText: vi.fn() }),
     now: () => new Date("2026-05-09T12:00:00.000Z"),
     runOnce: injectedRunOnce,
@@ -1362,9 +1370,9 @@ test("buildCli run-once should report config errors before creating mutating res
   });
 
   await buildCli({
-    createPostgresStagingRepositoryFromDatabaseUrl: createStaging,
+    createPostgresStagingRepository: createStaging,
     createRunId: () => "run-config-invalid",
-    createS3RawReplayStorageFromConfig: createStorage,
+    createS3RawReplayStorage: createStorage,
     now: () => new Date("2026-05-09T12:00:00.000Z"),
     runOnce: run,
   }).parseAsync(["node", "replays-fetcher", "run-once"]);
@@ -1491,13 +1499,13 @@ test("buildCli run-once stdout is exactly one compact JSON document (no heavy ar
   });
 
   await buildCli({
-    createPostgresStagingRepositoryFromDatabaseUrl: () => ({ stage: vi.fn() }),
+    createPostgresStagingRepository: () => ({ stage: vi.fn() }),
     createReplayByteClient: () => ({ fetchBytes: vi.fn() }),
-    createS3CheckpointStoreFromConfig: () => ({
+    createS3CheckpointStore: () => ({
       read: vi.fn(),
       write: vi.fn(),
     }),
-    createS3RawReplayStorageFromConfig: () => ({ storeRawReplay: vi.fn() }),
+    createS3RawReplayStorage: () => ({ storeRawReplay: vi.fn() }),
     createSourceClient: () => ({ fetchText: vi.fn() }),
     now: () => new Date("2026-05-09T12:00:00.000Z"),
     runOnce: vi.fn(async () =>
@@ -1530,9 +1538,9 @@ const buildRealRunOnceDeps = (
   evidenceWrites: { runId: string; summary: RunSummary }[],
   fileWrites: { body: string; path: string }[],
 ): Parameters<typeof buildCli>[0] => ({
-  createPostgresStagingRepositoryFromDatabaseUrl: () => ({ stage: vi.fn() }),
+  createPostgresStagingRepository: () => ({ stage: vi.fn() }),
   createReplayByteClient: () => ({ fetchBytes: vi.fn() }),
-  createS3CheckpointStoreFromConfig: () => ({
+  createS3CheckpointStore: () => ({
     async read() {
       return {};
     },
@@ -1540,8 +1548,8 @@ const buildRealRunOnceDeps = (
       return {};
     },
   }),
-  createS3RawReplayStorageFromConfig: () => ({ storeRawReplay: vi.fn() }),
-  createS3EvidenceStoreFromConfig: () => ({
+  createS3RawReplayStorage: () => ({ storeRawReplay: vi.fn() }),
+  createS3EvidenceStore: () => ({
     async write(input: { runId: string; summary: RunSummary }) {
       evidenceWrites.push(input);
     },
@@ -1704,13 +1712,13 @@ test("buildCli run-once flushLogger runs exactly once AFTER the stdout write and
 
   await buildCli({
     createLogger: () => mockLogger,
-    createPostgresStagingRepositoryFromDatabaseUrl: () => ({ stage: vi.fn() }),
+    createPostgresStagingRepository: () => ({ stage: vi.fn() }),
     createReplayByteClient: () => ({ fetchBytes: vi.fn() }),
-    createS3CheckpointStoreFromConfig: () => ({
+    createS3CheckpointStore: () => ({
       read: vi.fn(),
       write: vi.fn(),
     }),
-    createS3RawReplayStorageFromConfig: () => ({ storeRawReplay: vi.fn() }),
+    createS3RawReplayStorage: () => ({ storeRawReplay: vi.fn() }),
     createSourceClient: () => ({ fetchText: vi.fn() }),
     now: () => new Date("2026-05-09T12:00:00.000Z"),
     runOnce: vi.fn(async () =>
@@ -1736,15 +1744,15 @@ test("buildCli run-once evidence-write failure does not change the exit code", a
   });
 
   await buildCli({
-    createPostgresStagingRepositoryFromDatabaseUrl: () => ({ stage: vi.fn() }),
+    createPostgresStagingRepository: () => ({ stage: vi.fn() }),
     createReplayByteClient: () => ({ fetchBytes: vi.fn() }),
-    createS3CheckpointStoreFromConfig: () => ({
+    createS3CheckpointStore: () => ({
       read: vi.fn(),
       write: vi.fn(),
     }),
-    createS3RawReplayStorageFromConfig: () => ({ storeRawReplay: vi.fn() }),
+    createS3RawReplayStorage: () => ({ storeRawReplay: vi.fn() }),
     createSourceClient: () => ({ fetchText: vi.fn() }),
-    createS3EvidenceStoreFromConfig: () => ({
+    createS3EvidenceStore: () => ({
       async write() {
         throw new Error("simulated evidence S3 failure");
       },
@@ -1813,14 +1821,14 @@ test('buildRetryWarnEmitter emits event:"retry" discriminator with static "retry
         staging: { databaseUrl: "postgres://localhost/test" },
       }) as never,
     createRunId: () => "run-retry-discriminator",
-    createS3CheckpointStoreFromConfig: () => ({
+    createS3CheckpointStore: () => ({
       read: async () => ({}),
       write: async () => ({}),
     }),
-    createS3RawReplayStorageFromConfig: () => ({ storeRawReplay: vi.fn() }),
+    createS3RawReplayStorage: () => ({ storeRawReplay: vi.fn() }),
     createReplayByteClient: () => ({ fetchBytes: vi.fn() }),
     createSourceClient: () => ({ fetchText: vi.fn() }),
-    createPostgresStagingRepositoryFromDatabaseUrl: () => ({ stage: vi.fn() }),
+    createPostgresStagingRepository: () => ({ stage: vi.fn() }),
     discoverReplaysDryRun: vi.fn(),
     runOnce: async (input) => {
       // fire onRetry directly from run-once input to simulate retry
@@ -1979,8 +1987,8 @@ test("buildCli contract-check should not instantiate S3 or staging factories", a
   vi.spyOn(process.stdout, "write").mockImplementation(() => true);
 
   await buildCli({
-    createPostgresStagingRepositoryFromDatabaseUrl: createStaging,
-    createS3RawReplayStorageFromConfig: createStorage,
+    createPostgresStagingRepository: createStaging,
+    createS3RawReplayStorage: createStorage,
     createSourceClient: () => ({ fetchText: vi.fn() }),
     runContractCheck: async () => ({
       ok: true as const,
@@ -2008,8 +2016,8 @@ const contractCheckMutationTokens = [
   ["stage", "RawReplay"].join(""),
   ["S3RawReplay", "Storage"].join(""),
   ["PostgresStaging", "Repository"].join(""),
-  ["createPostgresStaging", "RepositoryFromDatabaseUrl"].join(""),
-  ["createS3RawReplay", "StorageFromConfig"].join(""),
+  ["createPgPool", "("].join(""),
+  ["createS3", "Client"].join(""),
   ["with", "Retry"].join(""),
 ] as const;
 
@@ -2046,13 +2054,13 @@ test("buildCli run-once default writeEvidenceFile seam writes the body to the gi
   };
 
   await buildCli({
-    createPostgresStagingRepositoryFromDatabaseUrl: () => ({ stage: vi.fn() }),
+    createPostgresStagingRepository: () => ({ stage: vi.fn() }),
     createReplayByteClient: () => ({ fetchBytes: vi.fn() }),
-    createS3CheckpointStoreFromConfig: () => ({
+    createS3CheckpointStore: () => ({
       read: vi.fn(),
       write: vi.fn(),
     }),
-    createS3RawReplayStorageFromConfig: () => ({ storeRawReplay: vi.fn() }),
+    createS3RawReplayStorage: () => ({ storeRawReplay: vi.fn() }),
     createSourceClient: () => ({ fetchText: vi.fn() }),
     now: () => new Date("2026-05-09T12:00:00.000Z"),
     runOnce: vi.fn(
@@ -2114,15 +2122,15 @@ test("buildCli run-once flushLogger rejects when log.flush calls back with an er
   await expect(
     buildCli({
       createLogger: () => mockLogger,
-      createPostgresStagingRepositoryFromDatabaseUrl: () => ({
+      createPostgresStagingRepository: () => ({
         stage: vi.fn(),
       }),
       createReplayByteClient: () => ({ fetchBytes: vi.fn() }),
-      createS3CheckpointStoreFromConfig: () => ({
+      createS3CheckpointStore: () => ({
         read: vi.fn(),
         write: vi.fn(),
       }),
-      createS3RawReplayStorageFromConfig: () => ({ storeRawReplay: vi.fn() }),
+      createS3RawReplayStorage: () => ({ storeRawReplay: vi.fn() }),
       createSourceClient: () => ({ fetchText: vi.fn() }),
       now: () => new Date("2026-05-09T12:00:00.000Z"),
       runOnce: vi.fn(async (input: { readonly runId: string }) =>

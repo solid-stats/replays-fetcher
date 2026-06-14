@@ -3,10 +3,7 @@ import { readFile } from "node:fs/promises";
 
 import { expect, test } from "vitest";
 
-import {
-  createPostgresStagingRepository,
-  createPostgresStagingRepositoryFromDatabaseUrl,
-} from "./postgres-staging-repository.js";
+import { createPostgresStagingRepository } from "./postgres-staging-repository.js";
 
 import type { StagingQueryClient } from "./postgres-staging-repository.js";
 
@@ -125,16 +122,6 @@ test("PostgresStagingRepository should insert pending ingest staging records", a
   expect(String(calls[0]?.values?.[7])).toContain(
     '"discoveredAt":"2026-05-09T00:32:44.000Z"',
   );
-});
-
-test("createPostgresStagingRepositoryFromDatabaseUrl should create a staging repository", () => {
-  const repository = createPostgresStagingRepositoryFromDatabaseUrl(
-    "postgres://user:pass@localhost:5432/replays",
-  );
-
-  expect(repository).toMatchObject({
-    stage: expect.any(Function) as unknown,
-  });
 });
 
 test("PostgresStagingRepository should return already_staged for matching source identity", async () => {

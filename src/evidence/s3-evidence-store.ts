@@ -4,8 +4,8 @@
  * `<prefix>/<safeRunId>/evidence.json` via a plain unconditional
  * `PutObjectCommand`.
  *
- * Mirrors the injectable `sender` seam + `FromConfig` factory of
- * `s3-checkpoint-store.ts`, but strips every concurrency mechanism: evidence is
+ * Mirrors the injectable `sender` seam of `s3-checkpoint-store.ts`, but strips
+ * every concurrency mechanism: evidence is
  * write-once per `runId`, so there is no read path, no compare-and-swap loop, no
  * `IfMatch`/`IfNoneMatch` conditional header, no merge, and no conflict error
  * (D-10). The body is the full in-memory `RunSummary` the caller hands it — the
@@ -17,11 +17,10 @@
  * (D-12). The store's sole responsibility is the write-once PUT.
  */
 
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { PutObjectCommand } from "@aws-sdk/client-s3";
 
 import { toEvidenceObjectKey } from "./object-key.js";
 
-import type { AppConfig } from "../config.js";
 import type { RunSummary } from "../types/run-summary.js";
 
 export interface S3EvidenceSender {
@@ -63,20 +62,3 @@ export const createS3EvidenceStore = (
 ): S3EvidenceStore => ({
   write: (input): Promise<void> => putEvidence(options, input),
 });
-
-export const createS3EvidenceStoreFromConfig = (
-  config: AppConfig["s3"],
-): S3EvidenceStore =>
-  createS3EvidenceStore({
-    bucket: config.bucket,
-    prefix: config.evidencePrefix,
-    sender: new S3Client({
-      credentials: {
-        accessKeyId: config.accessKeyId,
-        secretAccessKey: config.secretAccessKey,
-      },
-      endpoint: config.endpoint,
-      forcePathStyle: config.forcePathStyle,
-      region: config.region,
-    }),
-  });

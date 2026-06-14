@@ -1,10 +1,7 @@
 import { HeadBucketCommand } from "@aws-sdk/client-s3";
 import { expect, test } from "vitest";
 
-import {
-  checkS3Connectivity,
-  createS3ConnectivitySenderFromConfig,
-} from "./s3-connectivity.js";
+import { checkS3Connectivity } from "./s3-connectivity.js";
 
 test("checkS3Connectivity should send one HeadBucketCommand", async () => {
   const commands: HeadBucketCommand[] = [];
@@ -41,23 +38,4 @@ test("checkS3Connectivity should classify storage failures", async () => {
     message: "bucket unavailable",
     status: "failed",
   });
-});
-
-test("createS3ConnectivitySenderFromConfig should create a sender", () => {
-  const sender = createS3ConnectivitySenderFromConfig({
-    accessKeyId: "access-key",
-    bucket: "solid-stats-replays",
-    checkpointPrefix: "checkpoints",
-    conditionalWrites: true,
-    evidencePrefix: "runs",
-    endpoint: "https://s3.example.test",
-    forcePathStyle: true,
-    region: "us-east-1",
-    secretAccessKey: "secret-key",
-  });
-
-  expect(sender).toMatchObject({
-    send: expect.any(Function) as unknown,
-  });
-  expect(typeof sender.send).toBe("function");
 });

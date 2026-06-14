@@ -1,16 +1,14 @@
-import {
-  CreateBucketCommand,
-  ListObjectsV2Command,
-  S3Client,
-} from "@aws-sdk/client-s3";
+import { CreateBucketCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
 import { MinioContainer } from "@testcontainers/minio";
 import { afterEach, expect, test } from "vitest";
+
+import { createS3Client } from "../commands/clients.js";
 
 import {
   checkpointSourceUrl,
   makeCheckpoint,
 } from "./s3-checkpoint-store.fixtures.js";
-import { createS3CheckpointStoreFromConfig } from "./s3-checkpoint-store.js";
+import { createS3CheckpointStore } from "./s3-checkpoint-store.js";
 
 const bucket = "solid-stats-replays";
 const prefix = "checkpoints";
@@ -40,18 +38,7 @@ test("S3 checkpoint store creates, conditionally updates, and merges on a real 4
   };
   const endpoint = `http://${container.getHost()}:${String(container.getPort())}`;
 
-  const s3Client = new S3Client({
-    credentials: {
-      accessKeyId: "solid",
-      secretAccessKey: "solidsecret",
-    },
-    endpoint,
-    forcePathStyle: true,
-    region: "us-east-1",
-  });
-  await s3Client.send(new CreateBucketCommand({ Bucket: bucket }));
-
-  const store = createS3CheckpointStoreFromConfig({
+  const s3Client = createS3Client({
     accessKeyId: "solid",
     bucket,
     checkpointPrefix: prefix,
@@ -61,6 +48,14 @@ test("S3 checkpoint store creates, conditionally updates, and merges on a real 4
     forcePathStyle: true,
     region: "us-east-1",
     secretAccessKey: "solidsecret",
+  });
+  await s3Client.send(new CreateBucketCommand({ Bucket: bucket }));
+
+  const store = createS3CheckpointStore({
+    bucket,
+    conditionalWrites: true,
+    prefix,
+    sender: s3Client,
   });
 
   // (1) First write with no etag -> IfNoneMatch:* creates the rolling object.

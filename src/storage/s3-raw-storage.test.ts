@@ -6,10 +6,7 @@ import {
 import { expect, test } from "vitest";
 
 import { calculateSha256 } from "./checksum.js";
-import {
-  createS3RawReplayStorage,
-  createS3RawReplayStorageFromConfig,
-} from "./s3-raw-storage.js";
+import { createS3RawReplayStorage } from "./s3-raw-storage.js";
 
 import type { ReplayCandidate } from "../discovery/types.js";
 
@@ -269,23 +266,5 @@ test("storeRawReplay should return failed evidence for PUT failures", async () =
   expect(result).toMatchObject({
     failureCategory: "s3_error",
     status: "failed",
-  });
-});
-
-test("createS3RawReplayStorageFromConfig should create a configured storage adapter", () => {
-  const storage = createS3RawReplayStorageFromConfig({
-    accessKeyId: "access-key",
-    bucket,
-    checkpointPrefix: "checkpoints",
-    conditionalWrites: true,
-    evidencePrefix: "runs",
-    endpoint: "https://s3.example.test",
-    forcePathStyle: true,
-    region: "us-east-1",
-    secretAccessKey: "secret-key",
-  });
-
-  expect(storage).toMatchObject({
-    storeRawReplay: expect.any(Function) as unknown,
   });
 });

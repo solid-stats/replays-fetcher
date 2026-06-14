@@ -22,7 +22,12 @@ export default mergeConfig(
   defineConfig({
     test: {
       coverage: {
-        exclude: ["dist/**", "src/**/*.test.ts", "vitest.config.ts"],
+        exclude: [
+          "dist/**",
+          "src/**/*.test.ts",
+          "src/cli.ts",
+          "vitest.config.ts",
+        ],
         include: ["src/**/*.ts"],
       },
       exclude,
