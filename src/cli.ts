@@ -5,9 +5,7 @@ import { registerCheckCommand } from "./commands/check.js";
 import { registerContractCheckCommand } from "./commands/contract-check.js";
 import { registerDiscoverCommand } from "./commands/discover.js";
 import { registerRunOnceCommand } from "./commands/run-once.js";
-import {
-  resolveDependencies,
-} from "./commands/shared.js";
+import { resolveDependencies } from "./commands/shared.js";
 
 import type { BuildCliDependencies } from "./commands/shared.js";
 
@@ -26,7 +24,7 @@ export const buildCli = (dependencies: BuildCliDependencies = {}): Command => {
   registerContractCheckCommand(program, cliDependencies);
 
   return program;
-}
+};
 
 const [, entrypointPath] = process.argv;
 

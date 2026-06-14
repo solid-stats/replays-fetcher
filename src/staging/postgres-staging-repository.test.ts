@@ -281,4 +281,3 @@ test("PostgresStagingRepository source should not mutate forbidden server-2 busi
   }
   expect(source).toMatch(/insert\s+into\s+ingest_staging_records/iu);
 });
-

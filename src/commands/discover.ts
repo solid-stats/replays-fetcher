@@ -44,12 +44,10 @@ const countRawStorage = (
   conflict: storageResults.filter((result) => result.status === "conflict")
     .length,
   diagnostics: discoveryReport.diagnostics.length,
-  failed: storageResults.filter((result) => result.status === "failed")
-    .length,
+  failed: storageResults.filter((result) => result.status === "failed").length,
   skipped: storageResults.filter((result) => result.status === "skipped")
     .length,
-  stored: storageResults.filter((result) => result.status === "stored")
-    .length,
+  stored: storageResults.filter((result) => result.status === "stored").length,
 });
 
 const countStaging = (
@@ -60,13 +58,10 @@ const countStaging = (
   ).length,
   conflict: stagingResults.filter((result) => result.status === "conflict")
     .length,
-  failed: stagingResults.filter((result) => result.status === "failed")
+  failed: stagingResults.filter((result) => result.status === "failed").length,
+  skipped: stagingResults.filter((result) => result.status === "not_stageable")
     .length,
-  skipped: stagingResults.filter(
-    (result) => result.status === "not_stageable",
-  ).length,
-  staged: stagingResults.filter((result) => result.status === "staged")
-    .length,
+  staged: stagingResults.filter((result) => result.status === "staged").length,
 });
 
 const storeRawMode = (

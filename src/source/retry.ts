@@ -107,7 +107,7 @@ interface RetryRound<TResult> {
   readonly round: number;
 }
 
-const buildRetryEvent = <TResult,>(
+const buildRetryEvent = <TResult>(
   context: RetryRound<TResult>,
   delayMs: number,
 ): RetryAttemptEvent => {
@@ -127,7 +127,7 @@ const buildRetryEvent = <TResult,>(
   };
 };
 
-const resolveDelay = <TResult,>(context: RetryRound<TResult>): number => {
+const resolveDelay = <TResult>(context: RetryRound<TResult>): number => {
   const { classification, error, now, options, random, round } = context;
   const backoff = fullJitterDelay(round, random);
   if (classification.kind !== "rate_limited") {
@@ -141,12 +141,10 @@ const resolveDelay = <TResult,>(context: RetryRound<TResult>): number => {
   return Math.min(Math.max(backoff, retryAfter), retryAfterCapMs);
 };
 
-const isRetryable = (classification: FailureClassification): boolean => (
-  classification.kind === "transient" ||
-  classification.kind === "rate_limited"
-);
+const isRetryable = (classification: FailureClassification): boolean =>
+  classification.kind === "transient" || classification.kind === "rate_limited";
 
-export const withRetry = async <TResult,>(
+export const withRetry = async <TResult>(
   options: RetrySourceReadOptions<TResult>,
 ): Promise<TResult> => {
   const sleep = options.sleep ?? defaultSleep;

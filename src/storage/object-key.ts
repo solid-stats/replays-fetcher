@@ -6,4 +6,4 @@ export const toRawReplayObjectKey = (sha256: string): string => {
   }
 
   return `raw/sha256/${sha256}.ocap`;
-}
+};

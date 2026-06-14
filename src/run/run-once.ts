@@ -1,9 +1,7 @@
 /* oxlint-disable max-lines -- the run-once orchestrator keeps the page loop, resume/checkpoint wiring, and the per-page checkpoint builders co-located so the ingest cycle reads as one unit. */
 import { createLimiter } from "../source/concurrency.js";
 import { createPacer } from "../source/pacing.js";
-import {
-  createThrottleController,
-} from "../source/throttle.js";
+import { createThrottleController } from "../source/throttle.js";
 
 import type { LimitFunction } from "../source/concurrency.js";
 import type { Pacer } from "../source/pacing.js";
@@ -1043,9 +1041,7 @@ const assembleResult = async (
   };
 };
 
-export const runOnce = async (
-  input: RunOnceInput,
-): Promise<RunOnceResult> => {
+export const runOnce = async (input: RunOnceInput): Promise<RunOnceResult> => {
   const startedAt = input.now().toISOString();
   // The slug is persisted in the checkpoint body and reaches promotion_evidence;
   // strip any userinfo (user:pass@host) so credentials never land in a durable

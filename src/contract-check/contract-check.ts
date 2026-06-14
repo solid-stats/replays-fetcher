@@ -20,9 +20,7 @@ import {
   extractReplayRows,
 } from "../discovery/html.js";
 import { SourceFetchError } from "../discovery/source-client.js";
-import {
-  classifyFailure,
-} from "../source/classify-failure.js";
+import { classifyFailure } from "../source/classify-failure.js";
 
 import type { ClassifyInput } from "../source/classify-failure.js";
 
@@ -97,7 +95,7 @@ const readHttpStatus = (
   }
 
   return undefined;
-}
+};
 
 const buildClassifyInput = (
   error: SourceFetchError,
@@ -108,7 +106,7 @@ const buildClassifyInput = (
   }
 
   return { error, httpStatus };
-}
+};
 
 /**
  * Maps a caught error from fetchText into an ok:false ContractCheckResult.
@@ -147,7 +145,7 @@ const makeFetchFailureResult = (
     reason: "contract_broken",
     warnings,
   };
-}
+};
 
 const tryFetch = async (
   context: ProbeContext,
@@ -162,7 +160,7 @@ const tryFetch = async (
       result: makeFetchFailureResult(error, message, context.warnings),
     };
   }
-}
+};
 
 const warn = (
   context: ProbeContext,
@@ -171,7 +169,7 @@ const warn = (
 ): ContractCheckResult => {
   context.warnings.push(warning);
   return { ok: true, sample, warnings: context.warnings };
-}
+};
 
 const isJson = (text: string): boolean => {
   try {
@@ -180,7 +178,7 @@ const isJson = (text: string): boolean => {
   } catch {
     return false;
   }
-}
+};
 
 const probeRawEndpoint = async (
   context: ProbeContext,
@@ -216,7 +214,7 @@ const probeRawEndpoint = async (
     },
     warnings: context.warnings,
   };
-}
+};
 
 // ---------------------------------------------------------------------------
 // Main probe
@@ -296,4 +294,4 @@ export const runContractCheck = async (
   }
 
   return probeRawEndpoint(context, { detailUrl, detailUrlString, filename });
-}
+};

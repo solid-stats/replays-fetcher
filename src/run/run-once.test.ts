@@ -145,7 +145,7 @@ const replayCandidate = (
   },
 });
 
-const createClock = (values: readonly string[]): () => Date => {
+const createClock = (values: readonly string[]): (() => Date) => {
   let index = 0;
   const lastValueIndex = values.length - 1;
 

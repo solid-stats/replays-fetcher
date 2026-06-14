@@ -7,13 +7,8 @@ import {
   createS3ConnectivitySenderFromConfig,
 } from "../check/s3-connectivity.js";
 import { checkSourceConnectivity } from "../check/source-connectivity.js";
-import {
-  createS3CheckpointStoreFromConfig,
-} from "../checkpoint/s3-checkpoint-store.js";
-import {
-  loadConfig,
-  loadSourceConfig,
-} from "../config.js";
+import { createS3CheckpointStoreFromConfig } from "../checkpoint/s3-checkpoint-store.js";
+import { loadConfig, loadSourceConfig } from "../config.js";
 
 import type { S3CheckpointStore } from "../checkpoint/s3-checkpoint-store.js";
 import type { AppConfig, SourceConfig } from "../config.js";
@@ -21,28 +16,16 @@ import { runContractCheck } from "../contract-check/contract-check.js";
 import { discoverReplaysDryRun } from "../discovery/discover.js";
 import { createSourceClient } from "../discovery/source-client.js";
 import { ConfigValidationError } from "../errors/config-validation-error.js";
-import {
-  createS3EvidenceStoreFromConfig,
-} from "../evidence/s3-evidence-store.js";
-import {
-  createLogger,
-} from "../logging/create-logger.js";
+import { createS3EvidenceStoreFromConfig } from "../evidence/s3-evidence-store.js";
+import { createLogger } from "../logging/create-logger.js";
 
 import type { S3EvidenceStore } from "../evidence/s3-evidence-store.js";
 import type { CreateLoggerOptions } from "../logging/create-logger.js";
 import { runOnce } from "../run/run-once.js";
-import {
-  createPostgresStagingRepositoryFromDatabaseUrl,
-} from "../staging/postgres-staging-repository.js";
-import {
-  stageRawReplay,
-} from "../staging/stage-raw-replay.js";
-import {
-  createReplayByteClient,
-} from "../storage/replay-byte-client.js";
-import {
-  createS3RawReplayStorageFromConfig,
-} from "../storage/s3-raw-storage.js";
+import { createPostgresStagingRepositoryFromDatabaseUrl } from "../staging/postgres-staging-repository.js";
+import { stageRawReplay } from "../staging/stage-raw-replay.js";
+import { createReplayByteClient } from "../storage/replay-byte-client.js";
+import { createS3RawReplayStorageFromConfig } from "../storage/s3-raw-storage.js";
 
 import type { PostgresStagingRepository } from "../staging/postgres-staging-repository.js";
 import type { StagingRepository } from "../staging/stage-raw-replay.js";
@@ -203,11 +186,7 @@ export const createStoreRawResources = (
   byteClient: dependencies.createReplayByteClient(config),
   checkpointStore: dependencies.createS3CheckpointStoreFromConfig(config.s3),
   sourceClient: dependencies.createSourceClient(config),
-  stagingRepository: createStagingRepository(
-    dependencies,
-    config,
-    shouldStage,
-  ),
+  stagingRepository: createStagingRepository(dependencies, config, shouldStage),
   storage: dependencies.createS3RawReplayStorageFromConfig(config.s3),
 });
 

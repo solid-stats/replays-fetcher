@@ -15,7 +15,9 @@ interface ConfigValidationDetails {
  * Flatten the issues array into a plain record for the `AppError` base.
  * Keeps the payload identifiers-only (threat T-07-01) with no `as` cast.
  */
-const toDetailsRecord = (issues: string[]): Readonly<Record<string, unknown>> => ({ issues });
+const toDetailsRecord = (
+  issues: string[],
+): Readonly<Record<string, unknown>> => ({ issues });
 
 /**
  * Raised when `loadConfig` or `loadSourceConfig` receives an environment that

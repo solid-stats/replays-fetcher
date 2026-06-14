@@ -175,7 +175,9 @@ const redactSecret = (value: string): string => {
   return `${value.slice(0, 2)}****${value.slice(-2)}`;
 };
 
-const readSourceConfigInput = (source: ConfigSource): {
+const readSourceConfigInput = (
+  source: ConfigSource,
+): {
   readonly sourceConcurrency: string | boolean | undefined;
   readonly sourceMaxPages: string | boolean | undefined;
   readonly sourceRequestSpacingMs: string | boolean | undefined;

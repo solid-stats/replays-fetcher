@@ -72,72 +72,72 @@ export const createS3RawReplayStorage = (
   options: CreateS3RawReplayStorageOptions,
 ): S3RawReplayStorage => ({
   async storeRawReplay(input): Promise<RawReplayStorageEvidence> {
-      const baseEvidence = toBaseEvidence({
-        bucket: options.bucket,
-        candidate: input.candidate,
-        checksum: input.checksum,
-        fetchedAt: input.fetchedAt,
-        objectKey: input.objectKey,
-        byteSize: input.bytes.byteLength,
-      });
+    const baseEvidence = toBaseEvidence({
+      bucket: options.bucket,
+      candidate: input.candidate,
+      checksum: input.checksum,
+      fetchedAt: input.fetchedAt,
+      objectKey: input.objectKey,
+      byteSize: input.bytes.byteLength,
+    });
 
-      try {
-        const head = await options.sender.send(
-          new HeadObjectCommand({
-            Bucket: options.bucket,
-            Key: input.objectKey,
-          }),
-        );
+    try {
+      const head = await options.sender.send(
+        new HeadObjectCommand({
+          Bucket: options.bucket,
+          Key: input.objectKey,
+        }),
+      );
 
-        if (
-          head.ContentLength === input.bytes.byteLength &&
-          head.Metadata?.["sha256"] === input.checksum
-        ) {
-          return {
-            ...baseEvidence,
-            status: "skipped",
-          };
-        }
-
+      if (
+        head.ContentLength === input.bytes.byteLength &&
+        head.Metadata?.["sha256"] === input.checksum
+      ) {
         return {
           ...baseEvidence,
-          failureCategory: "object_conflict",
-          status: "conflict",
+          status: "skipped",
         };
-      } catch (error) {
-        if (!isNotFound(error)) {
-          return {
-            ...baseEvidence,
-            failureCategory: "s3_error",
-            status: "failed",
-          };
-        }
       }
 
-      try {
-        await options.sender.send(
-          new PutObjectCommand({
-            Body: input.bytes,
-            Bucket: options.bucket,
-            ContentLength: input.bytes.byteLength,
-            Key: input.objectKey,
-            Metadata: {
-              sha256: input.checksum,
-            },
-          }),
-        );
-
-        return {
-          ...baseEvidence,
-          status: "stored",
-        };
-      } catch {
+      return {
+        ...baseEvidence,
+        failureCategory: "object_conflict",
+        status: "conflict",
+      };
+    } catch (error) {
+      if (!isNotFound(error)) {
         return {
           ...baseEvidence,
           failureCategory: "s3_error",
           status: "failed",
         };
       }
+    }
+
+    try {
+      await options.sender.send(
+        new PutObjectCommand({
+          Body: input.bytes,
+          Bucket: options.bucket,
+          ContentLength: input.bytes.byteLength,
+          Key: input.objectKey,
+          Metadata: {
+            sha256: input.checksum,
+          },
+        }),
+      );
+
+      return {
+        ...baseEvidence,
+        status: "stored",
+      };
+    } catch {
+      return {
+        ...baseEvidence,
+        failureCategory: "s3_error",
+        status: "failed",
+      };
+    }
   },
 });
 

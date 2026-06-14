@@ -1,7 +1,4 @@
-import {
-  loadDryRunSourceConfig,
-  writeJson,
-} from "./shared.js";
+import { loadDryRunSourceConfig, writeJson } from "./shared.js";
 
 import type { BuildCliDependencies } from "./shared.js";
 
@@ -41,4 +38,4 @@ export const registerContractCheckCommand = (
         process.exitCode = 2;
       }
     });
-}
+};

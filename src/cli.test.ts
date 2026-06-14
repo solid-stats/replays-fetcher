@@ -635,7 +635,9 @@ test("buildCli should report rejected source fetches as structured dry-run failu
   expect(process.exitCode).toBe(2);
 });
 
-const createCapturingLogger = (lines: string[]): {
+const createCapturingLogger = (
+  lines: string[],
+): {
   readonly createLogger: typeof createLogger;
 } => {
   const destination = new Writable({
@@ -1473,7 +1475,9 @@ interface CompactRunOutput {
 const parseCompactOutput = (writes: readonly string[]): CompactRunOutput =>
   JSON.parse(writes.join("")) as CompactRunOutput;
 
-const createMinimalRunOnceResult = (summary: RunSummary): {
+const createMinimalRunOnceResult = (
+  summary: RunSummary,
+): {
   readonly exitCode: 0;
   readonly summary: RunSummary;
 } => ({ exitCode: 0 as const, summary });
@@ -1526,38 +1530,38 @@ const buildRealRunOnceDeps = (
   evidenceWrites: { runId: string; summary: RunSummary }[],
   fileWrites: { body: string; path: string }[],
 ): Parameters<typeof buildCli>[0] => ({
-    createPostgresStagingRepositoryFromDatabaseUrl: () => ({ stage: vi.fn() }),
-    createReplayByteClient: () => ({ fetchBytes: vi.fn() }),
-    createS3CheckpointStoreFromConfig: () => ({
-      async read() {
-        return {};
-      },
-      async write() {
-        return {};
-      },
-    }),
-    createS3RawReplayStorageFromConfig: () => ({ storeRawReplay: vi.fn() }),
-    createS3EvidenceStoreFromConfig: () => ({
-      async write(input: { runId: string; summary: RunSummary }) {
-        evidenceWrites.push(input);
-      },
-    }),
-    createSourceClient: () => ({ fetchText: vi.fn() }),
-    writeEvidenceFile: async (path: string, body: string) => {
-      fileWrites.push({ body, path });
+  createPostgresStagingRepositoryFromDatabaseUrl: () => ({ stage: vi.fn() }),
+  createReplayByteClient: () => ({ fetchBytes: vi.fn() }),
+  createS3CheckpointStoreFromConfig: () => ({
+    async read() {
+      return {};
     },
-    now: () => new Date("2026-05-09T12:00:00.000Z"),
-    async discoverReplaysDryRun(input) {
-      return {
-        candidates: [],
-        counts: { candidates: 0, diagnostics: 0, discovered: 0 },
-        diagnostics: [],
-        generatedAt: "2026-05-09T12:00:00.000Z",
-        mode: "dry-run",
-        ok: true,
-        sourceUrl: input.sourceUrl.toString(),
-      };
+    async write() {
+      return {};
     },
+  }),
+  createS3RawReplayStorageFromConfig: () => ({ storeRawReplay: vi.fn() }),
+  createS3EvidenceStoreFromConfig: () => ({
+    async write(input: { runId: string; summary: RunSummary }) {
+      evidenceWrites.push(input);
+    },
+  }),
+  createSourceClient: () => ({ fetchText: vi.fn() }),
+  writeEvidenceFile: async (path: string, body: string) => {
+    fileWrites.push({ body, path });
+  },
+  now: () => new Date("2026-05-09T12:00:00.000Z"),
+  async discoverReplaysDryRun(input) {
+    return {
+      candidates: [],
+      counts: { candidates: 0, diagnostics: 0, discovered: 0 },
+      diagnostics: [],
+      generatedAt: "2026-05-09T12:00:00.000Z",
+      mode: "dry-run",
+      ok: true,
+      sourceUrl: input.sourceUrl.toString(),
+    };
+  },
 });
 
 test("buildCli run-once --emit-evidence: stdout still compact AND evidenceStore.write receives full summary", async () => {

@@ -36,14 +36,13 @@ export interface PostgresStagingRepository {
 
 const uniqueViolationCode = "23505";
 
-const isUniqueViolation = (error: unknown): boolean => (
+const isUniqueViolation = (error: unknown): boolean =>
   typeof error === "object" &&
   error !== null &&
   "code" in error &&
-  (error as DatabaseError).code === uniqueViolationCode
-);
+  (error as DatabaseError).code === uniqueViolationCode;
 
-const requiredRow = <Row,>(rows: readonly Row[]): Row => {
+const requiredRow = <Row>(rows: readonly Row[]): Row => {
   const [row] = rows;
 
   if (row === undefined) {

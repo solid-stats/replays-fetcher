@@ -110,8 +110,7 @@ export const toRawReplayUrl = (filename: string, detailUrl: URL): string => {
     .replaceAll("%2F", "/");
 };
 
-const isValidFixtureUrl = (value: string): boolean =>
-  URL.parse(value) !== null;
+const isValidFixtureUrl = (value: string): boolean => URL.parse(value) !== null;
 
 const toPageUrl = (sourceUrl: URL, page: number): URL => {
   if (page === 1) {
@@ -581,10 +580,7 @@ const withSourceFailureEvidence = (
   return next;
 };
 
-const detailUrlOrSource = (
-  error: SourceFetchError,
-  sourceUrl: URL,
-): string => {
+const detailUrlOrSource = (error: SourceFetchError, sourceUrl: URL): string => {
   const url = error.details?.["url"];
 
   if (typeof url === "string") {

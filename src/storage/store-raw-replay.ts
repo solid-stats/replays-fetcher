@@ -1,8 +1,6 @@
 import { calculateSha256 } from "./checksum.js";
 import { toRawReplayObjectKey } from "./object-key.js";
-import {
-  ReplayByteFetchError,
-} from "./replay-byte-client.js";
+import { ReplayByteFetchError } from "./replay-byte-client.js";
 
 import type { ReplayByteClient } from "./replay-byte-client.js";
 

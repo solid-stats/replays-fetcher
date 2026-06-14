@@ -28,7 +28,7 @@ const createSleepSpy = (): SleepSpy => {
   };
 };
 
-const createScriptedNow = (sequence: number[]): () => number => {
+const createScriptedNow = (sequence: number[]): (() => number) => {
   let index = 0;
 
   return (): number => {

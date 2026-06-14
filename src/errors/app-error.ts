@@ -31,7 +31,10 @@ export abstract class AppError<Code extends string = string> extends Error {
       readonly isOperational?: boolean;
     },
   ) {
-    super(message, options?.cause === undefined ? undefined : { cause: options.cause });
+    super(
+      message,
+      options?.cause === undefined ? undefined : { cause: options.cause },
+    );
     this.name = "AppError";
     this.code = code;
     this.isOperational = options?.isOperational ?? true;

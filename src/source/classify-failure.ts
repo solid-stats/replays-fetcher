@@ -142,13 +142,12 @@ const unwrapCause = (error: unknown): UnwrappedCause => {
   return result;
 };
 
-const isTransientCauseCode = (code: string): boolean => (
+const isTransientCauseCode = (code: string): boolean =>
   transientNetworkCodes.has(code) ||
   transientTlsCodes.has(code) ||
   code.startsWith(undiciCodePrefix) ||
   code.startsWith(tlsCodePrefix) ||
-  code.startsWith(certCodePrefix)
-);
+  code.startsWith(certCodePrefix);
 
 const isServerError = (status: number): boolean =>
   status >= httpServerErrorFloor && status < httpServerErrorCeiling;
@@ -235,7 +234,9 @@ const resolveKind = (
   return "permanent";
 };
 
-export const classifyFailure = (input: ClassifyInput): FailureClassification => {
+export const classifyFailure = (
+  input: ClassifyInput,
+): FailureClassification => {
   const cause = unwrapCause(input.error);
   const cfChallenge = input.cfChallenge === true;
   const kind = resolveKind(input, cause, cfChallenge);

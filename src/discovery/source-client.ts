@@ -4,15 +4,18 @@ import { promisify } from "node:util";
 
 import { AppError } from "../errors/app-error.js";
 import { parseRetryAfter } from "../source/backoff.js";
-import {
-  classifyFailure,
-} from "../source/classify-failure.js";
-import {
-  withRetry,
-} from "../source/retry.js";
+import { classifyFailure } from "../source/classify-failure.js";
+import { withRetry } from "../source/retry.js";
 
-import type { ClassifyInput, FailureClassification, FailureKind } from "../source/classify-failure.js";
-import type { RetrySourceReadOptions, SourceReadPhase } from "../source/retry.js";
+import type {
+  ClassifyInput,
+  FailureClassification,
+  FailureKind,
+} from "../source/classify-failure.js";
+import type {
+  RetrySourceReadOptions,
+  SourceReadPhase,
+} from "../source/retry.js";
 
 import type { SourceConfig } from "../config.js";
 import type { SourceClient, SourceFetchOptions } from "./types.js";
@@ -174,7 +177,7 @@ const initialTry = 1;
 const totalTries = (options: SourceFetchOptions | undefined): number =>
   (options?.attempts ?? noRetryAttempts) + initialTry;
 
-const runWithRetry = async <TResult,>(
+const runWithRetry = async <TResult>(
   wiring: RetryWiring<TResult>,
   options?: SourceFetchOptions,
 ): Promise<TResult> => {
@@ -344,9 +347,7 @@ const buildPageInput = (
   return { page: options.page };
 };
 
-const toDirectFetchError = (
-  input: DirectFetchErrorInput,
-): SourceFetchError => {
+const toDirectFetchError = (input: DirectFetchErrorInput): SourceFetchError => {
   const { error, options, phase, url } = input;
   const attempts = totalTries(options);
   const pageInput = buildPageInput(options);

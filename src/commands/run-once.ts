@@ -39,7 +39,9 @@ const flushLogger = (log: Logger): Promise<void> =>
     });
   });
 
-const evidenceFileOption = (evidenceFile: string | undefined): {
+const evidenceFileOption = (
+  evidenceFile: string | undefined,
+): {
   evidenceFile?: string;
 } => {
   if (evidenceFile === undefined) {
@@ -49,7 +51,9 @@ const evidenceFileOption = (evidenceFile: string | undefined): {
   return { evidenceFile };
 };
 
-const maxPagesOption = (maxPages: number | undefined): {
+const maxPagesOption = (
+  maxPages: number | undefined,
+): {
   maxPages?: number;
 } => {
   if (maxPages === undefined) {

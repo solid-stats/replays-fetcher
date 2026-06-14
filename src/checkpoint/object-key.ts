@@ -35,7 +35,10 @@ export const toSourceSlug = (sourceUrl: URL): string =>
  * `<prefix>/<slug>/latest.json`. Throws on an empty prefix, an empty resulting
  * slug, or a final key that is not S3-safe.
  */
-export const toCheckpointObjectKey = (prefix: string, sourceUrl: URL): string => {
+export const toCheckpointObjectKey = (
+  prefix: string,
+  sourceUrl: URL,
+): string => {
   if (prefix.length === 0) {
     throw new Error("Checkpoint object-key prefix must not be empty");
   }

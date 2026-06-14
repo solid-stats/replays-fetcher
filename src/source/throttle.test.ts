@@ -13,7 +13,7 @@ const cleanWindow = Number("3");
 
 const fixedNow = Number("1000000000000");
 
-const scriptedClock = (): () => number => {
+const scriptedClock = (): (() => number) => {
   let tick = fixedNow;
 
   return () => {

@@ -41,7 +41,7 @@ export const checkPostgresConnectivity = async (
       status: "failed",
     };
   }
-}
+};
 
 export const checkPostgresConnectivityFromDatabaseUrl = async (
   databaseUrl: string,
@@ -53,4 +53,4 @@ export const checkPostgresConnectivityFromDatabaseUrl = async (
   } finally {
     await pool.end();
   }
-}
+};

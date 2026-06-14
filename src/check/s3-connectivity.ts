@@ -36,7 +36,7 @@ export const checkS3Connectivity = async (
       status: "failed",
     };
   }
-}
+};
 
 export const createS3ConnectivitySenderFromConfig = (
   config: AppConfig["s3"],

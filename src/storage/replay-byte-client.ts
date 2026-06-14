@@ -4,15 +4,19 @@ import { promisify } from "node:util";
 
 import { AppError } from "../errors/app-error.js";
 import { parseRetryAfter } from "../source/backoff.js";
-import {
-  classifyFailure,
-} from "../source/classify-failure.js";
-import {
-  withRetry,
-} from "../source/retry.js";
+import { classifyFailure } from "../source/classify-failure.js";
+import { withRetry } from "../source/retry.js";
 
-import type { ClassifyInput, FailureClassification, FailureKind } from "../source/classify-failure.js";
-import type { RetryAttemptEvent, RetrySourceReadOptions, SourceReadPhase } from "../source/retry.js";
+import type {
+  ClassifyInput,
+  FailureClassification,
+  FailureKind,
+} from "../source/classify-failure.js";
+import type {
+  RetryAttemptEvent,
+  RetrySourceReadOptions,
+  SourceReadPhase,
+} from "../source/retry.js";
 
 import type { SourceConfig } from "../config.js";
 
@@ -124,7 +128,7 @@ interface RetryWiring<TResult> {
  * options are supplied, `attempts` defaults to 0 so a single try is made,
  * preserving the legacy single-shot behavior for existing callers.
  */
-const runWithRetry = async <TResult,>(
+const runWithRetry = async <TResult>(
   wiring: RetryWiring<TResult>,
   options?: ByteFetchOptions,
 ): Promise<TResult> => {
@@ -355,45 +359,45 @@ const createDirectReplayByteClient = (
   config: SourceConfig,
 ): ReplayByteClient => ({
   async fetchBytes(url, options): Promise<Uint8Array> {
-      const read = async (callerSignal: AbortSignal): Promise<Uint8Array> => {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => {
-          controller.abort();
-        }, config.sourceTimeoutMs);
-        const onCallerAbort = (): void => {
-          controller.abort();
-        };
-        callerSignal.addEventListener("abort", onCallerAbort);
-
-        try {
-          const response = await fetch(url, { signal: controller.signal });
-
-          if (!response.ok) {
-            throw buildDirectHttpError({ response, url });
-          }
-
-          return new Uint8Array(await response.arrayBuffer());
-        } finally {
-          clearTimeout(timeout);
-          callerSignal.removeEventListener("abort", onCallerAbort);
-        }
+    const read = async (callerSignal: AbortSignal): Promise<Uint8Array> => {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => {
+        controller.abort();
+      }, config.sourceTimeoutMs);
+      const onCallerAbort = (): void => {
+        controller.abort();
       };
+      callerSignal.addEventListener("abort", onCallerAbort);
 
-      return runWithRetry(
-        {
-          classify: classifyDirect,
-          read,
-          // `now` is supplied by `withRetry` at the moment the delay is
-          // resolved (WR-08-03), making the time dependency explicit instead of
-          // closing over a factory-fixed value.
-          retryAfterMs: directRetryAfter,
-          url,
-        },
-        options,
-      ).catch((error: unknown) => {
-        throw toDirectByteError({ error, options, url });
-      });
-    },
+      try {
+        const response = await fetch(url, { signal: controller.signal });
+
+        if (!response.ok) {
+          throw buildDirectHttpError({ response, url });
+        }
+
+        return new Uint8Array(await response.arrayBuffer());
+      } finally {
+        clearTimeout(timeout);
+        callerSignal.removeEventListener("abort", onCallerAbort);
+      }
+    };
+
+    return runWithRetry(
+      {
+        classify: classifyDirect,
+        read,
+        // `now` is supplied by `withRetry` at the moment the delay is
+        // resolved (WR-08-03), making the time dependency explicit instead of
+        // closing over a factory-fixed value.
+        retryAfterMs: directRetryAfter,
+        url,
+      },
+      options,
+    ).catch((error: unknown) => {
+      throw toDirectByteError({ error, options, url });
+    });
+  },
 });
 
 interface SshByteErrorInput {
@@ -431,44 +435,44 @@ const createSshReplayByteClient = (
   execFile: ExecFile,
 ): ReplayByteClient => ({
   async fetchBytes(url, options): Promise<Uint8Array> {
-      const host = getSshHost(config);
+    const host = getSshHost(config);
 
-      const read = async (callerSignal: AbortSignal): Promise<Uint8Array> => {
-        const controller = new AbortController();
-        const onCallerAbort = (): void => {
-          controller.abort();
-        };
-        callerSignal.addEventListener("abort", onCallerAbort);
-
-        try {
-          const encodedUrl = Buffer.from(url.toString(), "utf8").toString(
-            "base64",
-          );
-          const result = await execFile(
-            "ssh",
-            [
-              host,
-              "sh",
-              "-c",
-              `${config.sourceSshCommand} -- "$(printf %s "$1" | base64 -d)" | base64`,
-              "replays-fetcher-byte-source",
-              encodedUrl,
-            ],
-            { signal: controller.signal, timeout: config.sourceTimeoutMs },
-          );
-
-          return new Uint8Array(Buffer.from(result.stdout, "base64"));
-        } finally {
-          callerSignal.removeEventListener("abort", onCallerAbort);
-        }
+    const read = async (callerSignal: AbortSignal): Promise<Uint8Array> => {
+      const controller = new AbortController();
+      const onCallerAbort = (): void => {
+        controller.abort();
       };
+      callerSignal.addEventListener("abort", onCallerAbort);
 
-      return runWithRetry({ classify: classifySsh, read, url }, options).catch(
-        (error: unknown) => {
-          throw toSshByteError({ error, options, url });
-        },
-      );
-    },
+      try {
+        const encodedUrl = Buffer.from(url.toString(), "utf8").toString(
+          "base64",
+        );
+        const result = await execFile(
+          "ssh",
+          [
+            host,
+            "sh",
+            "-c",
+            `${config.sourceSshCommand} -- "$(printf %s "$1" | base64 -d)" | base64`,
+            "replays-fetcher-byte-source",
+            encodedUrl,
+          ],
+          { signal: controller.signal, timeout: config.sourceTimeoutMs },
+        );
+
+        return new Uint8Array(Buffer.from(result.stdout, "base64"));
+      } finally {
+        callerSignal.removeEventListener("abort", onCallerAbort);
+      }
+    };
+
+    return runWithRetry({ classify: classifySsh, read, url }, options).catch(
+      (error: unknown) => {
+        throw toSshByteError({ error, options, url });
+      },
+    );
+  },
 });
 
 export const createReplayByteClient = (

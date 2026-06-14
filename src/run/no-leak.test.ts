@@ -92,7 +92,7 @@ const createCaptureSink = (): CaptureSink => {
   return { chunks, stream };
 };
 
-const createClock = (values: readonly string[]): () => Date => {
+const createClock = (values: readonly string[]): (() => Date) => {
   let index = 0;
   const lastValueIndex = values.length - 1;
 

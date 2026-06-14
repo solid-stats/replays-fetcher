@@ -38,10 +38,7 @@ import {
 import { CheckpointConflictError } from "../errors/checkpoint-conflict-error.js";
 import { fullJitterDelay } from "../source/backoff.js";
 
-import {
-  mergeCheckpoints,
-  parseCheckpoint,
-} from "./checkpoint.js";
+import { mergeCheckpoints, parseCheckpoint } from "./checkpoint.js";
 
 import type { Checkpoint } from "./checkpoint.js";
 import { toCheckpointObjectKey } from "./object-key.js";
@@ -97,19 +94,17 @@ export interface S3CheckpointStore {
   write: (input: CheckpointWriteInput) => Promise<CheckpointWriteResult>;
 }
 
-const isNotFound = (error: unknown): boolean => (
+const isNotFound = (error: unknown): boolean =>
   error instanceof S3ServiceException &&
   (error.name === "NotFound" ||
-    error.$metadata.httpStatusCode === HTTP_NOT_FOUND)
-);
+    error.$metadata.httpStatusCode === HTTP_NOT_FOUND);
 
-const isPreconditionFailed = (error: unknown): boolean => (
+const isPreconditionFailed = (error: unknown): boolean =>
   error instanceof S3ServiceException &&
   (error.name === "PreconditionFailed" ||
     error.name === "ConditionalRequestConflict" ||
     error.$metadata.httpStatusCode === HTTP_PRECONDITION_FAILED ||
-    error.$metadata.httpStatusCode === HTTP_CONDITIONAL_REQUEST_CONFLICT)
-);
+    error.$metadata.httpStatusCode === HTTP_CONDITIONAL_REQUEST_CONFLICT);
 
 const etagResult = (
   checkpoint: Checkpoint | undefined,
@@ -243,8 +238,10 @@ export const createS3CheckpointStore = (
   const random = options.random ?? Math.random;
 
   return {
-    read: (slug): Promise<CheckpointReadResult> => readCheckpoint(options, slug),
-    write: (input): Promise<CheckpointWriteResult> => writeCheckpoint(options, random, input),
+    read: (slug): Promise<CheckpointReadResult> =>
+      readCheckpoint(options, slug),
+    write: (input): Promise<CheckpointWriteResult> =>
+      writeCheckpoint(options, random, input),
   };
 };
 

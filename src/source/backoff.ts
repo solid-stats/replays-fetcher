@@ -40,7 +40,7 @@ export const fullJitterDelay = (
   const capped = Math.min(exponential, cap);
 
   return Math.floor(random() * capped);
-}
+};
 
 export const parseRetryAfter = (
   value: string | undefined,
@@ -61,4 +61,4 @@ export const parseRetryAfter = (
   }
 
   return Math.max(0, dateMs - now());
-}
+};

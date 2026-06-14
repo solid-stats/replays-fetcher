@@ -63,4 +63,4 @@ export const createLogger = (options: CreateLoggerOptions = {}): Logger => {
   const destination = options.destination ?? process.stderr;
 
   return pino(loggerOptions, destination);
-}
+};

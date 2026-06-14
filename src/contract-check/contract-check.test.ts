@@ -6,9 +6,7 @@ import { toRawReplayUrl } from "../discovery/discover.js";
 import { extractReplayRows } from "../discovery/html.js";
 import { SourceFetchError } from "../discovery/source-client.js";
 
-import {
-  runContractCheck,
-} from "./contract-check.js";
+import { runContractCheck } from "./contract-check.js";
 
 import type { ContractCheckReason } from "./contract-check.js";
 

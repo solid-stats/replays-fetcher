@@ -62,7 +62,9 @@ export const makeCheckpoint = (
 export const putInput = (command: SentCommand): PutInput =>
   command.input as PutInput;
 
-export const bodyOf = (json: string): {
+export const bodyOf = (
+  json: string,
+): {
   transformToString: () => Promise<string>;
 } => ({ transformToString: (): Promise<string> => Promise.resolve(json) });
 
