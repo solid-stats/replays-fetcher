@@ -181,7 +181,7 @@ Plans:
 
 Plans:
 
-- [ ] 17-01-PLAN.md — BLD-01/02: swap tsc-emit→tsdown@0.22.2 (build script + bin + delete tsconfig.build.json), update Dockerfile + Docker smoke-run of `check`, verify green at 100% coverage
+- [x] 17-01-PLAN.md — BLD-01/02: swap tsc-emit→tsdown@0.22.2 (build script + bin + delete tsconfig.build.json), update Dockerfile + Docker smoke-run of `check`, verify green at 100% coverage
 
 ---
 
