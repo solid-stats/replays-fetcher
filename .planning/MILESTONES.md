@@ -1,5 +1,28 @@
 # Milestones
 
+## v3.0 Track C Toolchain Convergence (Shipped: 2026-06-14)
+
+**Phases completed:** 6 phases, 16 plans, 20 tasks
+
+**Key accomplishments:**
+
+- 1. [Rule 1 - Bug] Добавлены @types/node и vitest в devDependencies shared repo
+- Аннотированный тег `v0.1.0` срезан и запушен на зелёный master SHA `7563551087fad1415a0ddb969ef8ac477f957195` — CI gate CFG-02 подтверждён перед тегированием.
+- Fetcher подключён к shared `@solid-stats/ts-toolchain` через tag-пинованный pnpm git-dep; `tsconfig.json` extends shared base вместо дублирования strict-флагов; `pnpm verify` зелёный end-to-end с 100% coverage.
+- Удалён deprecated pnpm.onlyBuiltDependencies блок из package.json, подтверждены 0 TODO/FIXME, и 9 bare eslint-disable-next-line no-await-in-loop дополнены -- reason
+- Перенос cross-band контракта `RunSummary` (9 типов) из `src/run/types.ts` в `src/types/run-summary.ts`; barrel-реэкспорт сохраняет все существующие импортёры; fence #1 закрыт в evidence-адаптере.
+- 1. [Rule 1 - Bug] Prettier и import-x/order lint ошибки в новых файлах
+- замена `prettier` на `oxfmt@0.54.0` как форматтер репозитория — `.oxfmtrc.json` (байт-зеркало shared preset), скрипты `format`/`format:check` на oxfmt, `verify` переключён на `format:check`; реформат дал zero-diff (spike 002 confirmed in-place).
+- 1. [Rule 1 - Bug] `extends` в .oxlintrc.json заменён на inline ruleset
+- 1. [Rule 1 - Bug] noopCleanup используется до объявления в интеграционных тестах
+- `pnpm run lint` exits 0: cleared ~118 arrow-body-style, ~25 no-use-before-define, 9 id-length, 1 no-useless-assignment findings, and modernized all eslint-disable comments to oxlint-disable form across 62 source and test files.
+- 1. [Rule 1 - Bug] `--init` требует TTY — использован `--init oneshot`
+- knip 6.16.1 подключён консервативно (ignoreExportsUsedInFile + per-file ignore), verify-цепочка финализирована с depcruise+knip, полный gate sg docker -c "pnpm run verify" GREEN при 100% coverage (1797 stmt / 771 branch / 350 func / 1766 lines, 450 unit + 4 integration тестов)
+- tsc-emit заменён на tsdown@0.22.2 (single-file ESM bundle 136 kB); Docker smoke-run `rf:p17 check` прошёл (exit 2, JSON, без ERR_MODULE_NOT_FOUND); `pnpm run verify` зелёный при 100% coverage
+- 1. [Rule 1 - Bug] Preset's bare-binary hook commands fail under git's minimal PATH
+
+---
+
 ## v2.0 Full-Corpus Ingest Resilience (Shipped: 2026-06-12)
 
 **Phases completed:** 6 phases, 24 plans, 41 tasks
