@@ -34,8 +34,8 @@
 
 ### Build — tsdown (BLD)
 
-- [ ] **BLD-01**: The build uses tsdown (single-entry ESM bundle); `tsc` emit and `tsconfig.build.json` are removed; `tsc --noEmit` remains the typecheck step.
-- [ ] **BLD-02**: The Dockerfile builds via tsdown and the bundled CLI passes a Docker smoke-run of the `check` command.
+- [x] **BLD-01**: The build uses tsdown (single-entry ESM bundle); `tsc` emit and `tsconfig.build.json` are removed; `tsc --noEmit` remains the typecheck step.
+- [x] **BLD-02**: The Dockerfile builds via tsdown and the bundled CLI passes a Docker smoke-run of the `check` command.
 
 ### Import Hygiene (IMP)
 
@@ -95,8 +95,8 @@ Filled during roadmap creation.
 | LNT-04 | Phase 16 | Complete |
 | IMP-01 | Phase 16 | Complete |
 | IMP-02 | Phase 16 | Complete |
-| BLD-01 | Phase 17 | Pending |
-| BLD-02 | Phase 17 | Pending |
+| BLD-01 | Phase 17 | Complete |
+| BLD-02 | Phase 17 | Complete |
 | HOK-01 | Phase 18 | Pending |
 | HOK-02 | Phase 18 | Pending |
 | HOK-03 | Phase 18 | Pending |

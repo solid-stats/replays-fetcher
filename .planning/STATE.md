@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Track C Toolchain Convergence
-status: executing
+status: verifying
 stopped_at: Completed 11-01-PLAN.md
-last_updated: "2026-06-14T00:56:55.740Z"
+last_updated: "2026-06-14T01:03:04.074Z"
 last_activity: 2026-06-14 -- Phase 17 execution started
 progress:
   total_phases: 6
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 15
-  completed_plans: 14
-  percent: 67
+  completed_plans: 15
+  percent: 83
 ---
 
 # Project State
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 
 Phase: 17 (tsdown-build-docker-smoke) — EXECUTING
 Plan: 1 of 1
-Status: Executing Phase 17
+Status: Phase complete — ready for verification
 Last activity: 2026-06-14 -- Phase 17 execution started
 
 ## Verify Gate: GREEN ✅
@@ -129,6 +129,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: func-style: все top-level function-декларации переведены на const-arrow во всём src/
 - [Phase ?]: knip 6.16.1 conservative + verify chain finalized
 - [Phase ?]: verify chain: format:check→lint→typecheck→test→test:integration→test:coverage→depcruise→knip→build; lint:types вне verify (LNT-04 non-blocking)
+- [Phase ?]: tsdown CLI-флаги в npm script (без tsdown.config.ts) — один entry, один format, меньше файлов
+- [Phase ?]: Prod Docker stage сохраняет pnpm install --prod --frozen-lockfile — externalized deps резолвятся из node_modules в runtime
 
 ### Roadmap Evolution
 
@@ -226,9 +228,10 @@ Behavioral fixes from the live parity-baseline run (registry `plans/product/PARI
 | Phase 16-oxlint-migration-import-hygiene P02 | 180 | 2 tasks | 57 files |
 | Phase 16-oxlint-migration-import-hygiene P03 | 120min | 2 tasks | 62 files |
 | Phase 16 P06 | 35min | - tasks | - files |
+| Phase 17-tsdown-build-docker-smoke P17-01 | 3min | 3 tasks | 4 files |
 
 ## Session
 
-**Last session:** 2026-06-14T00:25:41.330Z
+**Last session:** 2026-06-14T01:02:48.296Z
 **Stopped at:** Completed 11-01-PLAN.md
 **Resume file:** .planning/phases/11-progress-events-and-compact-evidence/11-CONTEXT.md

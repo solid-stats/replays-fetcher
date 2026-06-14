@@ -71,10 +71,10 @@ Behavior-preserving toolchain migration. The `verify` gate must stay green at 10
     3. Type-aware oxlint (oxlint-tsgolint) re-validated on this repo and kept non-blocking in `verify`.
     4. dependency-cruiser (no-cycle/boundaries) + knip (unused/dep hygiene) wired into `verify`; a planted cycle is caught.
 
-- [ ] **Phase 17: tsdown Build & Docker Smoke** — BLD-01, BLD-02
+- [x] **Phase 17: tsdown Build & Docker Smoke** — BLD-01, BLD-02 (completed 2026-06-14)
   - Goal: Replace `tsc` emit with a tsdown single-entry ESM bundle and prove the built CLI runs in a clean Docker image.
   - Plans: 1 plan (wave 1)
-    - [ ] 17-01-PLAN.md — BLD-01/02: swap tsc-emit→tsdown@0.22.2 (build script + bin + delete tsconfig.build.json), update Dockerfile + Docker smoke-run of `check`, verify green at 100% coverage (Wave 1)
+    - [x] 17-01-PLAN.md — BLD-01/02: swap tsc-emit→tsdown@0.22.2 (build script + bin + delete tsconfig.build.json), update Dockerfile + Docker smoke-run of `check`, verify green at 100% coverage (Wave 1)
   - Success criteria:
     1. `pnpm build` runs tsdown (single-entry ESM, deps externalized); `tsc` emit + `tsconfig.build.json` removed; `tsc --noEmit` retained as the typecheck.
     2. The Dockerfile builds via tsdown; the bundled CLI passes a Docker smoke-run of `check`.
@@ -177,7 +177,7 @@ Plans:
   2. The Dockerfile builds via tsdown; the bundled CLI passes a Docker smoke-run of `check`.
   3. `pnpm verify` green.
 
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
 
@@ -214,7 +214,7 @@ Plans:
 | 14. Repository Cleanup & Convention Compliance | v3.0 | 4/4 | Complete   | 2026-06-13 |
 | 15. Oxfmt Formatter Migration | v3.0 | 1/1 | Complete   | 2026-06-13 |
 | 16. Oxlint Migration & Import Hygiene | v3.0 | 6/6 | Complete   | 2026-06-14 |
-| 17. tsdown Build & Docker Smoke | v3.0 | 0/? | Pending | — |
+| 17. tsdown Build & Docker Smoke | v3.0 | 1/1 | Complete   | 2026-06-14 |
 | 18. lefthook Hooks & CI Verify Convergence | v3.0 | 0/? | Pending | — |
 
 ---
