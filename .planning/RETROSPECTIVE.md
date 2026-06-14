@@ -86,6 +86,38 @@ A resilient full-corpus ingest run: typed `AppError` + redacting pino substrate 
 
 ---
 
+## Milestone: v3.0 — Track C Toolchain Convergence (pilot)
+
+**Shipped:** 2026-06-14
+**Phases:** 6 (13-18) | **Plans:** 16
+
+### What Was Built
+Migrated the fetcher off ESLint/Prettier/tsc onto the VoidZero stack (Oxlint + Oxfmt + tsdown + Vitest) plus lefthook, all sourced from a new shared `@solid-stats/ts-toolchain` git-dep preset. Stood up the shared repo with self-validating CI and tag-pinned consumption (`#v0.1.0`→`v0.1.1`→`v0.1.2`); cleaned the repo to convention compliance (incl. splitting the 822-line `cli.ts`); swapped formatter, linter (dropping `eslint-plugin-import` for dependency-cruiser + knip), and build (`dist/cli.mjs` ESM bundle + Docker smoke); wired lefthook hooks from the preset; finalized the new `verify` surface + CI at 100% coverage. Zero `src/` business-logic change across the whole milestone.
+
+### What Worked
+- Phase ordering isolated churn: format-only commit (P15) before the linter swap (P16) before the build swap (P17) kept every diff reviewable.
+- The "patch shared repo → CI green → tag → re-pin" loop (established P13/P16) made cross-repo preset fixes routine.
+- The milestone audit's integration check earned its keep — it caught a real CFG-04 gap (vitest preset un-consumable) that all six phase verifications missed because no phase actually `import`ed the vitest preset until the audit reasoned about it.
+
+### What Was Inefficient
+- The vitest preset shipped raw `.ts` from P13 and nobody consumed it until the v3.0 audit, so an un-importable preset sat latent for five phases. A "first consumer actually imports each preset" check at P13 would have caught it immediately.
+- Bundling `git commit && git push` in one bash call meant a pre-execution push-gate denial silently dropped the commit too; had to reconstruct. Separate commit from push when a push may be gated.
+- A `git reset --hard HEAD~1` on a throwaway clone, run against an unexpected HEAD, wiped uncommitted preset edits — only recoverable because untracked files survived. Verify HEAD before destructive resets.
+
+### Patterns Established
+- Shared-preset consumption forms: `extends` (tsconfig/oxlint/lefthook), byte-mirror (oxfmt — no `extends`), `mergeConfig` import (vitest — must ship `.js`+`.d.ts`, never raw `.ts`, because Node won't strip types under `node_modules`).
+- lefthook from a node_modules preset needs `allowBuilds: lefthook` (pnpm gate) + a `.lefthookrc` PATH shim for git's minimal hook PATH.
+
+### Key Lessons
+- A shared config preset is only proven once a real consumer imports every export — "it's in the repo + CI green" is not the same as "consumable."
+- Shared-infra master pushes are correctly gated to the user even under carte-blanche; keep the fix prepared + tested so authorization is a one-word unblock.
+
+### Cost Observations
+- Model mix: orchestrator on Opus; GSD subagents (researcher/planner/checker/executor/verifier/integration) on their configured tiers (integration-checker on Haiku).
+- Notable: the Haiku integration-checker flagged the CFG-04 gap as a "BLOCKER"; the right call was to verify its claim against the live files (it was real but mis-rooted) rather than accept or dismiss it wholesale.
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -94,6 +126,7 @@ A resilient full-corpus ingest run: typed `AppError` + redacting pino substrate 
 |-----------|----------|--------|------------|
 | v1.0 | multiple | 6 | Established GSD-driven TypeScript ingest service from planning through audited archival. |
 | v2.0 | multiple | 6 | Made the full-corpus run resilient (retry, checkpoint/resume, dynamic range + AIMD throttle, compact progress, contract guards); enforced full Docker `verify` at close. |
+| v3.0 | autonomous | 6 | Toolchain convergence onto a shared `@solid-stats/ts-toolchain` preset (Oxlint/Oxfmt/tsdown/Vitest/lefthook); behavior-preserving, zero `src/` change; audit caught a latent un-consumable preset. |
 
 ### Cumulative Quality
 
