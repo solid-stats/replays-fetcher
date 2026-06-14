@@ -1,5 +1,3 @@
-import { Pool } from "pg";
-
 import type { ConnectivityCheck } from "./connectivity.js";
 
 interface QueryResult<Row> {
@@ -40,17 +38,5 @@ export const checkPostgresConnectivity = async (
       message,
       status: "failed",
     };
-  }
-};
-
-export const checkPostgresConnectivityFromDatabaseUrl = async (
-  databaseUrl: string,
-): Promise<ConnectivityCheck> => {
-  const pool = new Pool({ connectionString: databaseUrl });
-
-  try {
-    return await checkPostgresConnectivity({ client: pool });
-  } finally {
-    await pool.end();
   }
 };

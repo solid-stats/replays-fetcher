@@ -130,9 +130,7 @@ export const registerRunOnceCommand = (
         concurrency: configResult.config.sourceConcurrency,
         discoverReplays: dependencies.discoverReplaysDryRun,
         emitEvidence: options.emitEvidence === true,
-        evidenceStore: dependencies.createS3EvidenceStoreFromConfig(
-          configResult.config.s3,
-        ),
+        evidenceStore: resources.evidenceStore,
         log,
         now: dependencies.now,
         onRetry: buildRetryWarnEmitter(log),

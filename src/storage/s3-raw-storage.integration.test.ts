@@ -1,16 +1,13 @@
-import {
-  CreateBucketCommand,
-  ListObjectsV2Command,
-  S3Client,
-} from "@aws-sdk/client-s3";
+import { CreateBucketCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
 import { MinioContainer } from "@testcontainers/minio";
 import { afterEach, expect, test } from "vitest";
 
 import { checkS3Connectivity } from "../check/s3-connectivity.js";
+import { createS3Client } from "../commands/clients.js";
 
 import { calculateSha256 } from "./checksum.js";
 import { toRawReplayObjectKey } from "./object-key.js";
-import { createS3RawReplayStorageFromConfig } from "./s3-raw-storage.js";
+import { createS3RawReplayStorage } from "./s3-raw-storage.js";
 
 import type { ReplayCandidate } from "../discovery/types.js";
 
@@ -53,18 +50,7 @@ test("S3 raw storage should store, skip, and pass read-only connectivity against
   };
   const endpoint = `http://${container.getHost()}:${String(container.getPort())}`;
 
-  const s3Client = new S3Client({
-    credentials: {
-      accessKeyId: "solid",
-      secretAccessKey: "solidsecret",
-    },
-    endpoint,
-    forcePathStyle: true,
-    region: "us-east-1",
-  });
-  await s3Client.send(new CreateBucketCommand({ Bucket: bucket }));
-
-  const storage = createS3RawReplayStorageFromConfig({
+  const s3Client = createS3Client({
     accessKeyId: "solid",
     bucket,
     checkpointPrefix: "checkpoints",
@@ -75,6 +61,9 @@ test("S3 raw storage should store, skip, and pass read-only connectivity against
     region: "us-east-1",
     secretAccessKey: "solidsecret",
   });
+  await s3Client.send(new CreateBucketCommand({ Bucket: bucket }));
+
+  const storage = createS3RawReplayStorage({ bucket, sender: s3Client });
 
   const first = await storage.storeRawReplay({
     bytes,

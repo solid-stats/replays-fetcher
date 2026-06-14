@@ -28,11 +28,9 @@ export const buildCli = (dependencies: BuildCliDependencies = {}): Command => {
 
 const [, entrypointPath] = process.argv;
 
-/* v8 ignore next -- exercised by the installed binary, not unit tests. */
 if (
   entrypointPath !== undefined &&
   import.meta.url === `file://${entrypointPath}`
 ) {
-  /* v8 ignore next -- exercised by the installed binary, not unit tests. */
   await buildCli().parseAsync(process.argv);
 }

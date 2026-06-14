@@ -4,9 +4,27 @@ import { ConfigValidationError } from "../errors/config-validation-error.js";
 
 import { writeJson } from "./shared.js";
 
+import type { ConnectivityCheck } from "../check/connectivity.js";
 import type { BuildCliDependencies } from "./shared.js";
 
 import type { Command } from "commander";
+import type { Pool } from "pg";
+
+/**
+ * Runs the read-only staging probe against the injected, composition-root pool
+ * and always releases it ([std: correctness §AB] resource lifecycle) — the
+ * pool was built once for this command rather than per-adapter.
+ */
+const runStagingCheck = async (
+  dependencies: Required<BuildCliDependencies>,
+  pool: Pool,
+): Promise<ConnectivityCheck> => {
+  try {
+    return await dependencies.checkPostgresConnectivity({ client: pool });
+  } finally {
+    await pool.end();
+  }
+};
 
 export const registerCheckCommand = (
   program: Command,
@@ -19,20 +37,20 @@ export const registerCheckCommand = (
       try {
         const config = dependencies.loadConfig();
         const sourceClient = dependencies.createSourceClient(config);
-        const s3ConnectivitySender =
-          dependencies.createS3ConnectivitySenderFromConfig(config.s3);
+        // One S3 client + one pg pool per command, built once at the
+        // composition root and injected into the read-only probes
+        // ([std: correctness] External adapters one-client rule).
+        const s3Client = dependencies.createS3Client(config.s3);
+        const pool = dependencies.createPgPool(config.staging.databaseUrl);
         const sourceConnectivity = await dependencies.checkSourceConnectivity({
           sourceClient,
           sourceUrl: new URL(config.sourceUrl),
         });
         const s3Connectivity = await dependencies.checkS3Connectivity({
           bucket: config.s3.bucket,
-          sender: s3ConnectivitySender,
+          sender: s3Client,
         });
-        const stagingConnectivity =
-          await dependencies.checkPostgresConnectivityFromDatabaseUrl(
-            config.staging.databaseUrl,
-          );
+        const stagingConnectivity = await runStagingCheck(dependencies, pool);
         const checks = {
           s3Connectivity,
           sourceConnectivity,

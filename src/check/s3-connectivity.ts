@@ -1,7 +1,6 @@
-import { HeadBucketCommand, S3Client } from "@aws-sdk/client-s3";
+import { HeadBucketCommand } from "@aws-sdk/client-s3";
 
 import type { ConnectivityCheck } from "./connectivity.js";
-import type { AppConfig } from "../config.js";
 
 export interface S3ConnectivitySender {
   send: (command: HeadBucketCommand) => Promise<unknown>;
@@ -37,16 +36,3 @@ export const checkS3Connectivity = async (
     };
   }
 };
-
-export const createS3ConnectivitySenderFromConfig = (
-  config: AppConfig["s3"],
-): S3ConnectivitySender =>
-  new S3Client({
-    credentials: {
-      accessKeyId: config.accessKeyId,
-      secretAccessKey: config.secretAccessKey,
-    },
-    endpoint: config.endpoint,
-    forcePathStyle: config.forcePathStyle,
-    region: config.region,
-  });

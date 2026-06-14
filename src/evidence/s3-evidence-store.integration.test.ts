@@ -2,14 +2,15 @@ import {
   CreateBucketCommand,
   GetObjectCommand,
   ListObjectsV2Command,
-  S3Client,
 } from "@aws-sdk/client-s3";
 import { MinioContainer } from "@testcontainers/minio";
 import { afterEach, expect, test } from "vitest";
 
+import { createS3Client } from "../commands/clients.js";
+
 import { toEvidenceObjectKey } from "./object-key.js";
 import { evidenceRunId, makeRunSummary } from "./s3-evidence-store.fixtures.js";
-import { createS3EvidenceStoreFromConfig } from "./s3-evidence-store.js";
+import { createS3EvidenceStore } from "./s3-evidence-store.js";
 
 import type { RunSummary } from "../run/types.js";
 
@@ -38,18 +39,7 @@ test("S3 evidence store writes the full RunSummary as a single write-once object
   };
   const endpoint = `http://${container.getHost()}:${String(container.getPort())}`;
 
-  const s3Client = new S3Client({
-    credentials: {
-      accessKeyId: "solid",
-      secretAccessKey: "solidsecret",
-    },
-    endpoint,
-    forcePathStyle: true,
-    region: "us-east-1",
-  });
-  await s3Client.send(new CreateBucketCommand({ Bucket: bucket }));
-
-  const store = createS3EvidenceStoreFromConfig({
+  const s3Client = createS3Client({
     accessKeyId: "solid",
     bucket,
     checkpointPrefix: "checkpoints",
@@ -59,6 +49,13 @@ test("S3 evidence store writes the full RunSummary as a single write-once object
     forcePathStyle: true,
     region: "us-east-1",
     secretAccessKey: "solidsecret",
+  });
+  await s3Client.send(new CreateBucketCommand({ Bucket: bucket }));
+
+  const store = createS3EvidenceStore({
+    bucket,
+    prefix,
+    sender: s3Client,
   });
 
   const summary = makeRunSummary();

@@ -13,7 +13,6 @@ import {
 } from "./s3-evidence-store.fixtures.js";
 
 import type { SentCommand } from "./s3-evidence-store.fixtures.js";
-import { createS3EvidenceStoreFromConfig } from "./s3-evidence-store.js";
 
 const onlyCommand = (commands: SentCommand[]): SentCommand => {
   const [command] = commands;
@@ -68,22 +67,4 @@ test("write propagates a sender rejection (caller owns log-and-continue)", async
   await expect(
     store.write({ runId: evidenceRunId, summary: makeRunSummary() }),
   ).rejects.toThrow("network down");
-});
-
-test("createS3EvidenceStoreFromConfig builds a configured store", () => {
-  const store = createS3EvidenceStoreFromConfig({
-    accessKeyId: "access-key",
-    bucket: evidenceBucket,
-    checkpointPrefix: "checkpoints",
-    conditionalWrites: true,
-    endpoint: "https://s3.example.test",
-    evidencePrefix,
-    forcePathStyle: true,
-    region: "us-east-1",
-    secretAccessKey: "secret-key",
-  });
-
-  expect(store).toMatchObject({
-    write: expect.any(Function) as unknown,
-  });
 });

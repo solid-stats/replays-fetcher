@@ -9,8 +9,6 @@ import {
   bodyOf,
   capturingStore,
   casStore,
-  checkpointBucket,
-  checkpointPrefix,
   checkpointSourceUrl,
   failingPutStore,
   makeCheckpoint,
@@ -21,7 +19,6 @@ import {
 } from "./s3-checkpoint-store.fixtures.js";
 
 import type { PutInput, SentCommand } from "./s3-checkpoint-store.fixtures.js";
-import { createS3CheckpointStoreFromConfig } from "./s3-checkpoint-store.js";
 
 import type { Checkpoint } from "./checkpoint.js";
 
@@ -197,22 +194,4 @@ test("a non-precondition write error propagates without merge", async () => {
   await expect(
     store.write({ checkpoint: makeCheckpoint(), etag: '"e"', slug }),
   ).rejects.toBeInstanceOf(S3ServiceException);
-});
-
-test("createS3CheckpointStoreFromConfig builds a configured store", () => {
-  const store = createS3CheckpointStoreFromConfig({
-    accessKeyId: "access-key",
-    bucket: checkpointBucket,
-    checkpointPrefix,
-    conditionalWrites: true,
-    evidencePrefix: "runs",
-    endpoint: "https://s3.example.test",
-    forcePathStyle: true,
-    region: "us-east-1",
-    secretAccessKey: "secret-key",
-  });
-  expect(store).toMatchObject({
-    read: expect.any(Function) as unknown,
-    write: expect.any(Function) as unknown,
-  });
 });

@@ -2,8 +2,8 @@
  * S3 checkpoint store: read (stream → parse, degrade on corrupt) + conditional
  * write with a bounded compare-and-swap (CAS) loop (RESUME-01, RESUME-02).
  *
- * Mirrors the injectable `sender` seam + `FromConfig` factory of
- * `s3-raw-storage.ts`, widened to `GetObjectCommand`. A first write uses
+ * Mirrors the injectable `sender` seam of `s3-raw-storage.ts`, widened to
+ * `GetObjectCommand`. A first write uses
  * `IfNoneMatch: "*"` (create-if-absent); an update uses `IfMatch: <etag>`
  * (compare-and-swap). When a write loses the race, S3/MinIO returns
  * `412 PreconditionFailed` (or the sibling `409 ConditionalRequestConflict`):
@@ -31,7 +31,6 @@
 import {
   GetObjectCommand,
   PutObjectCommand,
-  S3Client,
   S3ServiceException,
 } from "@aws-sdk/client-s3";
 
@@ -42,8 +41,6 @@ import { mergeCheckpoints, parseCheckpoint } from "./checkpoint.js";
 
 import type { Checkpoint } from "./checkpoint.js";
 import { toCheckpointObjectKey } from "./object-key.js";
-
-import type { AppConfig } from "../config.js";
 
 const HTTP_NOT_FOUND = 404;
 const HTTP_PRECONDITION_FAILED = 412;
@@ -244,21 +241,3 @@ export const createS3CheckpointStore = (
       writeCheckpoint(options, random, input),
   };
 };
-
-export const createS3CheckpointStoreFromConfig = (
-  config: AppConfig["s3"],
-): S3CheckpointStore =>
-  createS3CheckpointStore({
-    bucket: config.bucket,
-    conditionalWrites: config.conditionalWrites,
-    prefix: config.checkpointPrefix,
-    sender: new S3Client({
-      credentials: {
-        accessKeyId: config.accessKeyId,
-        secretAccessKey: config.secretAccessKey,
-      },
-      endpoint: config.endpoint,
-      forcePathStyle: config.forcePathStyle,
-      region: config.region,
-    }),
-  });

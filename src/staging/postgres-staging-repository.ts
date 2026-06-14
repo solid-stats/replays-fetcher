@@ -1,5 +1,3 @@
-import { Pool } from "pg";
-
 import type {
   ExistingStagingEvidence,
   IngestStagingPayload,
@@ -201,12 +199,3 @@ export const createPostgresStagingRepository = (
     }
   },
 });
-
-export const createPostgresStagingRepositoryFromDatabaseUrl = (
-  databaseUrl: string,
-): PostgresStagingRepository =>
-  createPostgresStagingRepository(
-    new Pool({
-      connectionString: databaseUrl,
-    }),
-  );

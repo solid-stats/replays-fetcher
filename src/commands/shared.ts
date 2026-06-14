@@ -1,13 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { writeFile } from "node:fs/promises";
 
-import { checkPostgresConnectivityFromDatabaseUrl } from "../check/postgres-connectivity.js";
-import {
-  checkS3Connectivity,
-  createS3ConnectivitySenderFromConfig,
-} from "../check/s3-connectivity.js";
+import { checkPostgresConnectivity } from "../check/postgres-connectivity.js";
+import { checkS3Connectivity } from "../check/s3-connectivity.js";
 import { checkSourceConnectivity } from "../check/source-connectivity.js";
-import { createS3CheckpointStoreFromConfig } from "../checkpoint/s3-checkpoint-store.js";
+import { createS3CheckpointStore } from "../checkpoint/s3-checkpoint-store.js";
 import { loadConfig, loadSourceConfig } from "../config.js";
 
 import type { S3CheckpointStore } from "../checkpoint/s3-checkpoint-store.js";
@@ -16,22 +13,23 @@ import { runContractCheck } from "../contract-check/contract-check.js";
 import { discoverReplaysDryRun } from "../discovery/discover.js";
 import { createSourceClient } from "../discovery/source-client.js";
 import { ConfigValidationError } from "../errors/config-validation-error.js";
-import { createS3EvidenceStoreFromConfig } from "../evidence/s3-evidence-store.js";
+import { createS3EvidenceStore } from "../evidence/s3-evidence-store.js";
 import { createLogger } from "../logging/create-logger.js";
 
 import type { S3EvidenceStore } from "../evidence/s3-evidence-store.js";
 import type { CreateLoggerOptions } from "../logging/create-logger.js";
 import { runOnce } from "../run/run-once.js";
-import { createPostgresStagingRepositoryFromDatabaseUrl } from "../staging/postgres-staging-repository.js";
+import { createPostgresStagingRepository } from "../staging/postgres-staging-repository.js";
 import { stageRawReplay } from "../staging/stage-raw-replay.js";
 import { createReplayByteClient } from "../storage/replay-byte-client.js";
-import { createS3RawReplayStorageFromConfig } from "../storage/s3-raw-storage.js";
+import { createS3RawReplayStorage } from "../storage/s3-raw-storage.js";
 
-import type { PostgresStagingRepository } from "../staging/postgres-staging-repository.js";
 import type { StagingRepository } from "../staging/stage-raw-replay.js";
 import type { ReplayByteClient } from "../storage/replay-byte-client.js";
 import type { S3RawReplayStorage } from "../storage/s3-raw-storage.js";
 import { storeRawReplay } from "../storage/store-raw-replay.js";
+
+import { createPgPool, createS3Client } from "./clients.js";
 
 import type { SourceClient } from "../discovery/types.js";
 import type { RetryAttemptEvent } from "../source/retry.js";
@@ -58,25 +56,18 @@ export type AppConfigResult =
     };
 
 export interface BuildCliDependencies {
-  readonly checkPostgresConnectivityFromDatabaseUrl?: typeof checkPostgresConnectivityFromDatabaseUrl;
+  readonly checkPostgresConnectivity?: typeof checkPostgresConnectivity;
   readonly checkS3Connectivity?: typeof checkS3Connectivity;
   readonly checkSourceConnectivity?: typeof checkSourceConnectivity;
   readonly createLogger?: (options?: CreateLoggerOptions) => Logger;
+  readonly createPgPool?: typeof createPgPool;
   readonly createRunId?: (now: Date) => string;
-  readonly createS3CheckpointStoreFromConfig?: (
-    config: AppConfig["s3"],
-  ) => S3CheckpointStore;
-  readonly createS3ConnectivitySenderFromConfig?: typeof createS3ConnectivitySenderFromConfig;
-  readonly createS3EvidenceStoreFromConfig?: (
-    config: AppConfig["s3"],
-  ) => S3EvidenceStore;
+  readonly createS3CheckpointStore?: typeof createS3CheckpointStore;
+  readonly createS3Client?: typeof createS3Client;
+  readonly createS3EvidenceStore?: typeof createS3EvidenceStore;
   readonly createReplayByteClient?: (config: SourceConfig) => ReplayByteClient;
-  readonly createS3RawReplayStorageFromConfig?: (
-    config: AppConfig["s3"],
-  ) => S3RawReplayStorage;
-  readonly createPostgresStagingRepositoryFromDatabaseUrl?: (
-    databaseUrl: string,
-  ) => PostgresStagingRepository;
+  readonly createS3RawReplayStorage?: typeof createS3RawReplayStorage;
+  readonly createPostgresStagingRepository?: typeof createPostgresStagingRepository;
   readonly createSourceClient?: (config: SourceConfig) => SourceClient;
   readonly discoverReplaysDryRun?: typeof discoverReplaysDryRun;
   readonly runContractCheck?: typeof runContractCheck;
@@ -92,6 +83,7 @@ export interface BuildCliDependencies {
 export interface StoreRawResources {
   readonly byteClient: ReplayByteClient;
   readonly checkpointStore: S3CheckpointStore;
+  readonly evidenceStore: S3EvidenceStore;
   readonly sourceClient: SourceClient;
   readonly stagingRepository: StagingRepository | undefined;
   readonly storage: S3RawReplayStorage;
@@ -164,7 +156,7 @@ export const loadStoreRawConfig = (
 const createStagingRepository = (
   dependencies: Pick<
     Required<BuildCliDependencies>,
-    "createPostgresStagingRepositoryFromDatabaseUrl"
+    "createPgPool" | "createPostgresStagingRepository"
   >,
   config: AppConfig,
   shouldStage: boolean,
@@ -173,8 +165,8 @@ const createStagingRepository = (
     return undefined;
   }
 
-  return dependencies.createPostgresStagingRepositoryFromDatabaseUrl(
-    config.staging.databaseUrl,
+  return dependencies.createPostgresStagingRepository(
+    dependencies.createPgPool(config.staging.databaseUrl),
   );
 };
 
@@ -182,28 +174,52 @@ export const createStoreRawResources = (
   dependencies: Required<BuildCliDependencies>,
   config: AppConfig,
   shouldStage: boolean,
-): StoreRawResources => ({
-  byteClient: dependencies.createReplayByteClient(config),
-  checkpointStore: dependencies.createS3CheckpointStoreFromConfig(config.s3),
-  sourceClient: dependencies.createSourceClient(config),
-  stagingRepository: createStagingRepository(dependencies, config, shouldStage),
-  storage: dependencies.createS3RawReplayStorageFromConfig(config.s3),
-});
+): StoreRawResources => {
+  // One S3 client per command, built once at the composition root and injected
+  // into every store ([std: correctness] External adapters one-client rule).
+  const s3Client = dependencies.createS3Client(config.s3);
+
+  return {
+    byteClient: dependencies.createReplayByteClient(config),
+    checkpointStore: dependencies.createS3CheckpointStore({
+      bucket: config.s3.bucket,
+      conditionalWrites: config.s3.conditionalWrites,
+      prefix: config.s3.checkpointPrefix,
+      sender: s3Client,
+    }),
+    evidenceStore: dependencies.createS3EvidenceStore({
+      bucket: config.s3.bucket,
+      prefix: config.s3.evidencePrefix,
+      sender: s3Client,
+    }),
+    sourceClient: dependencies.createSourceClient(config),
+    stagingRepository: createStagingRepository(
+      dependencies,
+      config,
+      shouldStage,
+    ),
+    storage: dependencies.createS3RawReplayStorage({
+      bucket: config.s3.bucket,
+      sender: s3Client,
+    }),
+  };
+};
 
 export const resolveDependencies = (
   dependencies: BuildCliDependencies,
 ): Required<BuildCliDependencies> => ({
-  checkPostgresConnectivityFromDatabaseUrl,
+  checkPostgresConnectivity,
   checkS3Connectivity,
   checkSourceConnectivity,
   createLogger,
+  createPgPool,
   createRunId,
   createReplayByteClient,
-  createS3CheckpointStoreFromConfig,
-  createS3ConnectivitySenderFromConfig,
-  createS3EvidenceStoreFromConfig,
-  createPostgresStagingRepositoryFromDatabaseUrl,
-  createS3RawReplayStorageFromConfig,
+  createS3CheckpointStore,
+  createS3Client,
+  createS3EvidenceStore,
+  createPostgresStagingRepository,
+  createS3RawReplayStorage,
   createSourceClient,
   discoverReplaysDryRun,
   loadConfig,

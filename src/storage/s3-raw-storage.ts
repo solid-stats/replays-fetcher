@@ -1,7 +1,6 @@
 import {
   HeadObjectCommand,
   PutObjectCommand,
-  S3Client,
   S3ServiceException,
 } from "@aws-sdk/client-s3";
 
@@ -9,7 +8,6 @@ import type {
   RawReplayStorageEvidence,
   RawReplayStorageInput,
 } from "./types.js";
-import type { AppConfig } from "../config.js";
 import type { ReplayCandidate } from "../discovery/types.js";
 
 interface S3Sender {
@@ -140,19 +138,3 @@ export const createS3RawReplayStorage = (
     }
   },
 });
-
-export const createS3RawReplayStorageFromConfig = (
-  config: AppConfig["s3"],
-): S3RawReplayStorage =>
-  createS3RawReplayStorage({
-    bucket: config.bucket,
-    sender: new S3Client({
-      credentials: {
-        accessKeyId: config.accessKeyId,
-        secretAccessKey: config.secretAccessKey,
-      },
-      endpoint: config.endpoint,
-      forcePathStyle: config.forcePathStyle,
-      region: config.region,
-    }),
-  });
