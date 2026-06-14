@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 Phase: Milestone v3.0 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-06-15 — Completed quick task 260615-shcl: shared S3/pg clients at the composition root + config deltas
+Last activity: 2026-06-15 — Completed quick task 260615-stry: errors-only Sentry in the CronJob entrypoint (rebased onto 260615-shcl: shared S3/pg clients at the composition root + config deltas)
 
 ## Cross-repo preset follow-ups — both RESOLVED 2026-06-14
 
@@ -183,6 +183,7 @@ None.
 | 2026-05-10 | clean-phase-02-validation-metadata | complete |
 | 2026-05-10 | fix-milestone-close-audit-false-positive | complete |
 | 2026-06-15 | shared-clients-config-deltas | complete |
+| 2026-06-15 | sentry-errors-only | complete |
 
 ### Parity-baseline fixes (F1/F2) — folded into Track C (2026-06-13)
 
