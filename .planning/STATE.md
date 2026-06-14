@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Track C Toolchain Convergence
-status: executing
+status: verifying
 stopped_at: Completed 11-01-PLAN.md
-last_updated: "2026-06-14T00:12:39.652Z"
+last_updated: "2026-06-14T00:26:33.045Z"
 last_activity: 2026-06-13 -- Phase 16 execution started
 progress:
   total_phases: 6
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 14
-  completed_plans: 13
-  percent: 50
+  completed_plans: 14
+  percent: 67
 ---
 
 # Project State
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 
 Phase: 16 (oxlint-migration-import-hygiene) — EXECUTING
 Plan: 6 of 6
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-06-13 -- Phase 16 execution started
 
 ## Verify Gate: GREEN ✅
@@ -127,6 +127,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: CLN-04c: RunSummary (9 типов) перенесён в src/types/run-summary.ts; run/types.ts — barrel; fence #1 закрыт в evidence-адаптере
 - [Phase 15]: oxfmt@0.54.0 pinned без ^ (FMT-01 supply-chain); package.json в .prettierignore (oxfmt 0.54 false-positive workaround); format/format:check разделены (write vs check gate)
 - [Phase ?]: func-style: все top-level function-декларации переведены на const-arrow во всём src/
+- [Phase ?]: knip 6.16.1 conservative + verify chain finalized
+- [Phase ?]: verify chain: format:check→lint→typecheck→test→test:integration→test:coverage→depcruise→knip→build; lint:types вне verify (LNT-04 non-blocking)
 
 ### Roadmap Evolution
 
@@ -223,9 +225,10 @@ Behavioral fixes from the live parity-baseline run (registry `plans/product/PARI
 | Phase 15 P01 | 10min | 3 tasks | 4 files |
 | Phase 16-oxlint-migration-import-hygiene P02 | 180 | 2 tasks | 57 files |
 | Phase 16-oxlint-migration-import-hygiene P03 | 120min | 2 tasks | 62 files |
+| Phase 16 P06 | 35min | - tasks | - files |
 
 ## Session
 
-**Last session:** 2026-06-14T00:12:39.649Z
+**Last session:** 2026-06-14T00:25:41.330Z
 **Stopped at:** Completed 11-01-PLAN.md
 **Resume file:** .planning/phases/11-progress-events-and-compact-evidence/11-CONTEXT.md

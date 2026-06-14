@@ -63,7 +63,7 @@ Behavior-preserving toolchain migration. The `verify` gate must stay green at 10
     2. The repo-wide reformat is a single, verifiably format-only commit.
     3. `pnpm verify` green.
 
-- [ ] **Phase 16: Oxlint Migration & Import Hygiene** — LNT-01, LNT-02, LNT-03, LNT-04, IMP-01, IMP-02
+- [x] **Phase 16: Oxlint Migration & Import Hygiene** — LNT-01, LNT-02, LNT-03, LNT-04, IMP-01, IMP-02 (completed 2026-06-14)
   - Goal: Replace ESLint with Oxlint (ported rule options), drop `eslint-plugin-import` entirely, and wire dependency-cruiser + knip to cover the dropped gap — all in one coupled swap.
   - Success criteria:
     1. ESLint + plugins removed; `pnpm lint` runs oxlint green; `.oxlintrc.json` extends the shared preset (options ported, no `js.configs.all`, `unicorn/no-null` + `no-await-in-loop` off).
@@ -153,14 +153,14 @@ Plans:
   3. Type-aware oxlint (oxlint-tsgolint) re-validated on this repo and kept non-blocking in `verify`.
   4. dependency-cruiser (no-cycle/boundaries) + knip (unused/dep hygiene) wired into `verify`; a planted cycle is caught.
 
-**Plans:** 5/6 plans executed
+**Plans:** 6/6 plans complete
 
 - [x] 16-01-PLAN.md — oxlint swap: install oxlint@1.69.0, `.oxlintrc.json` (extends preset + ported options), lint/lint:types scripts, delete eslint.config.js
 - [x] 16-02-PLAN.md — code-fix #1: func-style (`function`→`const`) across src/ (the bulk), 450 tests unchanged
 - [x] 16-03-PLAN.md — code-fix #2: method-signature/member-accessibility/type-specifier/custom-error/id-length + disable-comment modernization → `pnpm lint` green
 - [x] 16-04-PLAN.md — RULE-DELTA.md (32 dropped rules + dispositions) + lint:types re-validation (non-blocking)
 - [x] 16-05-PLAN.md — dependency-cruiser (`--init`, no-cycle + boundary warn) + planted-cycle proof
-- [ ] 16-06-PLAN.md — knip (conservative) + final verify chain + full `sg docker` gate at 100% coverage
+- [x] 16-06-PLAN.md — knip (conservative) + final verify chain + full `sg docker` gate at 100% coverage
 
 ---
 
@@ -205,7 +205,7 @@ Plans:
 | 13. Shared @solid-stats/ts-toolchain Bootstrap | v3.0 | 3/3 | Complete   | 2026-06-13 |
 | 14. Repository Cleanup & Convention Compliance | v3.0 | 4/4 | Complete   | 2026-06-13 |
 | 15. Oxfmt Formatter Migration | v3.0 | 1/1 | Complete   | 2026-06-13 |
-| 16. Oxlint Migration & Import Hygiene | v3.0 | 5/6 | In Progress|  |
+| 16. Oxlint Migration & Import Hygiene | v3.0 | 6/6 | Complete   | 2026-06-14 |
 | 17. tsdown Build & Docker Smoke | v3.0 | 0/? | Pending | — |
 | 18. lefthook Hooks & CI Verify Convergence | v3.0 | 0/? | Pending | — |
 
