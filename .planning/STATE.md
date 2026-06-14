@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Track C Toolchain Convergence
-status: verifying
-stopped_at: Completed 18-01-PLAN.md
-last_updated: "2026-06-14T01:56:14.006Z"
-last_activity: 2026-06-14 -- Phase 17 execution started
+status: milestone_audit
+stopped_at: Phase 18 verified (18-VERIFICATION.md PASS 8/8)
+last_updated: "2026-06-14T08:40:00.000Z"
+last_activity: 2026-06-14 -- Phase 18 verified PASS; v3.0 all phases done, entering milestone lifecycle
 progress:
   total_phases: 6
   completed_phases: 6
@@ -21,14 +21,18 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-07)
 
 **Core value:** Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
-**Current focus:** Phase 17 — tsdown-build-docker-smoke
+**Current focus:** v3.0 Track C milestone lifecycle (audit → complete → cleanup) — all 6 phases (13-18) verified
 
 ## Current Position
 
-Phase: 17 (tsdown-build-docker-smoke) — EXECUTING
+Phase: 18 (lefthook-hooks-ci-verify-convergence) — VERIFIED PASS (8/8)
 Plan: 1 of 1
-Status: Phase complete — ready for verification
-Last activity: 2026-06-14 -- Phase 17 execution started
+Status: All v3.0 phases complete + verified; entering milestone audit
+Last activity: 2026-06-14 -- Phase 18 verified PASS
+
+## Deferred follow-up (cross-repo, non-blocking)
+
+- **ts-toolchain preset `oxfmt --check` papercut:** the shared `lefthook.yml` pre-commit `format` command (`oxfmt --check {staged_files}`) exits 2 when the staged set contains no oxfmt-formattable files (e.g. docs/config-only commits — oxfmt ignores `package.json`/lockfiles), false-blocking those commits. The `oxfmt --check --no-error-on-unmatched-pattern {staged_files}` fix was confirmed working (exit 0). Lives in the pinned `@solid-stats/ts-toolchain` preset (out of fetcher file scope). Fix pattern: patch preset → CI green → tag `v0.1.2` → re-pin fetcher + regen lockfile. Verified non-goal-blocking for Phase 18 (hook is correct for real `.ts` commits; assessed by both executor + verifier). Surfaced here for the next ts-toolchain touch / server-2 + web adoption.
 
 ## Verify Gate: GREEN ✅
 
