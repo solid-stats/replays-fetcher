@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Track C Toolchain Convergence
 status: verifying
-stopped_at: Completed 11-01-PLAN.md
-last_updated: "2026-06-14T01:55:51.984Z"
+stopped_at: Completed 18-01-PLAN.md
+last_updated: "2026-06-14T01:56:14.006Z"
 last_activity: 2026-06-14 -- Phase 17 execution started
 progress:
   total_phases: 6
@@ -131,6 +131,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: verify chain: format:check→lint→typecheck→test→test:integration→test:coverage→depcruise→knip→build; lint:types вне verify (LNT-04 non-blocking)
 - [Phase ?]: tsdown CLI-флаги в npm script (без tsdown.config.ts) — один entry, один format, меньше файлов
 - [Phase ?]: Prod Docker stage сохраняет pnpm install --prod --frozen-lockfile — externalized deps резолвятся из node_modules в runtime
+- [Phase ?]: Phase 18: lefthook 2.1.9 exact-pinned via shared preset extends; SUS seam flag cleared as false positive (approve-and-proceed)
+- [Phase ?]: Phase 18: .lefthookrc PATH shim so preset oxfmt/oxlint resolve under git minimal hook PATH (Rule 1 fix)
 
 ### Roadmap Evolution
 
@@ -233,6 +235,6 @@ Behavioral fixes from the live parity-baseline run (registry `plans/product/PARI
 
 ## Session
 
-**Last session:** 2026-06-14T01:55:51.981Z
-**Stopped at:** Completed 11-01-PLAN.md
-**Resume file:** .planning/phases/11-progress-events-and-compact-evidence/11-CONTEXT.md
+**Last session:** 2026-06-14T01:56:14.003Z
+**Stopped at:** Completed 18-01-PLAN.md
+**Resume file:** None
