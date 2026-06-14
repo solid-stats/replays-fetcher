@@ -73,6 +73,8 @@ Behavior-preserving toolchain migration. The `verify` gate must stay green at 10
 
 - [ ] **Phase 17: tsdown Build & Docker Smoke** — BLD-01, BLD-02
   - Goal: Replace `tsc` emit with a tsdown single-entry ESM bundle and prove the built CLI runs in a clean Docker image.
+  - Plans: 1 plan (wave 1)
+    - [ ] 17-01-PLAN.md — BLD-01/02: swap tsc-emit→tsdown@0.22.2 (build script + bin + delete tsconfig.build.json), update Dockerfile + Docker smoke-run of `check`, verify green at 100% coverage (Wave 1)
   - Success criteria:
     1. `pnpm build` runs tsdown (single-entry ESM, deps externalized); `tsc` emit + `tsconfig.build.json` removed; `tsc --noEmit` retained as the typecheck.
     2. The Dockerfile builds via tsdown; the bundled CLI passes a Docker smoke-run of `check`.
@@ -174,6 +176,12 @@ Plans:
   1. `pnpm build` runs tsdown (single-entry ESM, deps externalized); `tsc` emit + `tsconfig.build.json` removed; `tsc --noEmit` retained as the typecheck.
   2. The Dockerfile builds via tsdown; the bundled CLI passes a Docker smoke-run of `check`.
   3. `pnpm verify` green.
+
+**Plans:** 1 plan
+
+Plans:
+
+- [ ] 17-01-PLAN.md — BLD-01/02: swap tsc-emit→tsdown@0.22.2 (build script + bin + delete tsconfig.build.json), update Dockerfile + Docker smoke-run of `check`, verify green at 100% coverage
 
 ---
 
