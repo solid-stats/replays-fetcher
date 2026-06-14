@@ -39,8 +39,8 @@
 
 ### Import Hygiene (IMP)
 
-- [ ] **IMP-01**: dependency-cruiser enforces no-cycle and ingest-boundary import rules inside `verify`.
-- [ ] **IMP-02**: knip enforces unused-module and dependency hygiene inside `verify`.
+- [x] **IMP-01**: dependency-cruiser enforces no-cycle and ingest-boundary import rules inside `verify`.
+- [x] **IMP-02**: knip enforces unused-module and dependency hygiene inside `verify`.
 
 ### Git Hooks (HOK)
 
@@ -93,8 +93,8 @@ Filled during roadmap creation.
 | LNT-02 | Phase 16 | Complete |
 | LNT-03 | Phase 16 | Complete |
 | LNT-04 | Phase 16 | Complete |
-| IMP-01 | Phase 16 | Pending |
-| IMP-02 | Phase 16 | Pending |
+| IMP-01 | Phase 16 | Complete |
+| IMP-02 | Phase 16 | Complete |
 | BLD-01 | Phase 17 | Pending |
 | BLD-02 | Phase 17 | Pending |
 | HOK-01 | Phase 18 | Pending |
