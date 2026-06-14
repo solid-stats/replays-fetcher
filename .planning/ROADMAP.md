@@ -80,7 +80,7 @@ Behavior-preserving toolchain migration. The `verify` gate must stay green at 10
     2. The Dockerfile builds via tsdown; the bundled CLI passes a Docker smoke-run of `check`.
     3. `pnpm verify` green.
 
-- [ ] **Phase 18: lefthook Hooks & CI Verify Convergence** — HOK-01, HOK-02, HOK-03, VRF-01, VRF-02, VRF-03
+- [x] **Phase 18: lefthook Hooks & CI Verify Convergence** — HOK-01, HOK-02, HOK-03, VRF-01, VRF-02, VRF-03 (completed 2026-06-14)
   - Goal: Wire client-side lefthook hooks from the shared preset and finalize the full new `verify` pipeline + CI on the new command surface at 100% coverage.
   - Success criteria:
     1. lefthook pre-commit (Oxfmt + Oxlint staged) + pre-push (`tsc` + Vitest) installed from `@solid-stats/ts-toolchain`, mirroring CI, bypassable with `--no-verify`.
@@ -197,10 +197,11 @@ Plans:
   3. V8 coverage stays 100% reachable source; the measured file set is not reduced.
   4. CI is rewritten onto the new command surface.
 
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 18-01-PLAN.md — Install lefthook from the shared preset (devDep + allowBuilds + extends + prepare + lockfile, prove wire/fire/bypass), reorder verify to canonical order, add CI lefthook-validate, prove full verify green at 100% coverage
+
+- [x] 18-01-PLAN.md — Install lefthook from the shared preset (devDep + allowBuilds + extends + prepare + lockfile, prove wire/fire/bypass), reorder verify to canonical order, add CI lefthook-validate, prove full verify green at 100% coverage
 
 ---
 
@@ -220,7 +221,7 @@ Plans:
 | 15. Oxfmt Formatter Migration | v3.0 | 1/1 | Complete   | 2026-06-13 |
 | 16. Oxlint Migration & Import Hygiene | v3.0 | 6/6 | Complete   | 2026-06-14 |
 | 17. tsdown Build & Docker Smoke | v3.0 | 1/1 | Complete   | 2026-06-14 |
-| 18. lefthook Hooks & CI Verify Convergence | v3.0 | 0/1 | Pending | — |
+| 18. lefthook Hooks & CI Verify Convergence | v3.0 | 1/1 | Complete   | 2026-06-14 |
 
 ---
 

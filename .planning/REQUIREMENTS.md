@@ -44,15 +44,15 @@
 
 ### Git Hooks (HOK)
 
-- [ ] **HOK-01**: lefthook pre-commit runs Oxfmt + Oxlint on staged files.
-- [ ] **HOK-02**: lefthook pre-push runs `tsc` typecheck + Vitest.
-- [ ] **HOK-03**: Hook config is sourced from `@solid-stats/ts-toolchain`, mirrors (does not replace) the CI `verify` gate, and is bypassable with `--no-verify`.
+- [x] **HOK-01**: lefthook pre-commit runs Oxfmt + Oxlint on staged files.
+- [x] **HOK-02**: lefthook pre-push runs `tsc` typecheck + Vitest.
+- [x] **HOK-03**: Hook config is sourced from `@solid-stats/ts-toolchain`, mirrors (does not replace) the CI `verify` gate, and is bypassable with `--no-verify`.
 
 ### Pipeline & Coverage (VRF)
 
-- [ ] **VRF-01**: `pnpm verify` runs the new command surface (oxfmt → oxlint → tsc → unit → integration → coverage → tsdown → depcruise → knip) green from a clean checkout.
-- [ ] **VRF-02**: V8 coverage stays at 100% reachable source; the measured file set is not silently reduced by the toolchain change.
-- [ ] **VRF-03**: CI is rewritten onto the new command surface.
+- [x] **VRF-01**: `pnpm verify` runs the new command surface (oxfmt → oxlint → tsc → unit → integration → coverage → tsdown → depcruise → knip) green from a clean checkout.
+- [x] **VRF-02**: V8 coverage stays at 100% reachable source; the measured file set is not silently reduced by the toolchain change.
+- [x] **VRF-03**: CI is rewritten onto the new command surface.
 
 ## Future Requirements (deferred)
 
@@ -97,12 +97,12 @@ Filled during roadmap creation.
 | IMP-02 | Phase 16 | Complete |
 | BLD-01 | Phase 17 | Complete |
 | BLD-02 | Phase 17 | Complete |
-| HOK-01 | Phase 18 | Pending |
-| HOK-02 | Phase 18 | Pending |
-| HOK-03 | Phase 18 | Pending |
-| VRF-01 | Phase 18 | Pending |
-| VRF-02 | Phase 18 | Pending |
-| VRF-03 | Phase 18 | Pending |
+| HOK-01 | Phase 18 | Complete |
+| HOK-02 | Phase 18 | Complete |
+| HOK-03 | Phase 18 | Complete |
+| VRF-01 | Phase 18 | Complete |
+| VRF-02 | Phase 18 | Complete |
+| VRF-03 | Phase 18 | Complete |
 
 **Coverage:**
 
