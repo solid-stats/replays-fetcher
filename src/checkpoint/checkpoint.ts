@@ -73,10 +73,6 @@ export const checkpointSchema = z.object({
   updatedAt: z.string().min(1),
 });
 
-// CheckpointPageCounts: local type alias documenting the page-counts shape.
-// Not imported by any consumer — unexported (knip 16-06; coverage 100% intact).
-type CheckpointPageCounts = z.infer<typeof pageCountsSchema>;
-
 export type CheckpointPage = z.infer<typeof pageSchema>;
 
 /**

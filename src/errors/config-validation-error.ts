@@ -1,17 +1,6 @@
 import { AppError } from "./app-error.js";
 
 /**
- * Identifiers-only detail payload for a configuration validation failure.
- * Carries only the list of issue strings — never secrets, raw replay bytes,
- * or response bodies (threat T-07-01 / app-error.ts:13-16).
- */
-// ConfigValidationDetails: companion interface to ConfigValidationError.
-// Not imported by any consumer — unexported (knip 16-06; coverage 100% intact).
-interface ConfigValidationDetails {
-  readonly issues: readonly string[];
-}
-
-/**
  * Flatten the issues array into a plain record for the `AppError` base.
  * Keeps the payload identifiers-only (threat T-07-01) with no `as` cast.
  */
