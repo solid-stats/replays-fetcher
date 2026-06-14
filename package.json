@@ -5,10 +5,10 @@
   "type": "module",
   "packageManager": "pnpm@11.0.9",
   "bin": {
-    "replays-fetcher": "./dist/cli.js"
+    "replays-fetcher": "./dist/cli.mjs"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsdown --entry src/cli.ts --format esm --platform node --no-dts --out-dir dist",
     "check": "tsx src/cli.ts check",
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",
@@ -41,6 +41,7 @@
     "knip": "^6.16.1",
     "oxfmt": "0.54.0",
     "oxlint": "1.69.0",
+    "tsdown": "0.22.2",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.5"
