@@ -30,10 +30,10 @@ Plan: —
 Status: Awaiting next milestone
 Last activity: 2026-06-14 — Milestone v3.0 completed and archived
 
-## Deferred follow-up (cross-repo, non-blocking)
+## Cross-repo preset follow-ups — both RESOLVED 2026-06-14
 
-- **ts-toolchain preset `oxfmt --check` papercut:** the shared `lefthook.yml` pre-commit `format` command (`oxfmt --check {staged_files}`) exits 2 when the staged set contains no oxfmt-formattable files (e.g. `package.json`/lockfile-only commits — oxfmt ignores them), false-blocking those commits (worked around with intentional `--no-verify`). The `oxfmt --check --no-error-on-unmatched-pattern {staged_files}` fix is confirmed working (exit 0) and prepared, but NOT pushed — the user authorized only the CFG-04 vitest push, so it awaits a separately-authorized shared-repo push. Fix pattern: patch preset → CI green → tag **`v0.1.3`** → re-pin fetcher + regen lockfile. Non-goal-blocking (hook is correct for real `.ts` commits). Surface on the next ts-toolchain touch / server-2 + web adoption.
-- **CFG-04 vitest leg — RESOLVED 2026-06-14:** ts-toolchain `v0.1.2` ships the vitest preset as `base.js`+`base.d.ts` (raw `.ts` was unimportable under Node type-stripping); fetcher re-pinned `#v0.1.2` and `vitest.config.ts` now `mergeConfig`s the shared preset (commit `5d5a23f`). No longer deferred — kept here as the v0.1.2 origin note.
+- **CFG-04 vitest leg — RESOLVED:** ts-toolchain `v0.1.2` ships the vitest preset as `base.js`+`base.d.ts` (raw `.ts` was unimportable under Node type-stripping); fetcher re-pinned `#v0.1.2` and `vitest.config.ts` now `mergeConfig`s the shared preset (commit `5d5a23f`).
+- **oxfmt pre-commit papercut — RESOLVED:** ts-toolchain `v0.1.3` adds `--no-error-on-unmatched-pattern` to the lefthook pre-commit `format` command, so a staged set that is entirely oxfmt-ignored (`package.json`/lockfile-only commits) no longer exits 2 / false-blocks. Fetcher re-pinned `#v0.1.3` (commit `557cba6`); proven live — that re-pin commit (package.json + lockfile only) passed the pre-commit hook without `--no-verify`. No remaining deferred items.
 
 ## Verify Gate: GREEN ✅
 
