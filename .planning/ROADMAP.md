@@ -197,6 +197,11 @@ Plans:
   3. V8 coverage stays 100% reachable source; the measured file set is not reduced.
   4. CI is rewritten onto the new command surface.
 
+**Plans:** 1 plan
+
+Plans:
+- [ ] 18-01-PLAN.md — Install lefthook from the shared preset (devDep + allowBuilds + extends + prepare + lockfile, prove wire/fire/bypass), reorder verify to canonical order, add CI lefthook-validate, prove full verify green at 100% coverage
+
 ---
 
 ## Progress
@@ -215,7 +220,7 @@ Plans:
 | 15. Oxfmt Formatter Migration | v3.0 | 1/1 | Complete   | 2026-06-13 |
 | 16. Oxlint Migration & Import Hygiene | v3.0 | 6/6 | Complete   | 2026-06-14 |
 | 17. tsdown Build & Docker Smoke | v3.0 | 1/1 | Complete   | 2026-06-14 |
-| 18. lefthook Hooks & CI Verify Convergence | v3.0 | 0/? | Pending | — |
+| 18. lefthook Hooks & CI Verify Convergence | v3.0 | 0/1 | Pending | — |
 
 ---
 
