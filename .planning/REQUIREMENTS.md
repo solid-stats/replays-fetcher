@@ -24,7 +24,7 @@
 
 - [x] **LNT-01**: ESLint and its plugins are removed; Oxlint is the sole linter (`pnpm lint` runs oxlint).
 - [x] **LNT-02**: The Oxlint preset ports each vocalclub rule's **options** (not just severities); `js.configs.all` is not used; `unicorn/no-null` and `no-await-in-loop` are off.
-- [ ] **LNT-03**: A before/after rule-delta is documented and every dropped rule is explicitly accepted.
+- [x] **LNT-03**: A before/after rule-delta is documented and every dropped rule is explicitly accepted.
 - [x] **LNT-04**: Type-aware Oxlint (oxlint-tsgolint) is re-validated on this repo and kept non-blocking in `verify` until it validates clean.
 
 ### Formatting — Oxfmt (FMT)
@@ -91,7 +91,7 @@ Filled during roadmap creation.
 | FMT-02 | Phase 15 | Complete |
 | LNT-01 | Phase 16 | Complete |
 | LNT-02 | Phase 16 | Complete |
-| LNT-03 | Phase 16 | Pending |
+| LNT-03 | Phase 16 | Complete |
 | LNT-04 | Phase 16 | Complete |
 | IMP-01 | Phase 16 | Pending |
 | IMP-02 | Phase 16 | Pending |
