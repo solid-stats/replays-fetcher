@@ -5,7 +5,9 @@ import { AppError } from "./app-error.js";
  * Carries only the list of issue strings — never secrets, raw replay bytes,
  * or response bodies (threat T-07-01 / app-error.ts:13-16).
  */
-export interface ConfigValidationDetails {
+// ConfigValidationDetails: companion interface to ConfigValidationError.
+// Not imported by any consumer — unexported (knip 16-06; coverage 100% intact).
+interface ConfigValidationDetails {
   readonly issues: readonly string[];
 }
 

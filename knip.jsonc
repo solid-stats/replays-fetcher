@@ -1,0 +1,31 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.jsonc",
+  // Entry points for knip graph traversal.
+  // src/cli.ts is already covered by project ["src/**/*.ts"] and is the binary
+  // entry discovered automatically — no need to list it explicitly.
+  // src/index.ts — intentional public-API barrel (re-exports config/errors for
+  //                library consumers); NOT the package entry (no main/exports field,
+  //                bin = dist/cli.js), so knip does not discover it automatically.
+  //                Declared as entry so knip treats it as an intentional public surface.
+  "entry": ["src/index.ts"],
+  "project": ["src/**/*.ts"],
+  // PROG-04 no-leak contract module — companion to no-leak.test.ts.
+  // NoLeakSurface documents the three output surfaces the cross-surface
+  // no-leak test (T-11-09) guards. The file is intentionally kept; the
+  // export encodes the cross-surface contract and must not be removed.
+  "ignore": ["src/run/no-leak.ts"],
+  // All 17 unused exported types and toSourceSlug are used within their own
+  // defining files (internal narrowing / local type composition). They are not
+  // imported by other modules but are kept exported because:
+  //   a) evidence-boundary types (RawReplaySourceEvidence, RawReplayObjectIdentity,
+  //      RawReplayStorageStatus, IngestStagingStatus, StagingOutcomeStatus, …)
+  //      are first-class audit surface per fetcher conventions — they must remain
+  //      exported for server-2 / external consumers to reference the contract.
+  //   b) domain types used only in their own file (CheckpointStatus,
+  //      ConnectivityCheckStatus, ByteFetchOptions, …) carry intent documentation
+  //      and may be needed by downstream callers; unexporting now is premature.
+  //   c) toSourceSlug (src/checkpoint/object-key.ts) is documented for Plan 05
+  //      read-path reuse (see JSDoc) and kept exported by that explicit intent.
+  // Conservative policy: ignoreExportsUsedInFile instead of unexport/delete.
+  "ignoreExportsUsedInFile": true,
+}

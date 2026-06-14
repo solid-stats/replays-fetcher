@@ -18,8 +18,9 @@
     "test:integration": "VITEST_INTEGRATION=true VITEST_INTEGRATION_GLOB=\"src/**/*.integration.test.ts\" vitest run --dir src --no-file-parallelism --testTimeout 120000 --hookTimeout 120000",
     "test:coverage": "vitest run --coverage",
     "depcruise": "dependency-cruiser src --config .dependency-cruiser.cjs",
+    "knip": "knip --config knip.jsonc",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "verify": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm test && pnpm run test:integration && pnpm run test:coverage && pnpm run build"
+    "verify": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm test && pnpm run test:integration && pnpm run test:coverage && pnpm run depcruise && pnpm run knip && pnpm run build"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1045.0",
@@ -37,6 +38,7 @@
     "@types/pg": "^8.20.0",
     "@vitest/coverage-v8": "^4.1.5",
     "dependency-cruiser": "^17.4.3",
+    "knip": "^6.16.1",
     "oxfmt": "0.54.0",
     "oxlint": "1.69.0",
     "tsx": "^4.21.0",
