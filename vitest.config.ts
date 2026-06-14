@@ -1,4 +1,5 @@
-import { configDefaults, defineConfig } from "vitest/config";
+import { vitestBaseConfig } from "@solid-stats/ts-toolchain/vitest/base";
+import { configDefaults, defineConfig, mergeConfig } from "vitest/config";
 
 if (process.env["VITEST_INTEGRATION"] === "true") {
   process.argv.push("src/**/*.integration.test.ts");
@@ -13,20 +14,19 @@ if (isIntegrationRun) {
   include = ["**/*.integration.test.ts"];
 }
 
-export default defineConfig({
-  test: {
-    coverage: {
-      exclude: ["dist/**", "src/**/*.test.ts", "vitest.config.ts"],
-      include: ["src/**/*.ts"],
-      provider: "v8",
-      thresholds: {
-        branches: 100,
-        functions: 100,
-        lines: 100,
-        statements: 100,
+// coverage provider (v8) + 100% thresholds are inherited from the shared
+// @solid-stats/ts-toolchain vitest preset (CFG-04 single-source-of-truth); only
+// the fetcher-local include/exclude and test file globs are overlaid here.
+export default mergeConfig(
+  vitestBaseConfig,
+  defineConfig({
+    test: {
+      coverage: {
+        exclude: ["dist/**", "src/**/*.test.ts", "vitest.config.ts"],
+        include: ["src/**/*.ts"],
       },
+      exclude,
+      include,
     },
-    exclude,
-    include,
-  },
-});
+  }),
+);
