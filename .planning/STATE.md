@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Track C Toolchain Convergence
-status: verifying
+status: executing
 stopped_at: Completed 11-01-PLAN.md
-last_updated: "2026-06-14T00:26:33.045Z"
-last_activity: 2026-06-13 -- Phase 16 execution started
+last_updated: "2026-06-14T00:56:55.740Z"
+last_activity: 2026-06-14 -- Phase 17 execution started
 progress:
   total_phases: 6
   completed_phases: 4
-  total_plans: 14
+  total_plans: 15
   completed_plans: 14
   percent: 67
 ---
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-07)
 
 **Core value:** Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
-**Current focus:** Phase 16 — oxlint-migration-import-hygiene
+**Current focus:** Phase 17 — tsdown-build-docker-smoke
 
 ## Current Position
 
-Phase: 16 (oxlint-migration-import-hygiene) — EXECUTING
-Plan: 6 of 6
-Status: Phase complete — ready for verification
-Last activity: 2026-06-13 -- Phase 16 execution started
+Phase: 17 (tsdown-build-docker-smoke) — EXECUTING
+Plan: 1 of 1
+Status: Executing Phase 17
+Last activity: 2026-06-14 -- Phase 17 execution started
 
 ## Verify Gate: GREEN ✅
 
