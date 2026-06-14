@@ -589,9 +589,12 @@ const writeFinalCheckpoint = async (
     await input.checkpointStore.write(
       writeInput(context.slug, checkpoint, context.etag),
     );
-  } catch {
+  } catch (error) {
+    // Log the error itself (parity with writePageCheckpoint) so a persistent
+    // final-write CAS failure — the exact mode S3_CHECKPOINT_CONDITIONAL_WRITES
+    // was added to fix — is diagnosable instead of silently degrading resume.
     input.log?.warn(
-      { slug: context.slug },
+      { error, slug: context.slug },
       "final checkpoint write failed; continuing run",
     );
   }
