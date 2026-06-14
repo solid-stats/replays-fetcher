@@ -17,6 +17,12 @@ const leadingTrailingDashPattern = /^-+|-+$/gu;
 const s3SafeKeyPattern = /^[a-z0-9._/-]+$/u;
 const evidenceObjectName = "evidence.json";
 
+const toRunSlug = (runId: string): string =>
+  runId
+    .toLowerCase()
+    .replaceAll(unsafeRunPattern, "-")
+    .replaceAll(leadingTrailingDashPattern, "");
+
 /**
  * Build the write-once evidence object key for a run. Lowercases the `runId`,
  * replaces every run of non-`[a-z0-9._-]` characters with a single `-`, trims
@@ -24,7 +30,7 @@ const evidenceObjectName = "evidence.json";
  * Throws on an empty prefix, an empty resulting runId segment, or a final key
  * that is not S3-safe.
  */
-export function toEvidenceObjectKey(prefix: string, runId: string): string {
+export const toEvidenceObjectKey = (prefix: string, runId: string): string => {
   if (prefix.length === 0) {
     throw new Error("Evidence object-key prefix must not be empty");
   }
@@ -42,11 +48,4 @@ export function toEvidenceObjectKey(prefix: string, runId: string): string {
   }
 
   return key;
-}
-
-function toRunSlug(runId: string): string {
-  return runId
-    .toLowerCase()
-    .replaceAll(unsafeRunPattern, "-")
-    .replaceAll(leadingTrailingDashPattern, "");
-}
+};

@@ -14,33 +14,10 @@ interface ToIngestStagingPayloadOptions {
   readonly sourceSystem?: string;
 }
 
-export function toIngestStagingPayload(
+const isStageable = (
   evidence: RawReplayStorageEvidence,
-  options: ToIngestStagingPayloadOptions = {},
-): StagingPayloadResult {
-  if (!isStageable(evidence)) {
-    return {
-      reason: `Raw storage status ${evidence.status} is not stageable`,
-      stageable: false,
-      status: "not_stageable",
-    };
-  }
-
-  return {
-    payload: toPayload(
-      evidence,
-      options.sourceSystem ?? defaultSourceSystem,
-      options.runId,
-    ),
-    stageable: true,
-  };
-}
-
-function isStageable(
-  evidence: RawReplayStorageEvidence,
-): evidence is StageableRawReplayEvidence {
-  return evidence.status === "stored" || evidence.status === "skipped";
-}
+): evidence is StageableRawReplayEvidence =>
+  evidence.status === "stored" || evidence.status === "skipped";
 
 /**
  * Strip any `username`/`password` userinfo from the source URL before it lands
@@ -49,7 +26,7 @@ function isStageable(
  * into staging evidence (WR-02, threat T-09-01). A non-URL string is returned
  * unchanged — it carries no parsable userinfo to strip.
  */
-function sanitizeSourceUrl(sourceUrl: string): string {
+const sanitizeSourceUrl = (sourceUrl: string): string => {
   try {
     const cleaned = new URL(sourceUrl);
     cleaned.username = "";
@@ -59,13 +36,70 @@ function sanitizeSourceUrl(sourceUrl: string): string {
   } catch {
     return sourceUrl;
   }
-}
+};
 
-function toPayload(
+const toSourceReplayId = (evidence: StageableRawReplayEvidence): string => {
+  if (evidence.source.externalId !== undefined) {
+    return evidence.source.externalId;
+  }
+
+  return `derived:${calculateSha256(
+    new TextEncoder().encode(
+      `${evidence.source.url}\n${evidence.sourceFilename}\n${evidence.checksum}`,
+    ),
+  )}`;
+};
+
+const replayTimestampFromFilename = (filename: string): string | undefined => {
+  const match =
+    /^(?<year>\d{4})_(?<month>\d{2})_(?<day>\d{2})__(?<hour>\d{2})_(?<minute>\d{2})_(?<second>\d{2})__/u.exec(
+      filename,
+    );
+
+  if (match?.groups === undefined) {
+    return undefined;
+  }
+
+  const { day, hour, minute, month, second, year } = match.groups as Record<
+    "day" | "hour" | "minute" | "month" | "second" | "year",
+    string
+  >;
+
+  return `${year}-${month}-${day}T${hour}:${minute}:${second}.000Z`;
+};
+
+const basePayload = (
+  evidence: StageableRawReplayEvidence,
+  sourceSystem: string,
+  promotionEvidence: IngestStagingPayload["promotionEvidence"],
+): IngestStagingPayload => {
+  const payload: IngestStagingPayload = {
+    checksum: evidence.checksum,
+    conflictDetails: {},
+    objectKey: evidence.objectKey,
+    promotionEvidence,
+    sizeBytes: evidence.byteSize,
+    sourceReplayId: toSourceReplayId(evidence),
+    sourceSystem,
+    status: "pending",
+  };
+  const replayTimestamp = replayTimestampFromFilename(evidence.sourceFilename);
+
+  if (replayTimestamp !== undefined) {
+    return {
+      ...payload,
+      replayTimestamp,
+    };
+  }
+
+  return payload;
+};
+
+const toPayload = (
   evidence: StageableRawReplayEvidence,
   sourceSystem: string,
   runId: string | undefined,
-): IngestStagingPayload {
+): IngestStagingPayload => {
   let promotionEvidence: IngestStagingPayload["promotionEvidence"] = {
     bucket: evidence.bucket,
     byteSize: evidence.byteSize,
@@ -87,7 +121,7 @@ function toPayload(
   if (runId !== undefined) {
     promotionEvidence = {
       ...promotionEvidence,
-      // eslint-disable-next-line camelcase -- run_id is the cross-service promotion_evidence jsonb contract key (RESUME-04), not a local identifier
+      // oxlint-disable-next-line camelcase -- run_id is the cross-service promotion_evidence jsonb contract key (RESUME-04), not a local identifier
       run_id: runId,
     };
   }
@@ -103,61 +137,26 @@ function toPayload(
   }
 
   return basePayload(evidence, sourceSystem, promotionEvidence);
-}
+};
 
-function basePayload(
-  evidence: StageableRawReplayEvidence,
-  sourceSystem: string,
-  promotionEvidence: IngestStagingPayload["promotionEvidence"],
-): IngestStagingPayload {
-  const payload: IngestStagingPayload = {
-    checksum: evidence.checksum,
-    conflictDetails: {},
-    objectKey: evidence.objectKey,
-    promotionEvidence,
-    sizeBytes: evidence.byteSize,
-    sourceReplayId: toSourceReplayId(evidence),
-    sourceSystem,
-    status: "pending",
-  };
-  const replayTimestamp = replayTimestampFromFilename(evidence.sourceFilename);
-
-  if (replayTimestamp !== undefined) {
+export const toIngestStagingPayload = (
+  evidence: RawReplayStorageEvidence,
+  options: ToIngestStagingPayloadOptions = {},
+): StagingPayloadResult => {
+  if (!isStageable(evidence)) {
     return {
-      ...payload,
-      replayTimestamp,
+      reason: `Raw storage status ${evidence.status} is not stageable`,
+      stageable: false,
+      status: "not_stageable",
     };
   }
 
-  return payload;
-}
-
-function toSourceReplayId(evidence: StageableRawReplayEvidence): string {
-  if (evidence.source.externalId !== undefined) {
-    return evidence.source.externalId;
-  }
-
-  return `derived:${calculateSha256(
-    new TextEncoder().encode(
-      `${evidence.source.url}\n${evidence.sourceFilename}\n${evidence.checksum}`,
+  return {
+    payload: toPayload(
+      evidence,
+      options.sourceSystem ?? defaultSourceSystem,
+      options.runId,
     ),
-  )}`;
-}
-
-function replayTimestampFromFilename(filename: string): string | undefined {
-  const match =
-    /^(?<year>\d{4})_(?<month>\d{2})_(?<day>\d{2})__(?<hour>\d{2})_(?<minute>\d{2})_(?<second>\d{2})__/u.exec(
-      filename,
-    );
-
-  if (match?.groups === undefined) {
-    return undefined;
-  }
-
-  const { day, hour, minute, month, second, year } = match.groups as Record<
-    "day" | "hour" | "minute" | "month" | "second" | "year",
-    string
-  >;
-
-  return `${year}-${month}-${day}T${hour}:${minute}:${second}.000Z`;
-}
+    stageable: true,
+  };
+};

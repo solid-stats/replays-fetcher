@@ -43,10 +43,10 @@ interface FakeCheckpointStore extends S3CheckpointStore {
   readonly writes: CheckpointWriteInput[];
 }
 
-function fakeCheckpointStore(
+const fakeCheckpointStore = (
   initial?: Checkpoint,
   etag?: string,
-): FakeCheckpointStore {
+): FakeCheckpointStore => {
   const writes: CheckpointWriteInput[] = [];
 
   return {
@@ -68,94 +68,98 @@ function fakeCheckpointStore(
       return Promise.resolve({});
     },
   };
-}
+};
 
-function makeCheckpoint(overrides: Partial<Checkpoint> = {}): Checkpoint {
-  return {
-    counts: { discovered: 1, failed: 0, staged: 1, stored: 1 },
-    createdAt: startedAt,
-    discoveredLastPage: twoPages,
-    lastCompletedPage: twoPages,
-    pages: {},
-    runId: "run-prior",
-    sourceUrl: "https://example.test/replays",
-    status: "running",
-    updatedAt: finishedAt,
-    ...overrides,
-  };
-}
+const makeCheckpoint = (overrides: Partial<Checkpoint> = {}): Checkpoint => ({
+  counts: { discovered: 1, failed: 0, staged: 1, stored: 1 },
+  createdAt: startedAt,
+  discoveredLastPage: twoPages,
+  lastCompletedPage: twoPages,
+  pages: {},
+  runId: "run-prior",
+  sourceUrl: "https://example.test/replays",
+  status: "running",
+  updatedAt: finishedAt,
+  ...overrides,
+});
 
-function discoveryReport(
+const discoveryReport = (
   overrides: Partial<DiscoveryReport> = {},
-): DiscoveryReport {
-  return {
-    candidates: [candidate],
-    counts: {
-      candidates: 1,
-      diagnostics: 0,
-      discovered: 1,
-    },
-    diagnostics: [],
-    generatedAt: startedAt,
-    mode: "dry-run",
-    ok: true,
-    sourceUrl: "https://example.test/replays",
-    ...overrides,
-  };
-}
+): DiscoveryReport => ({
+  candidates: [candidate],
+  counts: {
+    candidates: 1,
+    diagnostics: 0,
+    discovered: 1,
+  },
+  diagnostics: [],
+  generatedAt: startedAt,
+  mode: "dry-run",
+  ok: true,
+  sourceUrl: "https://example.test/replays",
+  ...overrides,
+});
 
-function rawStored(): StoreRawReplayResult {
-  return {
-    bucket: "solid-stats-replays",
-    byteSize: Number("1234"),
-    checksum,
-    fetchedAt: finishedAt,
-    objectKey: `raw/sha256/${checksum}.ocap`,
-    source: candidate.source,
-    sourceFilename: candidate.identity.filename,
-    status: "stored",
-  };
-}
+const rawStored = (): StoreRawReplayResult => ({
+  bucket: "solid-stats-replays",
+  byteSize: Number("1234"),
+  checksum,
+  fetchedAt: finishedAt,
+  objectKey: `raw/sha256/${checksum}.ocap`,
+  source: candidate.source,
+  sourceFilename: candidate.identity.filename,
+  status: "stored",
+});
 
-function rawSkipped(): StoreRawReplayResult {
-  return {
-    bucket: "solid-stats-replays",
-    byteSize: Number("1234"),
-    checksum,
-    discoveredAt: finishedAt,
-    fetchedAt: finishedAt,
-    objectKey: `raw/sha256/${checksum}.ocap`,
-    source: candidate.source,
-    sourceFilename: candidate.identity.filename,
-    status: "skipped",
-  };
-}
+const rawSkipped = (): StoreRawReplayResult => ({
+  bucket: "solid-stats-replays",
+  byteSize: Number("1234"),
+  checksum,
+  discoveredAt: finishedAt,
+  fetchedAt: finishedAt,
+  objectKey: `raw/sha256/${checksum}.ocap`,
+  source: candidate.source,
+  sourceFilename: candidate.identity.filename,
+  status: "skipped",
+});
 
-function rawFetchFailed(): StoreRawReplayResult {
-  return {
-    failureCategory: "fetch_failed",
-    fetchedAt: finishedAt,
-    message: "Replay byte request failed",
-    source: candidate.source,
-    sourceFilename: candidate.identity.filename,
-    status: "failed",
-  };
-}
+const rawFetchFailed = (): StoreRawReplayResult => ({
+  failureCategory: "fetch_failed",
+  fetchedAt: finishedAt,
+  message: "Replay byte request failed",
+  source: candidate.source,
+  sourceFilename: candidate.identity.filename,
+  status: "failed",
+});
 
-function replayCandidate(
+const replayCandidate = (
   externalId: string,
   filename: string,
-): ReplayCandidate {
-  return {
-    identity: {
-      filename,
-    },
-    source: {
-      externalId,
-      url: `https://example.test/replays/${externalId}`,
-    },
+): ReplayCandidate => ({
+  identity: {
+    filename,
+  },
+  source: {
+    externalId,
+    url: `https://example.test/replays/${externalId}`,
+  },
+});
+
+const createClock = (values: readonly string[]): (() => Date) => {
+  let index = 0;
+  const lastValueIndex = values.length - 1;
+
+  return () => {
+    const value = values[index] ?? values.at(lastValueIndex);
+    index += 1;
+
+    if (value === undefined) {
+      throw new Error("Clock fixture must contain at least one timestamp");
+    }
+
+    return new Date(value);
   };
-}
+};
 
 test("runOnce should execute one discovery, raw storage, and staging cycle", async () => {
   const store = vi.fn(async () => rawStored());
@@ -821,7 +825,7 @@ test("runOnce should continue when a checkpoint write rejects transiently", asyn
 
 const LAST_INDEX = -1;
 
-function persistentCheckpointStore(): FakeCheckpointStore {
+const persistentCheckpointStore = (): FakeCheckpointStore => {
   const writes: CheckpointWriteInput[] = [];
 
   return {
@@ -840,7 +844,7 @@ function persistentCheckpointStore(): FakeCheckpointStore {
       return Promise.resolve({});
     },
   };
-}
+};
 
 test("runOnce full resume cycle skips completed pages across two runs", async () => {
   const checkpointStore = persistentCheckpointStore();
@@ -956,22 +960,6 @@ test("runOnce persists only identifiers in the checkpoint and summary (no leak)"
   expect(JSON.stringify(result.summary)).not.toContain(secret);
 });
 
-function createClock(values: readonly string[]): () => Date {
-  let index = 0;
-  const lastValueIndex = values.length - 1;
-
-  return () => {
-    const value = values[index] ?? values.at(lastValueIndex);
-    index += 1;
-
-    if (value === undefined) {
-      throw new Error("Clock fixture must contain at least one timestamp");
-    }
-
-    return new Date(value);
-  };
-}
-
 interface InspectableLimiter {
   readonly assignments: number[];
   readonly limit: LimitFunction;
@@ -984,7 +972,7 @@ interface InspectableLimiter {
  * simultaneous in-flight tasks so a test can prove the shared cap serializes or
  * parallelizes dispatch.
  */
-function inspectableLimiter(initial: number): InspectableLimiter {
+const inspectableLimiter = (initial: number): InspectableLimiter => {
   const assignments: number[] = [];
   let concurrency = initial;
   let running = 0;
@@ -1029,14 +1017,14 @@ function inspectableLimiter(initial: number): InspectableLimiter {
   });
 
   return { assignments, limit, maxInFlight: () => maxInFlight };
-}
+};
 
 interface SpyPacer {
   readonly awaited: () => number;
   readonly pacer: Pacer;
 }
 
-function spyPacer(): SpyPacer {
+const spyPacer = (): SpyPacer => {
   let awaited = 0;
 
   return {
@@ -1049,7 +1037,7 @@ function spyPacer(): SpyPacer {
       },
     },
   };
-}
+};
 
 interface ThrottleEvent {
   readonly kind: "clean" | "rate_limited";
@@ -1066,7 +1054,7 @@ interface SpyThrottle {
  * turn on every `onRateLimited`/`onCleanWindow` call, so a test can assert the
  * shared limiter is resized to the controller's shrunk/grown concurrency.
  */
-function spyThrottle(scripted: readonly number[]): SpyThrottle {
+const spyThrottle = (scripted: readonly number[]): SpyThrottle => {
   const events: ThrottleEvent[] = [];
   let cursor = 0;
   let effective = scripted.at(0) ?? 0;
@@ -1097,10 +1085,10 @@ function spyThrottle(scripted: readonly number[]): SpyThrottle {
       },
     },
   };
-}
+};
 
-function rateLimitedReport(sourceUrl: string): DiscoveryReport {
-  return discoveryReport({
+const rateLimitedReport = (sourceUrl: string): DiscoveryReport =>
+  discoveryReport({
     candidates: [],
     diagnostics: [
       {
@@ -1112,7 +1100,6 @@ function rateLimitedReport(sourceUrl: string): DiscoveryReport {
     ok: false,
     sourceUrl,
   });
-}
 
 test("runOnce runs past the old single-page bound and stops complete on the first empty page", async () => {
   const lastContentPage = 3;

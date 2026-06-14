@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.0
-milestone_name: Full-Corpus Ingest Resilience
+milestone: v3.0
+milestone_name: Track C Toolchain Convergence
 status: Awaiting next milestone
-stopped_at: Completed 11-01-PLAN.md
-last_updated: "2026-06-12T09:56:50.385Z"
-last_activity: 2026-06-12 — Milestone v2.0 completed and archived
+stopped_at: Completed 18-01-PLAN.md
+last_updated: "2026-06-14T02:36:59.409Z"
+last_activity: 2026-06-14 — Milestone v3.0 completed and archived
 progress:
   total_phases: 6
   completed_phases: 6
-  total_plans: 24
-  completed_plans: 24
+  total_plans: 16
+  completed_plans: 16
   percent: 100
 ---
 
@@ -21,14 +21,19 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-07)
 
 **Core value:** Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
-**Current focus:** v2.0 all phases complete — milestone ready for audit/close
+**Current focus:** v3.0 Track C milestone lifecycle (audit → complete → cleanup) — all 6 phases (13-18) verified
 
 ## Current Position
 
-Phase: Milestone v2.0 complete
+Phase: Milestone v3.0 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-06-12 — Milestone v2.0 completed and archived
+Last activity: 2026-06-14 — Milestone v3.0 completed and archived
+
+## Cross-repo preset follow-ups — both RESOLVED 2026-06-14
+
+- **CFG-04 vitest leg — RESOLVED:** ts-toolchain `v0.1.2` ships the vitest preset as `base.js`+`base.d.ts` (raw `.ts` was unimportable under Node type-stripping); fetcher re-pinned `#v0.1.2` and `vitest.config.ts` now `mergeConfig`s the shared preset (commit `5d5a23f`).
+- **oxfmt pre-commit papercut — RESOLVED:** ts-toolchain `v0.1.3` adds `--no-error-on-unmatched-pattern` to the lefthook pre-commit `format` command, so a staged set that is entirely oxfmt-ignored (`package.json`/lockfile-only commits) no longer exits 2 / false-blocks. Fetcher re-pinned `#v0.1.3` (commit `557cba6`); proven live — that re-pin commit (package.json + lockfile only) passed the pre-commit hook without `--no-verify`. No remaining deferred items.
 
 ## Verify Gate: GREEN ✅
 
@@ -113,6 +118,26 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: 10-03: createThrottleController is a pure AIMD machine over page-count windows (RATE_LIMITED_WINDOW=2, CLEAN_WINDOW=3): MD halve floor-1 + pacing-floor bump, AI +1 cap-max; reduces concurrency + pacing floor ONLY, no backoff (Pitfall 2). nowMs is a method parameter recorded as lastSignalAtMs evidence, never the decision boundary (RANGE-03).
 - [Phase 11]: Evidence is write-once per runId: plain unconditional PutObject, no read/CAS/merge (D-10)
 - [Phase 11]: Evidence store serializes the RunSummary as handed; no-leak guarantee owned by summary assembly (D-08/D-12)
+- [Phase ?]: Добавлены @types/node и vitest в devDependencies shared repo для typecheck vitest/base.ts в CI
+- [Phase ?]: CI shared repo использует actions @v4 (stable), не @v6 как в fetcher
+- [Phase ?]: 13-02: Тег v0.1.0 срезан на SHA 7563551 (CI conclusion=success); annotated tag
+- [Phase ?]: Pin @solid-stats/ts-toolchain git-dep тегом #v0.1.0 → lockfile SHA для --frozen-lockfile
+- [Phase ?]: tsconfig extends bare specifier; include/types явные в fetcher (Pitfall P13-5)
+- [Phase ?]: CLN-01: pnpm.onlyBuiltDependencies удалён из package.json; allowBuilds в pnpm-workspace.yaml единственный авторитетный источник для pnpm 11+
+- [Phase ?]: CLN-02: 0 TODO/FIXME/XXX/HACK в src/ и конфигах подтверждено repo-wide grep
+- [Phase ?]: CLN-03: все 14 no-await-in-loop suppress несут -- reason; 9 bare дополнены без удалений
+- [Phase ?]: ConfigValidationError carries public issues field so cli.ts call sites work without change
+- [Phase ?]: toDetailsRecord helper avoids unnecessary-type-assertion (checkpoint-conflict-error.ts pattern)
+- [Phase ?]: Named .max() bound constants — no magic numbers (Phase 10-01 ESLint decision)
+- [Phase ?]: CLN-04c: RunSummary (9 типов) перенесён в src/types/run-summary.ts; run/types.ts — barrel; fence #1 закрыт в evidence-адаптере
+- [Phase 15]: oxfmt@0.54.0 pinned без ^ (FMT-01 supply-chain); package.json в .prettierignore (oxfmt 0.54 false-positive workaround); format/format:check разделены (write vs check gate)
+- [Phase ?]: func-style: все top-level function-декларации переведены на const-arrow во всём src/
+- [Phase ?]: knip 6.16.1 conservative + verify chain finalized
+- [Phase ?]: verify chain: format:check→lint→typecheck→test→test:integration→test:coverage→depcruise→knip→build; lint:types вне verify (LNT-04 non-blocking)
+- [Phase ?]: tsdown CLI-флаги в npm script (без tsdown.config.ts) — один entry, один format, меньше файлов
+- [Phase ?]: Prod Docker stage сохраняет pnpm install --prod --frozen-lockfile — externalized deps резолвятся из node_modules в runtime
+- [Phase ?]: Phase 18: lefthook 2.1.9 exact-pinned via shared preset extends; SUS seam flag cleared as false positive (approve-and-proceed)
+- [Phase ?]: Phase 18: .lefthookrc PATH shim so preset oxfmt/oxlint resolve under git minimal hook PATH (Rule 1 fix)
 
 ### Roadmap Evolution
 
@@ -158,13 +183,22 @@ None.
 | 2026-05-10 | clean-phase-02-validation-metadata | complete |
 | 2026-05-10 | fix-milestone-close-audit-false-positive | complete |
 
+### Parity-baseline fixes (F1/F2) — folded into Track C (2026-06-13)
+
+Behavioral fixes from the live parity-baseline run (registry `plans/product/PARITY-BASELINE-FINDINGS.md` §A, coordinated via `plans/product/PARITY-COORDINATION.md`), landed on the v3.0 Track C branch though they are NOT toolchain (CFG/CLN/FMT/LNT/BLD/HOK) requirements:
+
+- **F1 (resolved):** merged `fix/fetcher-checkpoint-resume` (`7e5ca97`) via merge `d980aa8`. Adds `S3_CHECKPOINT_CONDITIONAL_WRITES` (Zod, default true; `false` → unconditional PUT for S3 backends like Timeweb that reject `If-Match`/`If-None-Match`) + logs the previously-swallowed checkpoint-write error in run-once. Was: every checkpoint write threw → resume silently restarted from page 1.
+- **F2 (resolved, `3bea3dc`):** `src/source/classify-failure.ts` maps `AbortError`/`TimeoutError` (per-request fetch timeout, internal AbortController) → `transient`, so a timed-out detail page retries instead of killing the run. Was: timeouts classified `permanent` (never retried). sg.zone detail pages degrade to 20-35s under concurrency.
+- `pnpm verify` green at 100% coverage after both; branch pushed.
+
 ### Blockers/Concerns
 
-- None.
+- **Subagent reliability (2026-06-13):** During v3.0 setup the 4 parallel `gsd-project-researcher` agents and the `gsd-roadmapper` agent returned fabricated output with `tool_uses: 0` — they hallucinated file reads/writes (inventing wrong spike names and decisions) and wrote nothing to disk. Research SUMMARY/STACK/FEATURES/ARCHITECTURE/PITFALLS and the ROADMAP/REQUIREMENTS traceability were therefore authored inline by the orchestrator from the real authoritative sources (`.planning/spikes/MANIFEST.md`, `.planning/spikes/CONVENTIONS.md`, `plans/product/TS-TOOLCHAIN-CONVERGENCE.md`). Watch for the same failure mode on later phases; verify subagent disk writes before trusting their summaries.
 
 ## Next Step
 
-Execute Phase 12 (Source Contract Guards) with `/gsd:execute-phase 12` — the final v2.0 phase.
+1. **Re-run `/gsd-map-codebase` BEFORE planning Phase 13** — the existing `.planning/codebase/` map is dated 2026-06-08 (pre-v2.0-close, pre-Track-C); refresh it so the planner works against current reality. (User-requested gate, 2026-06-13.)
+2. Then plan Phase 13 (Shared `@solid-stats/ts-toolchain` Bootstrap) with `/gsd-plan-phase 13`.
 
 ## Operator Next Steps
 
@@ -191,9 +225,21 @@ Execute Phase 12 (Source Contract Guards) with `/gsd:execute-phase 12` — the f
 | Phase 10-dynamic-source-range-and-rate-limiting P02 | 6min | 2 tasks | 2 files |
 | Phase 10-dynamic-source-range-and-rate-limiting P03 | ~8min | 3 tasks | 6 files |
 | Phase 11 P01 | 18min | 3 tasks | 13 files |
+| Phase 13 P01 | 21 | 2 tasks | 11 files |
+| Phase 13 P02 | 3min | 2 tasks | 0 files |
+| Phase 13 P13-03 | 33 | 2 tasks | 4 files |
+| Phase 14 P01 | 10min | 3 tasks | 5 files |
+| Phase 14 P02 | 15 | 2 tasks | 5 files |
+| Phase 14 P03 | 120 | 2 tasks | 3 files |
+| Phase 15 P01 | 10min | 3 tasks | 4 files |
+| Phase 16-oxlint-migration-import-hygiene P02 | 180 | 2 tasks | 57 files |
+| Phase 16-oxlint-migration-import-hygiene P03 | 120min | 2 tasks | 62 files |
+| Phase 16 P06 | 35min | - tasks | - files |
+| Phase 17-tsdown-build-docker-smoke P17-01 | 3min | 3 tasks | 4 files |
+| Phase 18 P01 | 10m | 2 tasks | 7 files |
 
 ## Session
 
-**Last session:** 2026-06-11T14:31:49.296Z
-**Stopped at:** Completed 11-01-PLAN.md
-**Resume file:** .planning/phases/11-progress-events-and-compact-evidence/11-CONTEXT.md
+**Last session:** 2026-06-14T01:56:14.003Z
+**Stopped at:** Completed 18-01-PLAN.md
+**Resume file:** None

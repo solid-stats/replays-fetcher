@@ -7,10 +7,10 @@ interface QueryResult<Row> {
 }
 
 export interface PostgresConnectivityQueryClient {
-  query<Row>(
+  query: <Row>(
     text: string,
     values?: readonly unknown[],
-  ): Promise<QueryResult<Row>>;
+  ) => Promise<QueryResult<Row>>;
 }
 
 interface CheckPostgresConnectivityInput {
@@ -20,9 +20,9 @@ interface CheckPostgresConnectivityInput {
 const basicReadSql = "select 1";
 const stagingReadSql = "select 1 from ingest_staging_records limit 1";
 
-export async function checkPostgresConnectivity(
+export const checkPostgresConnectivity = async (
   input: CheckPostgresConnectivityInput,
-): Promise<ConnectivityCheck> {
+): Promise<ConnectivityCheck> => {
   try {
     await input.client.query(basicReadSql);
     await input.client.query(stagingReadSql);
@@ -41,11 +41,11 @@ export async function checkPostgresConnectivity(
       status: "failed",
     };
   }
-}
+};
 
-export async function checkPostgresConnectivityFromDatabaseUrl(
+export const checkPostgresConnectivityFromDatabaseUrl = async (
   databaseUrl: string,
-): Promise<ConnectivityCheck> {
+): Promise<ConnectivityCheck> => {
   const pool = new Pool({ connectionString: databaseUrl });
 
   try {
@@ -53,4 +53,4 @@ export async function checkPostgresConnectivityFromDatabaseUrl(
   } finally {
     await pool.end();
   }
-}
+};

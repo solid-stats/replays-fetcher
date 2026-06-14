@@ -5,18 +5,23 @@
   "type": "module",
   "packageManager": "pnpm@11.0.9",
   "bin": {
-    "replays-fetcher": "./dist/cli.js"
+    "replays-fetcher": "./dist/cli.mjs"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsdown --entry src/cli.ts --format esm --platform node --no-dts --out-dir dist",
     "check": "tsx src/cli.ts check",
-    "format": "prettier --check .",
-    "lint": "eslint .",
+    "format": "oxfmt --write .",
+    "format:check": "oxfmt --check .",
+    "lint": "oxlint --config .oxlintrc.json src",
+    "lint:types": "oxlint --type-aware --config .oxlintrc.json src",
     "test": "vitest run",
     "test:integration": "VITEST_INTEGRATION=true VITEST_INTEGRATION_GLOB=\"src/**/*.integration.test.ts\" vitest run --dir src --no-file-parallelism --testTimeout 120000 --hookTimeout 120000",
     "test:coverage": "vitest run --coverage",
+    "depcruise": "dependency-cruiser src --config .dependency-cruiser.cjs",
+    "knip": "knip --config knip.jsonc",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "verify": "pnpm run format && pnpm run lint && pnpm run typecheck && pnpm test && pnpm run test:integration && pnpm run test:coverage && pnpm run build"
+    "prepare": "lefthook install || true",
+    "verify": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm test && pnpm run test:integration && pnpm run test:coverage && pnpm run build && pnpm run depcruise && pnpm run knip"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1045.0",
@@ -27,33 +32,24 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
+    "@solid-stats/ts-toolchain": "github:solid-stats/ts-toolchain#v0.1.3",
     "@testcontainers/minio": "11.14.0",
     "@testcontainers/postgresql": "11.14.0",
     "@types/node": "^25.6.2",
     "@types/pg": "^8.20.0",
     "@vitest/coverage-v8": "^4.1.5",
-    "eslint": "^10.3.0",
-    "eslint-import-resolver-typescript": "^4.4.4",
-    "eslint-plugin-import-x": "^4.16.2",
-    "eslint-plugin-unicorn": "^64.0.0",
-    "prettier": "^3.8.3",
+    "dependency-cruiser": "^17.4.3",
+    "knip": "^6.16.1",
+    "lefthook": "2.1.9",
+    "oxfmt": "0.54.0",
+    "oxlint": "1.69.0",
+    "tsdown": "0.22.2",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.59.2",
     "vitest": "^4.1.5"
   },
   "engines": {
     "node": ">=25 <26",
     "pnpm": ">=11 <12"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "cpu-features",
-      "esbuild",
-      "protobufjs",
-      "ssh2",
-      "unrs-resolver"
-    ]
   }
 }

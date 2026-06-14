@@ -1,4 +1,6 @@
-import { pino, type Logger, type LoggerOptions } from "pino";
+import { pino } from "pino";
+
+import type { Logger, LoggerOptions } from "pino";
 
 export interface CreateLoggerOptions {
   readonly level?: string;
@@ -49,7 +51,7 @@ const REDACT_PATHS = [
  * (PROG-04) can be added without redesign. Callers must log identifiers
  * (runId, page, filename, code) only — never whole config/candidate/payload.
  */
-export function createLogger(options: CreateLoggerOptions = {}): Logger {
+export const createLogger = (options: CreateLoggerOptions = {}): Logger => {
   const loggerOptions: LoggerOptions = {
     level: options.level ?? process.env["LOG_LEVEL"] ?? "info",
     redact: { paths: [...REDACT_PATHS], censor: "[redacted]" },
@@ -61,4 +63,4 @@ export function createLogger(options: CreateLoggerOptions = {}): Logger {
   const destination = options.destination ?? process.stderr;
 
   return pino(loggerOptions, destination);
-}
+};

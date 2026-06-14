@@ -22,10 +22,10 @@ import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { toEvidenceObjectKey } from "./object-key.js";
 
 import type { AppConfig } from "../config.js";
-import type { RunSummary } from "../run/types.js";
+import type { RunSummary } from "../types/run-summary.js";
 
 export interface S3EvidenceSender {
-  send(command: PutObjectCommand): Promise<{ readonly ETag?: string }>;
+  send: (command: PutObjectCommand) => Promise<{ readonly ETag?: string }>;
 }
 
 export interface EvidenceWriteInput {
@@ -40,23 +40,13 @@ interface CreateS3EvidenceStoreOptions {
 }
 
 export interface S3EvidenceStore {
-  write(input: EvidenceWriteInput): Promise<void>;
+  write: (input: EvidenceWriteInput) => Promise<void>;
 }
 
-export function createS3EvidenceStore(
-  options: CreateS3EvidenceStoreOptions,
-): S3EvidenceStore {
-  return {
-    write(input): Promise<void> {
-      return putEvidence(options, input);
-    },
-  };
-}
-
-async function putEvidence(
+const putEvidence = async (
   options: CreateS3EvidenceStoreOptions,
   input: EvidenceWriteInput,
-): Promise<void> {
+): Promise<void> => {
   const key = toEvidenceObjectKey(options.prefix, input.runId);
   await options.sender.send(
     new PutObjectCommand({
@@ -66,12 +56,18 @@ async function putEvidence(
       Key: key,
     }),
   );
-}
+};
 
-export function createS3EvidenceStoreFromConfig(
+export const createS3EvidenceStore = (
+  options: CreateS3EvidenceStoreOptions,
+): S3EvidenceStore => ({
+  write: (input): Promise<void> => putEvidence(options, input),
+});
+
+export const createS3EvidenceStoreFromConfig = (
   config: AppConfig["s3"],
-): S3EvidenceStore {
-  return createS3EvidenceStore({
+): S3EvidenceStore =>
+  createS3EvidenceStore({
     bucket: config.bucket,
     prefix: config.evidencePrefix,
     sender: new S3Client({
@@ -84,4 +80,3 @@ export function createS3EvidenceStoreFromConfig(
       region: config.region,
     }),
   });
-}

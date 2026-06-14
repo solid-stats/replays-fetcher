@@ -4,6 +4,7 @@
 
 - [x] **v1.0 Initial Ingest Service** — Phases 1-6, shipped 2026-05-10. Full archive: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 - [x] **v2.0 Full-Corpus Ingest Resilience** — Phases 7-12, shipped 2026-06-12. Full archive: [milestones/v2.0-ROADMAP.md](milestones/v2.0-ROADMAP.md)
+- [x] **v3.0 Track C Toolchain Convergence (pilot)** — Phases 13-18, shipped 2026-06-14. Full archive: [milestones/v3.0-ROADMAP.md](milestones/v3.0-ROADMAP.md)
 
 ## Phases
 
@@ -31,18 +32,28 @@
 
 </details>
 
+<details>
+<summary>✅ v3.0 Track C Toolchain Convergence (Phases 13-18) — SHIPPED 2026-06-14</summary>
+
+Behavior-preserving migration onto the shared `@solid-stats/ts-toolchain` preset (Oxlint + Oxfmt + tsdown + Vitest + lefthook). `verify` green at 100% coverage at every phase boundary. Pilot before `server-2` and `web`.
+
+- [x] Phase 13: Shared `@solid-stats/ts-toolchain` Bootstrap (3/3 plans) — completed 2026-06-13
+- [x] Phase 14: Repository Cleanup & Convention Compliance (4/4 plans) — completed 2026-06-13
+- [x] Phase 15: Oxfmt Formatter Migration (1/1 plans) — completed 2026-06-13
+- [x] Phase 16: Oxlint Migration & Import Hygiene (6/6 plans) — completed 2026-06-14
+- [x] Phase 17: tsdown Build & Docker Smoke (1/1 plans) — completed 2026-06-14
+- [x] Phase 18: lefthook Hooks & CI Verify Convergence (1/1 plans) — completed 2026-06-14
+
+</details>
+
 ## Progress
 
 | Phase | Milestone | Plans | Status | Completed |
 |-------|-----------|-------|--------|-----------|
 | 1-6 | v1.0 | 23/23 | Complete | 2026-05-10 |
-| 7. v2 Foundations | v2.0 | 3/3 | Complete | 2026-06-07 |
-| 8. Source Failure Diagnostics and Retry | v2.0 | 4/4 | Complete | 2026-06-08 |
-| 9. Checkpoint and Resume | v2.0 | 5/5 | Complete | 2026-06-09 |
-| 10. Dynamic Source Range and Rate Limiting | v2.0 | 5/5 | Complete | 2026-06-11 |
-| 11. Progress Events and Compact Evidence | v2.0 | 5/5 | Complete | 2026-06-12 |
-| 12. Source Contract Guards | v2.0 | 2/2 | Complete | 2026-06-12 |
+| 7-12 | v2.0 | 24/24 | Complete | 2026-06-12 |
+| 13-18 | v3.0 | 16/16 | Complete | 2026-06-14 |
 
 ---
 
-*v1.0 archived 2026-05-10. v2.0 archived 2026-06-12. Start the next milestone with `/gsd-new-milestone`.*
+*v1.0 archived 2026-05-10. v2.0 archived 2026-06-12. v3.0 Track C archived 2026-06-14 (Phases 13-18). Start the next milestone with `/gsd-new-milestone`.*

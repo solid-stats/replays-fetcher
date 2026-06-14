@@ -12,6 +12,25 @@ export interface CheckpointConflictDetails {
 }
 
 /**
+ * Flatten the typed identifiers-only details into a plain record for the
+ * `AppError` base, dropping absent optionals. Keeps the payload identifiers-only
+ * (threat T-09-01) with no `as` cast.
+ */
+const toDetailsRecord = (
+  details: CheckpointConflictDetails,
+): Readonly<Record<string, number | string>> => {
+  const record: Record<string, number | string> = { slug: details.slug };
+  if (details.page !== undefined) {
+    record["page"] = details.page;
+  }
+  if (details.attempts !== undefined) {
+    record["attempts"] = details.attempts;
+  }
+
+  return record;
+};
+
+/**
  * First concrete `AppError` subclass (CORE-01). Raised when a checkpoint
  * conditional write loses the optimistic-concurrency race (HTTP 412) and the
  * bounded re-read+merge retry budget is exhausted (the retry path lives in Plan
@@ -20,7 +39,7 @@ export interface CheckpointConflictDetails {
  * (app-error.ts:9-12 — do not restore it).
  */
 export class CheckpointConflictError extends AppError<"checkpoint-conflict"> {
-  constructor(
+  public constructor(
     details: CheckpointConflictDetails,
     options?: { readonly cause?: unknown },
   ) {
@@ -33,24 +52,6 @@ export class CheckpointConflictError extends AppError<"checkpoint-conflict"> {
         isOperational: true,
       },
     );
+    this.name = "CheckpointConflictError";
   }
-}
-
-/**
- * Flatten the typed identifiers-only details into a plain record for the
- * `AppError` base, dropping absent optionals. Keeps the payload identifiers-only
- * (threat T-09-01) with no `as` cast.
- */
-function toDetailsRecord(
-  details: CheckpointConflictDetails,
-): Readonly<Record<string, number | string>> {
-  const record: Record<string, number | string> = { slug: details.slug };
-  if (details.page !== undefined) {
-    record["page"] = details.page;
-  }
-  if (details.attempts !== undefined) {
-    record["attempts"] = details.attempts;
-  }
-
-  return record;
 }

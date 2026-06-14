@@ -1,19 +1,20 @@
-/* eslint-disable max-lines -- Source-client keeps the direct + SSH adapters, shared-classifier wiring, and the identifiers-only diagnostic builder co-located so the failure/retry contract reads as one unit. */
+/* oxlint-disable max-lines -- Source-client keeps the direct + SSH adapters, shared-classifier wiring, and the identifiers-only diagnostic builder co-located so the failure/retry contract reads as one unit. */
 import { execFile as execFileCallback } from "node:child_process";
 import { promisify } from "node:util";
 
 import { AppError } from "../errors/app-error.js";
 import { parseRetryAfter } from "../source/backoff.js";
-import {
-  classifyFailure,
-  type ClassifyInput,
-  type FailureClassification,
-  type FailureKind,
+import { classifyFailure } from "../source/classify-failure.js";
+import { withRetry } from "../source/retry.js";
+
+import type {
+  ClassifyInput,
+  FailureClassification,
+  FailureKind,
 } from "../source/classify-failure.js";
-import {
-  withRetry,
-  type RetrySourceReadOptions,
-  type SourceReadPhase,
+import type {
+  RetrySourceReadOptions,
+  SourceReadPhase,
 } from "../source/retry.js";
 
 import type { SourceConfig } from "../config.js";
@@ -51,8 +52,8 @@ type SourceFetchCode =
   | "source_unavailable";
 
 export class SourceFetchError extends AppError<SourceFetchCode> {
-  // eslint-disable-next-line @typescript-eslint/no-useless-constructor -- exposes a public constructor over AppError's protected one and narrows options to omit isOperational.
-  constructor(
+  // oxlint-disable-next-line typescript/no-useless-constructor -- exposes a public constructor over AppError's protected one and narrows options to omit isOperational.
+  public constructor(
     code: SourceFetchError["code"],
     message: string,
     options?: {
@@ -61,6 +62,7 @@ export class SourceFetchError extends AppError<SourceFetchCode> {
     },
   ) {
     super(code, message, options);
+    this.name = "SourceFetchError";
   }
 }
 
@@ -68,27 +70,12 @@ interface CreateSourceClientOptions {
   readonly execFile?: ExecFile;
 }
 
-export function createSourceClient(
-  config: SourceConfig,
-  options: CreateSourceClientOptions = {},
-): SourceClient {
-  if (config.sourceTransport === "direct") {
-    return createDirectSourceClient(config);
-  }
-
-  if (options.execFile === undefined) {
-    return createSshSourceClient(config, defaultExecFile);
-  }
-
-  return createSshSourceClient(config, options.execFile);
-}
-
 /**
  * Maps the shared classifier's tri-state kind onto the narrow
  * `SourceFetchError` code union, keeping `rate_limited` distinct so pacing and
  * `Retry-After` handling stay observable downstream.
  */
-function toFetchCode(kind: FailureKind): SourceFetchCode {
+const toFetchCode = (kind: FailureKind): SourceFetchCode => {
   if (kind === "rate_limited") {
     return "rate_limited";
   }
@@ -98,7 +85,7 @@ function toFetchCode(kind: FailureKind): SourceFetchCode {
   }
 
   return "source_unavailable";
-}
+};
 
 interface BuildErrorInput {
   readonly attempts: number;
@@ -119,7 +106,7 @@ interface BuildErrorInput {
  * failing response body, raw bytes, headers, and secrets are NEVER copied here
  * (threat T-08-01 / DIAG-04).
  */
-function buildSourceFetchError(input: BuildErrorInput): SourceFetchError {
+const buildSourceFetchError = (input: BuildErrorInput): SourceFetchError => {
   const { attempts, classification, fallbackMessage, phase, url } = input;
   let details: Record<string, unknown> = {
     attempts,
@@ -157,16 +144,15 @@ function buildSourceFetchError(input: BuildErrorInput): SourceFetchError {
     fallbackMessage,
     { cause: input.originalError, details },
   );
-}
+};
 
-function resolvePhase(options?: SourceFetchOptions): SourceReadPhase {
-  return options?.phase ?? "list";
-}
+const resolvePhase = (options?: SourceFetchOptions): SourceReadPhase =>
+  options?.phase ?? "list";
 
-interface RetryWiring<T> {
+interface RetryWiring<TResult> {
   readonly classify: (error: unknown) => FailureClassification;
   readonly phase: SourceReadPhase;
-  readonly read: (signal: AbortSignal) => Promise<T>;
+  readonly read: (signal: AbortSignal) => Promise<TResult>;
   readonly retryAfterMs?: (
     error: unknown,
     now: () => number,
@@ -188,18 +174,17 @@ const initialTry = 1;
  * plus the bounded retry rounds. Reported in `details.attempts` so an operator
  * sees how many tries the read was allowed (DIAG-01).
  */
-function totalTries(options: SourceFetchOptions | undefined): number {
-  return (options?.attempts ?? noRetryAttempts) + initialTry;
-}
+const totalTries = (options: SourceFetchOptions | undefined): number =>
+  (options?.attempts ?? noRetryAttempts) + initialTry;
 
-async function runWithRetry<T>(
-  wiring: RetryWiring<T>,
+const runWithRetry = async <TResult>(
+  wiring: RetryWiring<TResult>,
   options?: SourceFetchOptions,
-): Promise<T> {
+): Promise<TResult> => {
   const attempts = options?.attempts ?? noRetryAttempts;
   const callerSignal = options?.signal ?? new AbortController().signal;
 
-  let retryOptions: RetrySourceReadOptions<T> = {
+  let retryOptions: RetrySourceReadOptions<TResult> = {
     attempts,
     classify: wiring.classify,
     phase: wiring.phase,
@@ -233,90 +218,30 @@ async function runWithRetry<T>(
   }
 
   return withRetry(retryOptions);
-}
+};
 
-function detectCloudflareChallenge(
+const detectCloudflareChallenge = (
   response: Response,
   bodyText: string,
-): boolean {
+): boolean => {
   if (!response.headers.has("cf-ray")) {
     return false;
   }
 
   const lower = bodyText.toLowerCase();
   return cfBodyMarkers.some((marker) => lower.includes(marker));
-}
+};
 
 interface CloudflareChallengeError extends Error {
   readonly isCloudflareChallenge: true;
 }
 
-function isCloudflareChallengeError(
+const isCloudflareChallengeError = (
   error: unknown,
-): error is CloudflareChallengeError {
-  return (
-    error instanceof Error &&
-    "isCloudflareChallenge" in error &&
-    error.isCloudflareChallenge === true
-  );
-}
-
-function createDirectSourceClient(config: SourceConfig): SourceClient {
-  return {
-    async fetchText(url: URL, options?: SourceFetchOptions): Promise<string> {
-      const phase = resolvePhase(options);
-
-      const read = async (callerSignal: AbortSignal): Promise<string> => {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => {
-          controller.abort();
-        }, config.sourceTimeoutMs);
-        const onCallerAbort = (): void => {
-          controller.abort();
-        };
-        callerSignal.addEventListener("abort", onCallerAbort);
-
-        try {
-          const response = await fetch(url, { signal: controller.signal });
-
-          if (!response.ok) {
-            throw buildDirectHttpError({ phase, response, url });
-          }
-
-          const bodyText = await response.text();
-          if (detectCloudflareChallenge(response, bodyText)) {
-            const challenge: CloudflareChallengeError = Object.assign(
-              new Error("Source returned a Cloudflare challenge"),
-              { isCloudflareChallenge: true as const },
-            );
-            throw challenge;
-          }
-
-          return bodyText;
-        } finally {
-          clearTimeout(timeout);
-          callerSignal.removeEventListener("abort", onCallerAbort);
-        }
-      };
-
-      return runWithRetry(
-        {
-          classify: classifyDirect,
-          phase,
-          read,
-          // `now` is supplied by `withRetry` at the moment the delay is
-          // resolved (WR-08-03), making the time dependency explicit instead of
-          // closing over a factory-fixed value.
-          retryAfterMs: directRetryAfter,
-          url,
-        },
-        options,
-      ).catch((error: unknown) => {
-        throw toDirectFetchError({ error, options, phase, url });
-      });
-    },
-  };
-}
+): error is CloudflareChallengeError =>
+  error instanceof Error &&
+  "isCloudflareChallenge" in error &&
+  error.isCloudflareChallenge === true;
 
 const httpHeaderRetryAfter = "retry-after";
 
@@ -326,10 +251,10 @@ const httpHeaderRetryAfter = "retry-after";
  * wrapper passes the thrown error here; we only read the header string we
  * stored, never the body.
  */
-function directRetryAfter(
+const directRetryAfter = (
   error: unknown,
   now: () => number,
-): number | undefined {
+): number | undefined => {
   /* v8 ignore next 3 -- only the rate_limited path (a thrown SourceFetchError) reaches the Retry-After extractor; defensive guard for other error shapes. */
   if (!(error instanceof SourceFetchError)) {
     return undefined;
@@ -341,7 +266,7 @@ function directRetryAfter(
   }
 
   return parseRetryAfter(retryAfter, now);
-}
+};
 
 interface DirectHttpErrorInput {
   readonly phase: SourceReadPhase;
@@ -354,7 +279,9 @@ interface DirectHttpErrorInput {
  * status (and `Retry-After` header string when present) so `classify` and the
  * retry wrapper can act on it. No body is read here.
  */
-function buildDirectHttpError(input: DirectHttpErrorInput): SourceFetchError {
+const buildDirectHttpError = (
+  input: DirectHttpErrorInput,
+): SourceFetchError => {
   const { phase, response, url } = input;
   const classification = classifyFailure({ httpStatus: response.status });
   const retryAfter = response.headers.get(httpHeaderRetryAfter);
@@ -373,9 +300,9 @@ function buildDirectHttpError(input: DirectHttpErrorInput): SourceFetchError {
     `Source request failed with status ${String(response.status)}`,
     { details },
   );
-}
+};
 
-function reclassifyDirect(error: SourceFetchError): FailureClassification {
+const reclassifyDirect = (error: SourceFetchError): FailureClassification => {
   const httpStatus = error.details?.["httpStatus"];
   const cfChallenge = error.details?.["cfChallenge"] === true;
   let input: ClassifyInput = { cfChallenge };
@@ -385,9 +312,9 @@ function reclassifyDirect(error: SourceFetchError): FailureClassification {
   }
 
   return classifyFailure(input);
-}
+};
 
-function classifyDirect(error: unknown): FailureClassification {
+const classifyDirect = (error: unknown): FailureClassification => {
   if (error instanceof SourceFetchError) {
     return reclassifyDirect(error);
   }
@@ -396,11 +323,10 @@ function classifyDirect(error: unknown): FailureClassification {
     cfChallenge: isCloudflareChallengeError(error),
     error,
   });
-}
+};
 
-function classifySsh(error: unknown): FailureClassification {
-  return classifyFailure({ error });
-}
+const classifySsh = (error: unknown): FailureClassification =>
+  classifyFailure({ error });
 
 interface DirectFetchErrorInput {
   readonly error: unknown;
@@ -409,17 +335,19 @@ interface DirectFetchErrorInput {
   readonly url: URL;
 }
 
-function buildPageInput(options: SourceFetchOptions | undefined): {
+const buildPageInput = (
+  options: SourceFetchOptions | undefined,
+): {
   readonly page?: number;
-} {
+} => {
   if (options?.page === undefined) {
     return {};
   }
 
   return { page: options.page };
-}
+};
 
-function toDirectFetchError(input: DirectFetchErrorInput): SourceFetchError {
+const toDirectFetchError = (input: DirectFetchErrorInput): SourceFetchError => {
   const { error, options, phase, url } = input;
   const attempts = totalTries(options);
   const pageInput = buildPageInput(options);
@@ -455,56 +383,18 @@ function toDirectFetchError(input: DirectFetchErrorInput): SourceFetchError {
     url,
     ...pageInput,
   });
-}
+};
 
-function createSshSourceClient(
-  config: SourceConfig,
-  execFile: ExecFile,
-): SourceClient {
-  return {
-    async fetchText(url: URL, options?: SourceFetchOptions): Promise<string> {
-      const phase = resolvePhase(options);
-      const host = getSshHost(config);
+const getSshHost = (config: SourceConfig): string => {
+  if (config.sourceSshHost === undefined) {
+    throw new SourceFetchError(
+      "source_unavailable",
+      "SSH source host is not configured",
+    );
+  }
 
-      const read = async (callerSignal: AbortSignal): Promise<string> => {
-        const controller = new AbortController();
-        const onCallerAbort = (): void => {
-          controller.abort();
-        };
-        callerSignal.addEventListener("abort", onCallerAbort);
-
-        try {
-          const encodedUrl = Buffer.from(url.toString(), "utf8").toString(
-            "base64",
-          );
-          const result = await execFile(
-            "ssh",
-            [
-              host,
-              "sh",
-              "-c",
-              `${config.sourceSshCommand} -- "$(printf %s "$1" | base64 -d)"`,
-              "replays-fetcher-source",
-              encodedUrl,
-            ],
-            { signal: controller.signal, timeout: config.sourceTimeoutMs },
-          );
-
-          return result.stdout;
-        } finally {
-          callerSignal.removeEventListener("abort", onCallerAbort);
-        }
-      };
-
-      return runWithRetry(
-        { classify: classifySsh, phase, read, url },
-        options,
-      ).catch((error: unknown) => {
-        throw toSshFetchError({ error, options, phase, url });
-      });
-    },
-  };
-}
+  return config.sourceSshHost;
+};
 
 interface SshFetchErrorInput {
   readonly error: unknown;
@@ -513,7 +403,7 @@ interface SshFetchErrorInput {
   readonly url: URL;
 }
 
-function toSshFetchError(input: SshFetchErrorInput): SourceFetchError {
+const toSshFetchError = (input: SshFetchErrorInput): SourceFetchError => {
   const { error, options, phase, url } = input;
   const classification = classifyFailure({ error });
 
@@ -526,15 +416,121 @@ function toSshFetchError(input: SshFetchErrorInput): SourceFetchError {
     url,
     ...buildPageInput(options),
   });
-}
+};
 
-function getSshHost(config: SourceConfig): string {
-  if (config.sourceSshHost === undefined) {
-    throw new SourceFetchError(
-      "source_unavailable",
-      "SSH source host is not configured",
-    );
+const createDirectSourceClient = (config: SourceConfig): SourceClient => ({
+  async fetchText(url: URL, options?: SourceFetchOptions): Promise<string> {
+    const phase = resolvePhase(options);
+
+    const read = async (callerSignal: AbortSignal): Promise<string> => {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => {
+        controller.abort();
+      }, config.sourceTimeoutMs);
+      const onCallerAbort = (): void => {
+        controller.abort();
+      };
+      callerSignal.addEventListener("abort", onCallerAbort);
+
+      try {
+        const response = await fetch(url, { signal: controller.signal });
+
+        if (!response.ok) {
+          throw buildDirectHttpError({ phase, response, url });
+        }
+
+        const bodyText = await response.text();
+        if (detectCloudflareChallenge(response, bodyText)) {
+          const challenge: CloudflareChallengeError = Object.assign(
+            new Error("Source returned a Cloudflare challenge"),
+            { isCloudflareChallenge: true as const },
+          );
+          throw challenge;
+        }
+
+        return bodyText;
+      } finally {
+        clearTimeout(timeout);
+        callerSignal.removeEventListener("abort", onCallerAbort);
+      }
+    };
+
+    return runWithRetry(
+      {
+        classify: classifyDirect,
+        phase,
+        read,
+        // `now` is supplied by `withRetry` at the moment the delay is
+        // resolved (WR-08-03), making the time dependency explicit instead of
+        // closing over a factory-fixed value.
+        retryAfterMs: directRetryAfter,
+        url,
+      },
+      options,
+    ).catch((error: unknown) => {
+      throw toDirectFetchError({ error, options, phase, url });
+    });
+  },
+});
+
+const createSshSourceClient = (
+  config: SourceConfig,
+  execFile: ExecFile,
+): SourceClient => ({
+  async fetchText(url: URL, options?: SourceFetchOptions): Promise<string> {
+    const phase = resolvePhase(options);
+    const host = getSshHost(config);
+
+    const read = async (callerSignal: AbortSignal): Promise<string> => {
+      const controller = new AbortController();
+      const onCallerAbort = (): void => {
+        controller.abort();
+      };
+      callerSignal.addEventListener("abort", onCallerAbort);
+
+      try {
+        const encodedUrl = Buffer.from(url.toString(), "utf8").toString(
+          "base64",
+        );
+        const result = await execFile(
+          "ssh",
+          [
+            host,
+            "sh",
+            "-c",
+            `${config.sourceSshCommand} -- "$(printf %s "$1" | base64 -d)"`,
+            "replays-fetcher-source",
+            encodedUrl,
+          ],
+          { signal: controller.signal, timeout: config.sourceTimeoutMs },
+        );
+
+        return result.stdout;
+      } finally {
+        callerSignal.removeEventListener("abort", onCallerAbort);
+      }
+    };
+
+    return runWithRetry(
+      { classify: classifySsh, phase, read, url },
+      options,
+    ).catch((error: unknown) => {
+      throw toSshFetchError({ error, options, phase, url });
+    });
+  },
+});
+
+export const createSourceClient = (
+  config: SourceConfig,
+  options: CreateSourceClientOptions = {},
+): SourceClient => {
+  if (config.sourceTransport === "direct") {
+    return createDirectSourceClient(config);
   }
 
-  return config.sourceSshHost;
-}
+  if (options.execFile === undefined) {
+    return createSshSourceClient(config, defaultExecFile);
+  }
+
+  return createSshSourceClient(config, options.execFile);
+};

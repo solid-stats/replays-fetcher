@@ -5,9 +5,9 @@ import {
   mergeCheckpoints,
   parseCheckpoint,
   resumeStartPage,
-  type Checkpoint,
-  type CheckpointSourceFailure,
 } from "./checkpoint.js";
+
+import type { Checkpoint, CheckpointSourceFailure } from "./checkpoint.js";
 
 import type { RunSourceFailure } from "../run/types.js";
 

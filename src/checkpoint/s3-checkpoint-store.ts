@@ -20,6 +20,12 @@
  *
  * The persisted body is the identifiers-only `Checkpoint` (Plan 01 allowlist) —
  * never replay bytes, secrets, or HTML (threat T-09-01).
+ *
+ * `conditionalWrites: false` drops the `IfMatch` / `IfNoneMatch` headers and
+ * writes unconditionally — a fallback for S3 backends that don't implement
+ * conditional PUT (e.g. Timeweb S3, which otherwise fails every checkpoint
+ * write). It forfeits the concurrent-writer CAS guarantee, so it is only safe
+ * for the single-writer controlled run; keep it true on compliant backends.
  */
 
 import {
@@ -32,11 +38,9 @@ import {
 import { CheckpointConflictError } from "../errors/checkpoint-conflict-error.js";
 import { fullJitterDelay } from "../source/backoff.js";
 
-import {
-  mergeCheckpoints,
-  parseCheckpoint,
-  type Checkpoint,
-} from "./checkpoint.js";
+import { mergeCheckpoints, parseCheckpoint } from "./checkpoint.js";
+
+import type { Checkpoint } from "./checkpoint.js";
 import { toCheckpointObjectKey } from "./object-key.js";
 
 import type { AppConfig } from "../config.js";
@@ -48,18 +52,23 @@ const MAX_CAS_ROUNDS = 5;
 const CREATE_IF_ABSENT_CONDITION = "*";
 
 interface S3CheckpointSenderOutput {
-  readonly Body?: { transformToString(): Promise<string> };
+  readonly Body?: { transformToString: () => Promise<string> };
   readonly ETag?: string;
 }
 
 interface S3CheckpointSender {
-  send(
+  send: (
     command: GetObjectCommand | PutObjectCommand,
-  ): Promise<S3CheckpointSenderOutput>;
+  ) => Promise<S3CheckpointSenderOutput>;
 }
 
 interface CreateS3CheckpointStoreOptions {
   readonly bucket: string;
+  // When false, checkpoint PUTs omit the If-Match / If-None-Match CAS headers —
+  // a fallback for S3 backends that don't implement conditional writes (e.g.
+  // Timeweb S3). Safe for the single-writer controlled run; loses the
+  // concurrent-writer CAS guarantee, so keep it true on compliant backends.
+  readonly conditionalWrites: boolean;
   readonly prefix: string;
   readonly random?: () => number;
   readonly sender: S3CheckpointSender;
@@ -81,29 +90,85 @@ export interface CheckpointWriteResult {
 }
 
 export interface S3CheckpointStore {
-  read(slug: string): Promise<CheckpointReadResult>;
-  write(input: CheckpointWriteInput): Promise<CheckpointWriteResult>;
+  read: (slug: string) => Promise<CheckpointReadResult>;
+  write: (input: CheckpointWriteInput) => Promise<CheckpointWriteResult>;
 }
 
-export function createS3CheckpointStore(
+const isNotFound = (error: unknown): boolean =>
+  error instanceof S3ServiceException &&
+  (error.name === "NotFound" ||
+    error.$metadata.httpStatusCode === HTTP_NOT_FOUND);
+
+const isPreconditionFailed = (error: unknown): boolean =>
+  error instanceof S3ServiceException &&
+  (error.name === "PreconditionFailed" ||
+    error.name === "ConditionalRequestConflict" ||
+    error.$metadata.httpStatusCode === HTTP_PRECONDITION_FAILED ||
+    error.$metadata.httpStatusCode === HTTP_CONDITIONAL_REQUEST_CONFLICT);
+
+const etagResult = (
+  checkpoint: Checkpoint | undefined,
+  etag: string | undefined,
+): { checkpoint?: Checkpoint; etag?: string } => {
+  const base: { checkpoint?: Checkpoint } = {};
+  if (checkpoint !== undefined) {
+    base.checkpoint = checkpoint;
+  }
+  if (etag === undefined) {
+    return base;
+  }
+
+  return { ...base, etag };
+};
+
+const conditionalHeader = (
+  etag: string | undefined,
+  conditionalWrites: boolean,
+): { IfMatch: string } | { IfNoneMatch: string } | Record<string, never> => {
+  if (!conditionalWrites) {
+    return {};
+  }
+
+  if (etag === undefined) {
+    return { IfNoneMatch: CREATE_IF_ABSENT_CONDITION };
+  }
+
+  return { IfMatch: etag };
+};
+
+const delay = (milliseconds: number): Promise<void> =>
+  new Promise((resolve) => {
+    setTimeout(resolve, milliseconds);
+  });
+
+interface PutCheckpointInput {
+  readonly checkpoint: Checkpoint;
+  readonly etag: string | undefined;
+  readonly slug: string;
+}
+
+const putCheckpoint = async (
   options: CreateS3CheckpointStoreOptions,
-): S3CheckpointStore {
-  const random = options.random ?? Math.random;
+  input: PutCheckpointInput,
+): Promise<CheckpointWriteResult> => {
+  const key = toCheckpointObjectKey(options.prefix, new URL(input.slug));
+  const output = await options.sender.send(
+    new PutObjectCommand({
+      Body: JSON.stringify(input.checkpoint),
+      Bucket: options.bucket,
+      ContentType: "application/json",
+      Key: key,
+      ...conditionalHeader(input.etag, options.conditionalWrites),
+    }),
+  );
 
-  return {
-    read(slug): Promise<CheckpointReadResult> {
-      return readCheckpoint(options, slug);
-    },
-    write(input): Promise<CheckpointWriteResult> {
-      return writeCheckpoint(options, random, input);
-    },
-  };
-}
+  return etagResult(undefined, output.ETag);
+};
 
-async function readCheckpoint(
+const readCheckpoint = async (
   options: CreateS3CheckpointStoreOptions,
   slug: string,
-): Promise<CheckpointReadResult> {
+): Promise<CheckpointReadResult> => {
   const key = toCheckpointObjectKey(options.prefix, new URL(slug));
 
   try {
@@ -127,18 +192,18 @@ async function readCheckpoint(
     }
     throw error;
   }
-}
+};
 
-async function writeCheckpoint(
+const writeCheckpoint = async (
   options: CreateS3CheckpointStoreOptions,
   random: () => number,
   input: CheckpointWriteInput,
-): Promise<CheckpointWriteResult> {
+): Promise<CheckpointWriteResult> => {
   let { checkpoint: intended, etag } = input;
 
   for (let round = 0; round < MAX_CAS_ROUNDS; round += 1) {
     try {
-      // eslint-disable-next-line no-await-in-loop -- bounded sequential CAS rounds are intentional.
+      // oxlint-disable-next-line no-await-in-loop -- bounded sequential CAS rounds are intentional.
       return await putCheckpoint(options, {
         checkpoint: intended,
         etag,
@@ -149,9 +214,9 @@ async function writeCheckpoint(
         throw error;
       }
 
-      // eslint-disable-next-line no-await-in-loop -- full-jitter backoff between CAS rounds.
+      // oxlint-disable-next-line no-await-in-loop -- full-jitter backoff between CAS rounds.
       await delay(fullJitterDelay(round, random));
-      // eslint-disable-next-line no-await-in-loop -- re-read the winner before merging.
+      // oxlint-disable-next-line no-await-in-loop -- re-read the winner before merging.
       const fresh = await readCheckpoint(options, input.slug);
       if (fresh.checkpoint !== undefined) {
         intended = mergeCheckpoints(intended, fresh.checkpoint);
@@ -165,62 +230,27 @@ async function writeCheckpoint(
     page: intended.lastCompletedPage,
     slug: input.slug,
   });
-}
+};
 
-interface PutCheckpointInput {
-  readonly checkpoint: Checkpoint;
-  readonly etag: string | undefined;
-  readonly slug: string;
-}
-
-async function putCheckpoint(
+export const createS3CheckpointStore = (
   options: CreateS3CheckpointStoreOptions,
-  input: PutCheckpointInput,
-): Promise<CheckpointWriteResult> {
-  const key = toCheckpointObjectKey(options.prefix, new URL(input.slug));
-  const output = await options.sender.send(
-    new PutObjectCommand({
-      Body: JSON.stringify(input.checkpoint),
-      Bucket: options.bucket,
-      ContentType: "application/json",
-      Key: key,
-      ...conditionalHeader(input.etag),
-    }),
-  );
+): S3CheckpointStore => {
+  const random = options.random ?? Math.random;
 
-  return etagResult(undefined, output.ETag);
-}
+  return {
+    read: (slug): Promise<CheckpointReadResult> =>
+      readCheckpoint(options, slug),
+    write: (input): Promise<CheckpointWriteResult> =>
+      writeCheckpoint(options, random, input),
+  };
+};
 
-function conditionalHeader(
-  etag: string | undefined,
-): { IfMatch: string } | { IfNoneMatch: string } {
-  if (etag === undefined) {
-    return { IfNoneMatch: CREATE_IF_ABSENT_CONDITION };
-  }
-
-  return { IfMatch: etag };
-}
-
-function etagResult(
-  checkpoint: Checkpoint | undefined,
-  etag: string | undefined,
-): { checkpoint?: Checkpoint; etag?: string } {
-  const base: { checkpoint?: Checkpoint } = {};
-  if (checkpoint !== undefined) {
-    base.checkpoint = checkpoint;
-  }
-  if (etag === undefined) {
-    return base;
-  }
-
-  return { ...base, etag };
-}
-
-export function createS3CheckpointStoreFromConfig(
+export const createS3CheckpointStoreFromConfig = (
   config: AppConfig["s3"],
-): S3CheckpointStore {
-  return createS3CheckpointStore({
+): S3CheckpointStore =>
+  createS3CheckpointStore({
     bucket: config.bucket,
+    conditionalWrites: config.conditionalWrites,
     prefix: config.checkpointPrefix,
     sender: new S3Client({
       credentials: {
@@ -232,28 +262,3 @@ export function createS3CheckpointStoreFromConfig(
       region: config.region,
     }),
   });
-}
-
-function delay(milliseconds: number): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, milliseconds);
-  });
-}
-
-function isNotFound(error: unknown): boolean {
-  return (
-    error instanceof S3ServiceException &&
-    (error.name === "NotFound" ||
-      error.$metadata.httpStatusCode === HTTP_NOT_FOUND)
-  );
-}
-
-function isPreconditionFailed(error: unknown): boolean {
-  return (
-    error instanceof S3ServiceException &&
-    (error.name === "PreconditionFailed" ||
-      error.name === "ConditionalRequestConflict" ||
-      error.$metadata.httpStatusCode === HTTP_PRECONDITION_FAILED ||
-      error.$metadata.httpStatusCode === HTTP_CONDITIONAL_REQUEST_CONFLICT)
-  );
-}

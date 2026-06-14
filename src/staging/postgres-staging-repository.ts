@@ -11,10 +11,10 @@ interface QueryResult<Row> {
 }
 
 export interface StagingQueryClient {
-  query<Row>(
+  query: <Row>(
     text: string,
     values?: readonly unknown[],
-  ): Promise<QueryResult<Row>>;
+  ) => Promise<QueryResult<Row>>;
 }
 
 interface StagingRow {
@@ -31,55 +31,32 @@ interface DatabaseError {
 }
 
 export interface PostgresStagingRepository {
-  stage(payload: IngestStagingPayload): Promise<IngestStagingResult>;
+  stage: (payload: IngestStagingPayload) => Promise<IngestStagingResult>;
 }
 
 const uniqueViolationCode = "23505";
 
-export function createPostgresStagingRepository(
-  client: StagingQueryClient,
-): PostgresStagingRepository {
-  return {
-    async stage(payload): Promise<IngestStagingResult> {
-      try {
-        const result = await insertStaging(client, payload);
-        const row = requiredRow(result.rows);
+const isUniqueViolation = (error: unknown): boolean =>
+  typeof error === "object" &&
+  error !== null &&
+  "code" in error &&
+  (error as DatabaseError).code === uniqueViolationCode;
 
-        return {
-          payload,
-          stagingId: row.id,
-          status: "staged",
-        };
-      } catch (error) {
-        if (!isUniqueViolation(error)) {
-          return {
-            payload,
-            reason: "staging_write_failed",
-            status: "failed",
-          };
-        }
+const requiredRow = <Row>(rows: readonly Row[]): Row => {
+  const [row] = rows;
 
-        return classifyExistingStaging(client, payload);
-      }
-    },
-  };
-}
+  if (row === undefined) {
+    throw new Error("Expected staging insert to return a row");
+  }
 
-export function createPostgresStagingRepositoryFromDatabaseUrl(
-  databaseUrl: string,
-): PostgresStagingRepository {
-  return createPostgresStagingRepository(
-    new Pool({
-      connectionString: databaseUrl,
-    }),
-  );
-}
+  return row;
+};
 
-async function insertStaging(
+const insertStaging = async (
   client: StagingQueryClient,
   payload: IngestStagingPayload,
-): Promise<QueryResult<Pick<StagingRow, "id">>> {
-  return client.query<Pick<StagingRow, "id">>(
+): Promise<QueryResult<Pick<StagingRow, "id">>> =>
+  client.query<Pick<StagingRow, "id">>(
     `
       insert into ingest_staging_records (
         source_system,
@@ -107,12 +84,59 @@ async function insertStaging(
       JSON.stringify(payload.conflictDetails),
     ],
   );
-}
 
-async function classifyExistingStaging(
+const matchesPayload = (
+  row: StagingRow,
+  payload: IngestStagingPayload,
+): boolean =>
+  row.checksum === payload.checksum && row.object_key === payload.objectKey;
+
+const toExisting = (row: StagingRow): ExistingStagingEvidence => ({
+  checksum: row.checksum,
+  objectKey: row.object_key,
+  sourceReplayId: row.source_replay_id,
+  sourceSystem: row.source_system,
+  status: row.status,
+});
+
+const findBySourceIdentity = async (
   client: StagingQueryClient,
   payload: IngestStagingPayload,
-): Promise<IngestStagingResult> {
+): Promise<StagingRow | undefined> => {
+  const result = await client.query<StagingRow>(
+    `
+      select id, source_system, source_replay_id, object_key, checksum, status
+      from ingest_staging_records
+      where source_system = $1 and source_replay_id = $2
+      limit 1
+    `,
+    [payload.sourceSystem, payload.sourceReplayId],
+  );
+
+  return result.rows[0];
+};
+
+const findByObjectIdentity = async (
+  client: StagingQueryClient,
+  payload: IngestStagingPayload,
+): Promise<StagingRow | undefined> => {
+  const result = await client.query<StagingRow>(
+    `
+      select id, source_system, source_replay_id, object_key, checksum, status
+      from ingest_staging_records
+      where checksum = $1 and object_key = $2
+      limit 1
+    `,
+    [payload.checksum, payload.objectKey],
+  );
+
+  return result.rows[0];
+};
+
+const classifyExistingStaging = async (
+  client: StagingQueryClient,
+  payload: IngestStagingPayload,
+): Promise<IngestStagingResult> => {
   const existingBySource = await findBySourceIdentity(client, payload);
 
   if (existingBySource !== undefined) {
@@ -149,76 +173,40 @@ async function classifyExistingStaging(
     reason: "unique_violation_without_existing_staging",
     status: "failed",
   };
-}
+};
 
-async function findBySourceIdentity(
+export const createPostgresStagingRepository = (
   client: StagingQueryClient,
-  payload: IngestStagingPayload,
-): Promise<StagingRow | undefined> {
-  const result = await client.query<StagingRow>(
-    `
-      select id, source_system, source_replay_id, object_key, checksum, status
-      from ingest_staging_records
-      where source_system = $1 and source_replay_id = $2
-      limit 1
-    `,
-    [payload.sourceSystem, payload.sourceReplayId],
+): PostgresStagingRepository => ({
+  async stage(payload): Promise<IngestStagingResult> {
+    try {
+      const result = await insertStaging(client, payload);
+      const row = requiredRow(result.rows);
+
+      return {
+        payload,
+        stagingId: row.id,
+        status: "staged",
+      };
+    } catch (error) {
+      if (!isUniqueViolation(error)) {
+        return {
+          payload,
+          reason: "staging_write_failed",
+          status: "failed",
+        };
+      }
+
+      return classifyExistingStaging(client, payload);
+    }
+  },
+});
+
+export const createPostgresStagingRepositoryFromDatabaseUrl = (
+  databaseUrl: string,
+): PostgresStagingRepository =>
+  createPostgresStagingRepository(
+    new Pool({
+      connectionString: databaseUrl,
+    }),
   );
-
-  return result.rows[0];
-}
-
-async function findByObjectIdentity(
-  client: StagingQueryClient,
-  payload: IngestStagingPayload,
-): Promise<StagingRow | undefined> {
-  const result = await client.query<StagingRow>(
-    `
-      select id, source_system, source_replay_id, object_key, checksum, status
-      from ingest_staging_records
-      where checksum = $1 and object_key = $2
-      limit 1
-    `,
-    [payload.checksum, payload.objectKey],
-  );
-
-  return result.rows[0];
-}
-
-function matchesPayload(
-  row: StagingRow,
-  payload: IngestStagingPayload,
-): boolean {
-  return (
-    row.checksum === payload.checksum && row.object_key === payload.objectKey
-  );
-}
-
-function toExisting(row: StagingRow): ExistingStagingEvidence {
-  return {
-    checksum: row.checksum,
-    objectKey: row.object_key,
-    sourceReplayId: row.source_replay_id,
-    sourceSystem: row.source_system,
-    status: row.status,
-  };
-}
-
-function isUniqueViolation(error: unknown): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    (error as DatabaseError).code === uniqueViolationCode
-  );
-}
-
-function requiredRow<Row>(rows: readonly Row[]): Row {
-  const [row] = rows;
-
-  if (row === undefined) {
-    throw new Error("Expected staging insert to return a row");
-  }
-
-  return row;
-}

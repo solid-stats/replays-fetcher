@@ -22,54 +22,65 @@ interface MutableReplayRowSource {
   url?: string;
 }
 
-export function extractReplayRows(
-  html: string,
-  page: number,
+/* v8 ignore next -- regexes using this helper always declare the group. */
+const getMatchGroup = (match: RegExpMatchArray, group: string): string =>
+  match.groups?.[group] ?? "";
+
+const decodeHtmlEntities = (value: string): string =>
+  value
+    .replaceAll("&amp;", "&")
+    .replaceAll("&quot;", '"')
+    .replaceAll("&#39;", "'")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">");
+
+const stripTags = (html: string): string =>
+  decodeHtmlEntities(html.replaceAll(/<[^>]+>/gu, " "));
+
+const hrefToUrl = (
+  href: string | undefined,
   sourceUrl: URL,
-): readonly ReplayRowObservation[] {
-  const tableMatch =
-    /<table[^>]*class=["'][^"']*\bcommon-table\b[^"']*["'][^>]*>[\s\S]*?<tbody[^>]*>(?<body>[\s\S]*?)<\/tbody>[\s\S]*?<\/table>/iu.exec(
-      html,
-    );
-  const tableBody = tableMatch?.groups?.["body"];
-
-  if (tableBody === undefined) {
-    return [];
+): string | undefined => {
+  if (href === undefined) {
+    return undefined;
   }
 
-  return [...tableBody.matchAll(/<tr[^>]*>(?<row>[\s\S]*?)<\/tr>/giu)].map(
-    (match) => parseReplayRow(getMatchGroup(match, "row"), page, sourceUrl),
-  );
-}
+  try {
+    const resolved = new URL(href, sourceUrl);
 
-export function extractFilenameFromDetailHtml(
-  html: string,
-): string | undefined {
-  const filenameValue = findInputValueById(html, "filename")?.trim();
+    if (
+      resolved.origin !== sourceUrl.origin ||
+      !resolved.pathname.startsWith("/replays/")
+    ) {
+      return undefined;
+    }
 
-  if (filenameValue !== undefined && filenameValue.length > 0) {
-    return decodeHtmlEntities(filenameValue);
+    return resolved.toString();
+  } catch {
+    return undefined;
   }
+};
 
-  // Legacy fallback selector: body[data-ocap].
-  const bodyMatch =
-    /<body\b[^>]*\bdata-ocap=(?<quote>["'])(?<filename>.*?)\k<quote>[^>]*>/iu.exec(
-      html,
-    );
-  const bodyOcap = bodyMatch?.groups?.["filename"]?.trim();
+const findInputValueById = (html: string, id: string): string | undefined => {
+  for (const match of html.matchAll(/<input\b(?<attributes>[^>]*)>/giu)) {
+    const attributes = getMatchGroup(match, "attributes");
+    const inputId = /\bid=(?<quote>["'])(?<id>.*?)\k<quote>/iu.exec(attributes)
+      ?.groups?.["id"];
 
-  if (bodyOcap !== undefined && bodyOcap.length > 0) {
-    return decodeHtmlEntities(bodyOcap);
+    if (inputId === id) {
+      return /\bvalue=(?<quote>["'])(?<value>.*?)\k<quote>/iu.exec(attributes)
+        ?.groups?.["value"];
+    }
   }
 
   return undefined;
-}
+};
 
-function parseReplayRow(
+const parseReplayRow = (
   rowHtml: string,
   page: number,
   sourceUrl: URL,
-): ReplayRowObservation {
+): ReplayRowObservation => {
   const cells = [
     ...rowHtml.matchAll(/<td[^>]*>(?<cell>[\s\S]*?)<\/td>/giu),
   ].map((match) => getMatchGroup(match, "cell"));
@@ -115,61 +126,47 @@ function parseReplayRow(
     page,
     source,
   };
-}
+};
 
-function hrefToUrl(
-  href: string | undefined,
+export const extractReplayRows = (
+  html: string,
+  page: number,
   sourceUrl: URL,
-): string | undefined {
-  if (href === undefined) {
-    return undefined;
+): readonly ReplayRowObservation[] => {
+  const tableMatch =
+    /<table[^>]*class=["'][^"']*\bcommon-table\b[^"']*["'][^>]*>[\s\S]*?<tbody[^>]*>(?<body>[\s\S]*?)<\/tbody>[\s\S]*?<\/table>/iu.exec(
+      html,
+    );
+  const tableBody = tableMatch?.groups?.["body"];
+
+  if (tableBody === undefined) {
+    return [];
   }
 
-  try {
-    const resolved = new URL(href, sourceUrl);
+  return [...tableBody.matchAll(/<tr[^>]*>(?<row>[\s\S]*?)<\/tr>/giu)].map(
+    (match) => parseReplayRow(getMatchGroup(match, "row"), page, sourceUrl),
+  );
+};
 
-    if (
-      resolved.origin !== sourceUrl.origin ||
-      !resolved.pathname.startsWith("/replays/")
-    ) {
-      return undefined;
-    }
+export const extractFilenameFromDetailHtml = (
+  html: string,
+): string | undefined => {
+  const filenameValue = findInputValueById(html, "filename")?.trim();
 
-    return resolved.toString();
-  } catch {
-    return undefined;
+  if (filenameValue !== undefined && filenameValue.length > 0) {
+    return decodeHtmlEntities(filenameValue);
   }
-}
 
-function findInputValueById(html: string, id: string): string | undefined {
-  for (const match of html.matchAll(/<input\b(?<attributes>[^>]*)>/giu)) {
-    const attributes = getMatchGroup(match, "attributes");
-    const inputId = /\bid=(?<quote>["'])(?<id>.*?)\k<quote>/iu.exec(attributes)
-      ?.groups?.["id"];
+  // Legacy fallback selector: body[data-ocap].
+  const bodyMatch =
+    /<body\b[^>]*\bdata-ocap=(?<quote>["'])(?<filename>.*?)\k<quote>[^>]*>/iu.exec(
+      html,
+    );
+  const bodyOcap = bodyMatch?.groups?.["filename"]?.trim();
 
-    if (inputId === id) {
-      return /\bvalue=(?<quote>["'])(?<value>.*?)\k<quote>/iu.exec(attributes)
-        ?.groups?.["value"];
-    }
+  if (bodyOcap !== undefined && bodyOcap.length > 0) {
+    return decodeHtmlEntities(bodyOcap);
   }
 
   return undefined;
-}
-
-function getMatchGroup(match: RegExpMatchArray, group: string): string {
-  /* v8 ignore next -- regexes using this helper always declare the group. */
-  return match.groups?.[group] ?? "";
-}
-
-function stripTags(html: string): string {
-  return decodeHtmlEntities(html.replaceAll(/<[^>]+>/gu, " "));
-}
-
-function decodeHtmlEntities(value: string): string {
-  return value
-    .replaceAll("&amp;", "&")
-    .replaceAll("&quot;", '"')
-    .replaceAll("&#39;", "'")
-    .replaceAll("&lt;", "<")
-    .replaceAll("&gt;", ">");
-}
+};

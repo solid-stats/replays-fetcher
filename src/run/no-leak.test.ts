@@ -76,7 +76,7 @@ interface CaptureSink {
   readonly stream: Writable;
 }
 
-function createCaptureSink(): CaptureSink {
+const createCaptureSink = (): CaptureSink => {
   const chunks: string[] = [];
   const stream = new Writable({
     write(
@@ -90,9 +90,9 @@ function createCaptureSink(): CaptureSink {
   });
 
   return { chunks, stream };
-}
+};
 
-function createClock(values: readonly string[]): () => Date {
+const createClock = (values: readonly string[]): (() => Date) => {
   let index = 0;
   const lastValueIndex = values.length - 1;
 
@@ -106,76 +106,67 @@ function createClock(values: readonly string[]): () => Date {
 
     return new Date(value);
   };
-}
+};
 
-function fakeCheckpointStore(): {
+const fakeCheckpointStore = (): {
   readonly read: () => Promise<Record<string, never>>;
   readonly write: (
     input: CheckpointWriteInput,
   ) => Promise<Record<string, never>>;
-} {
-  return {
-    read(): Promise<Record<string, never>> {
-      return Promise.resolve({});
-    },
-    write(): Promise<Record<string, never>> {
-      return Promise.resolve({});
-    },
-  };
-}
+} => ({
+  read(): Promise<Record<string, never>> {
+    return Promise.resolve({});
+  },
+  write(): Promise<Record<string, never>> {
+    return Promise.resolve({});
+  },
+});
 
-function baseDiscoveryReport(): DiscoveryReport {
-  return {
-    candidates: [
-      {
-        identity: { filename: "replay-leak-test.ocap" },
-        source: {
-          externalId: "999",
-          url: "https://sg.zone/replays/999",
-        },
+const baseDiscoveryReport = (): DiscoveryReport => ({
+  candidates: [
+    {
+      identity: { filename: "replay-leak-test.ocap" },
+      source: {
+        externalId: "999",
+        url: "https://sg.zone/replays/999",
       },
-    ],
-    counts: { candidates: 1, diagnostics: 0, discovered: 1 },
-    diagnostics: [],
-    generatedAt: startedAt,
-    mode: "dry-run",
-    ok: true,
-    sourceUrl: sanitizedHostPath,
-  };
-}
+    },
+  ],
+  counts: { candidates: 1, diagnostics: 0, discovered: 1 },
+  diagnostics: [],
+  generatedAt: startedAt,
+  mode: "dry-run",
+  ok: true,
+  sourceUrl: sanitizedHostPath,
+});
 
-function emptyDiscoveryReport(): DiscoveryReport {
-  return {
-    candidates: [],
-    counts: { candidates: 0, diagnostics: 0, discovered: 0 },
-    diagnostics: [],
-    generatedAt: finishedAt,
-    mode: "dry-run",
-    ok: true,
-    sourceUrl: sanitizedHostPath,
-  };
-}
+const emptyDiscoveryReport = (): DiscoveryReport => ({
+  candidates: [],
+  counts: { candidates: 0, diagnostics: 0, discovered: 0 },
+  diagnostics: [],
+  generatedAt: finishedAt,
+  mode: "dry-run",
+  ok: true,
+  sourceUrl: sanitizedHostPath,
+});
 
-function rawStorageEvidence(): RawReplayStorageEvidence {
-  return {
-    bucket: "solid-stats-replays",
-    byteSize: 512,
-    checksum: testChecksum,
-    fetchedAt: finishedAt,
-    objectKey: `raw/sha256/${testChecksum}.ocap`,
-    source: { externalId: "999", url: "https://sg.zone/replays/999" },
-    sourceFilename: "replay-leak-test.ocap",
-    status: "stored",
-  };
-}
+const rawStorageEvidence = (): RawReplayStorageEvidence => ({
+  bucket: "solid-stats-replays",
+  byteSize: 512,
+  checksum: testChecksum,
+  fetchedAt: finishedAt,
+  objectKey: `raw/sha256/${testChecksum}.ocap`,
+  source: { externalId: "999", url: "https://sg.zone/replays/999" },
+  sourceFilename: "replay-leak-test.ocap",
+  status: "stored",
+});
 
-function rawStoredResult(): StoreRawReplayResult {
-  return rawStorageEvidence();
-}
+const rawStoredResult = (): StoreRawReplayResult => rawStorageEvidence();
 
-function stagedResult(): IngestStagingResult {
-  return { stagingId: "staging-leak-test", status: "staged" };
-}
+const stagedResult = (): IngestStagingResult => ({
+  stagingId: "staging-leak-test",
+  status: "staged",
+});
 
 // ---------------------------------------------------------------------------
 // Test

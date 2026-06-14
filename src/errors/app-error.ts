@@ -3,8 +3,9 @@
  *
  * Generic over a narrow literal `Code` so each subclass keeps its own
  * literal-union code without widening to `string`. Preserves the native
- * ES2022 `cause`, derives `name` from the concrete subclass, and carries an
- * `isOperational` flag plus optional structured `details`.
+ * ES2022 `cause`; each concrete subclass MUST set its own `this.name`
+ * explicitly (the base does not derive it). Carries an `isOperational` flag
+ * plus optional structured `details`.
  *
  * Intentionally has NO `httpStatus` field: this is a CLI using exit-code-2
  * semantics (Phase 05), not an HTTP service. The canonical
@@ -16,11 +17,11 @@
  * (threat T-07-01).
  */
 export abstract class AppError<Code extends string = string> extends Error {
-  readonly isOperational: boolean;
+  public readonly isOperational: boolean;
 
-  readonly code: Code;
+  public readonly code: Code;
 
-  readonly details?: Readonly<Record<string, unknown>>;
+  public readonly details?: Readonly<Record<string, unknown>>;
 
   protected constructor(
     code: Code,
@@ -31,12 +32,11 @@ export abstract class AppError<Code extends string = string> extends Error {
       readonly isOperational?: boolean;
     },
   ) {
-    if (options?.cause === undefined) {
-      super(message);
-    } else {
-      super(message, { cause: options.cause });
-    }
-    this.name = new.target.name;
+    super(
+      message,
+      options?.cause === undefined ? undefined : { cause: options.cause },
+    );
+    this.name = "AppError";
     this.code = code;
     this.isOperational = options?.isOperational ?? true;
     if (options?.details !== undefined) {

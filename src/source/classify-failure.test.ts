@@ -133,6 +133,26 @@ test("classifyFailure should classify TLS cause codes as transient", () => {
   }
 });
 
+test("classifyFailure should classify an aborted/timed-out fetch (AbortError, TimeoutError) as transient (F2)", () => {
+  for (const name of ["AbortError", "TimeoutError"]) {
+    const error = new DOMException("The operation was aborted", name);
+
+    expect(classifyFailure({ error })).toMatchObject({
+      kind: "transient",
+    });
+  }
+});
+
+test("classifyFailure should unwrap a wrapped AbortError cause to transient (F2)", () => {
+  const error = Object.assign(new TypeError("fetch failed"), {
+    cause: new DOMException("The operation was aborted", "AbortError"),
+  });
+
+  expect(classifyFailure({ error })).toMatchObject({
+    kind: "transient",
+  });
+});
+
 test("classifyFailure should unwrap an AggregateError to the first inner cause code", () => {
   const ipv6 = Object.assign(new Error("ipv6 attempt"), {
     code: "ECONNREFUSED",

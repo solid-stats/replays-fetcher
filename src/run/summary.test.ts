@@ -46,26 +46,24 @@ const candidate: ReplayCandidate = {
   },
 };
 
-function discoveryReport(
+const discoveryReport = (
   overrides: Partial<DiscoveryReport> = {},
-): DiscoveryReport {
-  return {
-    candidates: [candidate],
-    counts: {
-      candidates: 1,
-      diagnostics: 0,
-      discovered: 1,
-    },
-    diagnostics: [],
-    generatedAt: startedAt,
-    mode: "dry-run",
-    ok: true,
-    sourceUrl: "https://example.test/replays",
-    ...overrides,
-  };
-}
+): DiscoveryReport => ({
+  candidates: [candidate],
+  counts: {
+    candidates: 1,
+    diagnostics: 0,
+    discovered: 1,
+  },
+  diagnostics: [],
+  generatedAt: startedAt,
+  mode: "dry-run",
+  ok: true,
+  sourceUrl: "https://example.test/replays",
+  ...overrides,
+});
 
-function raw(status: StoreRawReplayResult["status"]): StoreRawReplayResult {
+const raw = (status: StoreRawReplayResult["status"]): StoreRawReplayResult => {
   if (status === "failed") {
     return {
       failureCategory: "fetch_failed",
@@ -87,35 +85,31 @@ function raw(status: StoreRawReplayResult["status"]): StoreRawReplayResult {
     sourceFilename: candidate.identity.filename,
     status,
   };
-}
+};
 
-function rawStorageFailure(): StoreRawReplayResult {
-  return {
-    bucket: "solid-stats-replays",
-    byteSize: Number("1234"),
-    checksum,
-    failureCategory: "s3_error",
-    fetchedAt: finishedAt,
-    objectKey: `raw/sha256/${checksum}.ocap`,
-    source: candidate.source,
-    sourceFilename: candidate.identity.filename,
-    status: "failed",
-  };
-}
+const rawStorageFailure = (): StoreRawReplayResult => ({
+  bucket: "solid-stats-replays",
+  byteSize: Number("1234"),
+  checksum,
+  failureCategory: "s3_error",
+  fetchedAt: finishedAt,
+  objectKey: `raw/sha256/${checksum}.ocap`,
+  source: candidate.source,
+  sourceFilename: candidate.identity.filename,
+  status: "failed",
+});
 
-function rawStorageConflict(): StoreRawReplayResult {
-  return {
-    bucket: "solid-stats-replays",
-    byteSize: Number("1234"),
-    checksum,
-    failureCategory: "object_conflict",
-    fetchedAt: finishedAt,
-    objectKey: `raw/sha256/${checksum}.ocap`,
-    source: candidate.source,
-    sourceFilename: candidate.identity.filename,
-    status: "conflict",
-  };
-}
+const rawStorageConflict = (): StoreRawReplayResult => ({
+  bucket: "solid-stats-replays",
+  byteSize: Number("1234"),
+  checksum,
+  failureCategory: "object_conflict",
+  fetchedAt: finishedAt,
+  objectKey: `raw/sha256/${checksum}.ocap`,
+  source: candidate.source,
+  sourceFilename: candidate.identity.filename,
+  status: "conflict",
+});
 
 test("buildRunSummary should aggregate successful run counts without secrets", () => {
   const summary = buildRunSummary({
@@ -624,8 +618,8 @@ test("buildRunSummary should default candidatesPerMinute to zero without a candi
 // toCompactSummary — Task 2
 // ---------------------------------------------------------------------------
 
-function fullRunSummary(): RunSummary {
-  return buildRunSummary({
+const fullRunSummary = (): RunSummary =>
+  buildRunSummary({
     discoveredRange: { firstPage: 1, lastPage: 3 },
     discoveryReport: discoveryReport({
       diagnostics: [
@@ -652,7 +646,6 @@ function fullRunSummary(): RunSummary {
     startedAt,
     status: "resumable",
   });
-}
 
 test("toCompactSummary should strip the four heavy array keys", () => {
   const compact = toCompactSummary(fullRunSummary());

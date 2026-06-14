@@ -78,6 +78,12 @@ pnpm run verify
 
 `pnpm run test:integration` starts Docker-backed PostgreSQL and MinIO services with Testcontainers. `pnpm run verify` includes this integration gate after the unit suite and before coverage/build, so Docker must be available for full verification.
 
+### Git hooks (lefthook)
+
+Client-side git hooks are managed by [lefthook](https://lefthook.dev) and sourced from the shared `@solid-stats/ts-toolchain` preset via `extends` (single source of truth — no hook bodies live in this repo). `pnpm install` wires `.git/hooks/pre-commit` (oxfmt + oxlint over staged files) and `.git/hooks/pre-push` (typecheck + unit tests), mirroring CI.
+
+Bypass the hooks when needed: `git commit --no-verify` / `git push --no-verify`, or `LEFTHOOK=0 git ...`.
+
 Validate runtime configuration:
 
 ```bash

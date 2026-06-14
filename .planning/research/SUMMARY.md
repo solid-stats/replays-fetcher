@@ -1,106 +1,52 @@
-# Project Research Summary
+# Project Research Summary — v3.0 Track C Toolchain Convergence
 
-**Project:** replays-fetcher  
-**Domain:** scheduled replay ingest service, S3 raw storage, PostgreSQL staging integration  
-**Researched:** 2026-05-09  
-**Confidence:** MEDIUM
+**Project:** replays-fetcher
+**Milestone:** v3.0 Track C Toolchain Convergence (pilot)
+**Synthesized:** 2026-06-13
 
-## Executive Summary
-
-`replays-fetcher` should be a narrow ingest service, not a backend or parser replacement. The best v1 shape is a TypeScript scheduled job that discovers replay candidates from the external replay source, fetches raw files, writes them to S3-compatible storage under a raw-object prefix, and writes staging/outbox rows for `server-2` to promote.
-
-The most important boundary is that `server-2` remains the source of truth. `replays-fetcher` may write staging evidence, but it must not create canonical `replays`, `parse_jobs`, `parse_results`, identity rows, stats, requests, or moderation records. `server-2` owns deduplication decisions, manual conflict review, parse job lifecycle, RabbitMQ publication, retry policy, and admin visibility.
+> Provenance: STACK / FEATURES / ARCHITECTURE / PITFALLS were produced by the GSD research subagents (working build, after the GSD reinstall). This SUMMARY was assembled by the orchestrator because the synthesizer hit the known #222 write-refusal and returned its content inline instead of writing the file — its findings are folded in below. The shared package is `@solid-stats/ts-toolchain` (`git@github.com:solid-stats/ts-toolchain.git`); the earlier name `@solidstats/config` is retired.
 
 ## Key Findings
 
-### Recommended Service Shape
+**Toolchain-only migration.** The five-band ingest pipeline, CLI, S3/PostgreSQL boundaries, and `src/` are frozen. Behavior is preserved; `verify` stays green at 100% coverage at every step. All recommendations are empirically proven on real code by spikes 001–004.
 
-Use TypeScript for v1. The service should expose a small command surface:
+**Locked, spike-proven stack:**
+- **Oxlint 1.69.0** replaces ESLint — config `.oxlintrc.json`, plugins `["typescript","unicorn","import","oxc"]`, `typescript/` rule prefix. **Port each rule's options, not severities** (severity-only = 1336 false positives, spike 001). Drop `js.configs.all`; `unicorn/no-null` off; `no-await-in-loop` off (backend).
+- **Oxfmt 0.54.0** replaces Prettier — `.oxfmtrc.json`, seed via `oxfmt --migrate=prettier`. At **`printWidth: 80` the diff against current Prettier output is zero** (spike 002) — the formatter swap is essentially free; the churn risk only appears at Oxfmt's wider default.
+- **tsdown 0.22.2** replaces `tsc` emit — single entry `src/cli.ts` → one externalized **`dist/cli.mjs` (~133 kB)**, ESM, `--platform node`; all 6 runtime deps external by default (spike 003). Docker cold-start smoke is the runtime gate.
+- **eslint-plugin-import dropped entirely** → `tsc` (no-unresolved) + **dependency-cruiser** (no-cycle/boundaries) + **knip** (unused/dep hygiene). **dependency-cruiser MUST use `--init` config — a hand-authored config produced 220 false `not-to-unresolvable` errors on this NodeNext repo** (spike 004). Only `import/order` is a genuine orphan (decide at plan-phase).
+- **oxlint-tsgolint** (type-aware) was validated on this repo (no crashes, ~+160 ms, heavy `strictTypeChecked` rules fire) but stays a **separate non-blocking step** outside `verify` until each repo re-validates it; `server-2` re-validates before its cutover.
+- **lefthook** hooks from the shared preset: pre-commit (Oxfmt + Oxlint staged), pre-push (`tsc` + Vitest); mirrors — not replaces — CI `verify`. **Vitest 4 and `tsc --noEmit` stay.**
 
-- `run-once` for one scheduled fetch cycle.
-- `discover --dry-run` for source inspection without writes.
-- `check` for config/storage/database connectivity validation.
+**`@solid-stats/ts-toolchain`** is a standalone GitHub repo (`solid-stats` org) consumed as a pnpm git-dep **pinned by tag/commit SHA** (`github:solid-stats/ts-toolchain#<tag>`) — a branch ref silently re-resolves, so the pin + a working `--frozen-lockfile` install in CI and Docker are mandatory. It ships tsconfig/oxlint/oxfmt/vitest presets + `lefthook.yml`; backends consume the VoidZero **subset** (no full Vite+ runtime mgmt for a CLI). Built and hardened in this pilot, then reused by `server-2` → `web`.
 
-The implementation should be deterministic and idempotent. Running the same discovery cycle twice should not create duplicate promoted product state. Staging rows should include enough evidence for `server-2` to make safe promotion decisions.
+## Implications for Roadmap
 
-### Recommended Stack
+The 6 phases (13–18) in ROADMAP.md follow the hard dependency order; each keeps `verify` green:
 
-- Node.js Active LTS at implementation time; Node.js 24 is Active LTS as of 2026-05-09.
-- Strict TypeScript, with the exact compiler/module target locked in Phase 1.
-- AWS SDK for JavaScript v3 for S3-compatible raw object writes.
-- `pg` for explicit PostgreSQL staging/outbox writes unless `server-2` schema ownership requires another migration path.
-- Vitest for unit tests.
-- Testcontainers or local mocks for PostgreSQL and MinIO/S3-compatible integration coverage.
-- Structured JSON logging, with Pino as a likely default if a logging library is introduced.
+1. **Phase 13 — Bootstrap `@solid-stats/ts-toolchain`** repo + tag (self-validating); gates everything.
+2. **Phase 14 — Cleanup + convention-skill refactor** on the still-ESLint baseline (clean code before the new linter audits).
+3. **Phase 15 — Oxfmt** migration — one isolated reformat commit (zero-diff at printWidth 80).
+4. **Phase 16 — Oxlint + import hygiene** — port rule options, document rule-delta, drop import-plugin, wire depcruise (`--init`) + knip; type-aware non-blocking.
+5. **Phase 17 — tsdown** build + Docker cold-start smoke + Dockerfile update.
+6. **Phase 18 — lefthook** hooks + full CI `verify` rewrite at 100% coverage.
 
-### Data Ownership
+## Watch Out For (pitfall → gate)
+- Silent lint-coverage loss → before/after rule-delta diff, document drops (Oxlint phase).
+- depcruise hand-authored config → use `--init` only (Oxlint/gates phase).
+- Alpha type-aware flaking → keep non-blocking until clean on this repo (Oxlint phase).
+- tsdown runtime breakage → Docker cold-start smoke, not just a green build (tsdown phase).
+- Reformat churn → isolated format-only commit; hold printWidth 80 (Oxfmt phase).
+- git-dep drift → pin tag/commit SHA + `--frozen-lockfile` in CI/Docker (bootstrap/CI phase).
+- `npm install` corrupts this pnpm repo → pnpm only (every phase).
+- Coverage measuring fewer files → compare file-count/totals to baseline each phase.
 
-The accepted ownership model is:
-
-- `replays-fetcher`: external source metadata, raw replay bytes in S3, ingestion staging/outbox records.
-- `server-2`: canonical replay records, parse jobs, deduplication/conflict status, RabbitMQ parse requests, parsed result persistence, final stats.
-- `replay-parser-2`: parser artifact/failure production after a parse job exists.
-- `web`: user-facing and admin UI through `server-2` APIs.
-
-Direct writes from `replays-fetcher` into business tables are a high-risk override because they bypass backend validation, status machines, operator visibility, and future API/admin assumptions.
-
-### Required Staging Evidence
-
-The exact schema belongs in an implementation phase, but staging records should preserve:
-
-- External source name.
-- External source replay ID when available.
-- Source URL.
-- Discovered timestamp.
-- Fetched timestamp.
-- S3 bucket and object key.
-- SHA-256 checksum.
-- Byte size.
-- Content type or source response metadata where useful.
-- Fetch status and error evidence.
-- Promotion status owned or interpreted by `server-2`.
-
-### S3 Layout
-
-Use separate prefixes in one S3-compatible bucket by default:
-
-- `raw/` for fetched replay files.
-- `artifacts/` for parser-produced artifacts written later by `replay-parser-2`.
-
-The fetcher should only write `raw/`. Parser artifact keying remains owned by `replay-parser-2` and `server-2` integration.
-
-### Risks
-
-1. **Boundary creep into backend state** - Direct business-table writes would make job status and duplicate handling inconsistent.
-2. **Unsafe deduplication** - Checksum-only or source-only logic can lose lineage or produce duplicate stats; use both as evidence and leave conflicts to `server-2`.
-3. **Non-idempotent scheduled runs** - Repeat runs must not create duplicate staging entries or overwrite evidence destructively.
-4. **External source instability** - Source HTML/API shape, rate limits, and missing metadata need defensive handling and tests.
-5. **Operational opacity** - Scheduled jobs need structured summaries, clear failures, and enough state for admin visibility.
-
-## Recommended Roadmap Implications
-
-1. Start with repo foundation, planning docs, TypeScript skeleton, config validation, and source adapter contracts.
-2. Build source discovery in dry-run mode before writing storage/database state.
-3. Add S3 raw object storage, checksum calculation, and idempotent object keying.
-4. Add PostgreSQL staging/outbox writes and align promotion semantics with `server-2`.
-5. Harden scheduled operation, retries, structured logs, run summaries, and integration tests.
-
-## Gaps To Address
-
-- Exact external replay source URL/API/HTML structure.
-- Exact staging table name and columns.
-- Whether staging rows live in the `server-2` database or a separate ingest database/schema.
-- Exact S3 object key format for raw replay files.
-- Rate-limit/backoff expectations for the external source.
-- Authentication, cookies, or anti-bot constraints, if any, for fetching the source.
-- Operator path for duplicate conflict review in `server-2`/`web`.
+## Open Gaps for Planning
+- `@solid-stats/ts-toolchain` repo creation is external to this repo and a Phase 13 prerequisite (repo URL confirmed: `git@github.com:solid-stats/ts-toolchain.git`).
+- `import/order` orphan: `simple-import-sort` residual vs. accept loss — decide in Phase 16.
+- `server-2` tsgolint re-validation — not pilot scope; prerequisite before type-aware becomes blocking there.
 
 ## Sources
-
-- Node.js Releases: https://nodejs.org/en/about/releases/
-- TypeScript 5.9 release notes: https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-9.html
-- AWS SDK for JavaScript v3 guide: https://docs.aws.amazon.com/en_us/sdk-for-javascript/v3/developer-guide/welcome.html
-- node-postgres docs: https://node-postgres.com/
-- Vitest docs: https://main.vitest.dev/guide/learn/writing-tests
-- Testcontainers for Node.js: https://node.testcontainers.org/
-- User project brief: `gsd-briefs/replays-fetcher.md`
+- `.planning/research/STACK.md`, `FEATURES.md`, `ARCHITECTURE.md`, `PITFALLS.md` (this research pass).
+- `.planning/spikes/MANIFEST.md`, `.planning/spikes/CONVENTIONS.md`, spike outputs 001–004.
+- `plans/product/TS-TOOLCHAIN-CONVERGENCE.md`, `plans/product/RELEASE-PLAN.md`.

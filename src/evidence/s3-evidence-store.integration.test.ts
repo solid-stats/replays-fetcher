@@ -16,6 +16,8 @@ import type { RunSummary } from "../run/types.js";
 const bucket = "solid-stats-replays";
 const prefix = "runs";
 
+const noopCleanup = (): Promise<void> => Promise.resolve();
+
 let stopContainer = noopCleanup;
 
 afterEach(async () => {
@@ -51,6 +53,7 @@ test("S3 evidence store writes the full RunSummary as a single write-once object
     accessKeyId: "solid",
     bucket,
     checkpointPrefix: "checkpoints",
+    conditionalWrites: true,
     endpoint,
     evidencePrefix: prefix,
     forcePathStyle: true,
@@ -80,7 +83,3 @@ test("S3 evidence store writes the full RunSummary as a single write-once object
   expect(persisted.runId).toBe(evidenceRunId);
   expect(persisted).toStrictEqual(summary);
 });
-
-function noopCleanup(): Promise<void> {
-  return Promise.resolve();
-}

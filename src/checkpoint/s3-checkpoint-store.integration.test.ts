@@ -18,6 +18,8 @@ const expectedKey = "checkpoints/sg.zone-replays/latest.json";
 const slug = checkpointSourceUrl;
 const CONCURRENT_PAGE = 7;
 
+const noopCleanup = (): Promise<void> => Promise.resolve();
+
 let stopContainer = noopCleanup;
 
 afterEach(async () => {
@@ -53,6 +55,7 @@ test("S3 checkpoint store creates, conditionally updates, and merges on a real 4
     accessKeyId: "solid",
     bucket,
     checkpointPrefix: prefix,
+    conditionalWrites: true,
     evidencePrefix: "runs",
     endpoint,
     forcePathStyle: true,
@@ -104,7 +107,3 @@ test("S3 checkpoint store creates, conditionally updates, and merges on a real 4
     expectedKey,
   ]);
 });
-
-function noopCleanup(): Promise<void> {
-  return Promise.resolve();
-}

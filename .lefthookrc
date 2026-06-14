@@ -1,0 +1,6 @@
+# Sourced by the generated lefthook git hooks (see `rc:` in lefthook.yml).
+# Git runs hooks with a minimal PATH that lacks node_modules/.bin, so the preset's
+# bare oxfmt/oxlint commands resolve only after this prepends the repo bin dir.
+# Resolve relative to the repo root so it stays portable across clones.
+PATH="$(git rev-parse --show-toplevel)/node_modules/.bin:$PATH"
+export PATH

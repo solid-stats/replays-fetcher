@@ -3,7 +3,7 @@ import { expect, test } from "vitest";
 import { AppError } from "./app-error.js";
 
 class TestError extends AppError<"test_code"> {
-  constructor(
+  public constructor(
     message: string,
     options?: {
       readonly cause?: unknown;
@@ -12,6 +12,7 @@ class TestError extends AppError<"test_code"> {
     },
   ) {
     super("test_code", message, options);
+    this.name = "TestError";
   }
 }
 

@@ -1,0 +1,12 @@
+# Hooks are sourced from the shared @solid-stats/ts-toolchain preset.
+# Do NOT copy hook bodies here — extend the preset so it stays the single source of truth.
+#
+# `rc` points at a tiny sh shim sourced by the generated git hook. Git invokes hooks with a
+# minimal PATH that lacks `node_modules/.bin`, so the preset's bare `oxfmt`/`oxlint` commands
+# would otherwise fail with exit 127. The shim prepends the repo's `node_modules/.bin` to PATH.
+# It is a PATH fix, not a copied hook body — the command bodies still live only in the preset.
+# The `./` prefix keeps the generated `. ./.lefthookrc` line sourcing from the repo root under
+# POSIX sh/dash (a bare `.lefthookrc` would be searched on PATH, not cwd).
+rc: ./.lefthookrc
+extends:
+  - node_modules/@solid-stats/ts-toolchain/lefthook.yml

@@ -20,10 +20,9 @@ import {
   extractReplayRows,
 } from "../discovery/html.js";
 import { SourceFetchError } from "../discovery/source-client.js";
-import {
-  classifyFailure,
-  type ClassifyInput,
-} from "../source/classify-failure.js";
+import { classifyFailure } from "../source/classify-failure.js";
+
+import type { ClassifyInput } from "../source/classify-failure.js";
 
 import type { SourceClient } from "../discovery/types.js";
 
@@ -86,9 +85,9 @@ interface DetailTarget {
 // Error classification helpers
 // ---------------------------------------------------------------------------
 
-function readHttpStatus(
+const readHttpStatus = (
   details: Readonly<Record<string, unknown>> | undefined,
-): number | undefined {
+): number | undefined => {
   const raw = details?.["httpStatus"];
 
   if (typeof raw === "number") {
@@ -96,18 +95,18 @@ function readHttpStatus(
   }
 
   return undefined;
-}
+};
 
-function buildClassifyInput(
+const buildClassifyInput = (
   error: SourceFetchError,
   httpStatus: number | undefined,
-): ClassifyInput {
+): ClassifyInput => {
   if (httpStatus === undefined) {
     return { error };
   }
 
   return { error, httpStatus };
-}
+};
 
 /**
  * Maps a caught error from fetchText into an ok:false ContractCheckResult.
@@ -115,11 +114,11 @@ function buildClassifyInput(
  * re-classified through DIAG to split permanent (contract_broken) from transient
  * network failures (source_unreachable).
  */
-function makeFetchFailureResult(
+const makeFetchFailureResult = (
   error: unknown,
   message: string,
   warnings: readonly ContractCheckWarning[],
-): FetchFailureResult {
+): FetchFailureResult => {
   if (!(error instanceof SourceFetchError)) {
     return { message, ok: false, reason: "contract_broken", warnings };
   }
@@ -146,13 +145,13 @@ function makeFetchFailureResult(
     reason: "contract_broken",
     warnings,
   };
-}
+};
 
-async function tryFetch(
+const tryFetch = async (
   context: ProbeContext,
   url: URL,
   message: string,
-): Promise<FetchOutcome> {
+): Promise<FetchOutcome> => {
   try {
     return { body: await context.sourceClient.fetchText(url), ok: true };
   } catch (error) {
@@ -161,30 +160,30 @@ async function tryFetch(
       result: makeFetchFailureResult(error, message, context.warnings),
     };
   }
-}
+};
 
-function warn(
+const warn = (
   context: ProbeContext,
   warning: ContractCheckWarning,
   sample: ContractCheckSample,
-): ContractCheckResult {
+): ContractCheckResult => {
   context.warnings.push(warning);
   return { ok: true, sample, warnings: context.warnings };
-}
+};
 
-function isJson(text: string): boolean {
+const isJson = (text: string): boolean => {
   try {
     JSON.parse(text);
     return true;
   } catch {
     return false;
   }
-}
+};
 
-async function probeRawEndpoint(
+const probeRawEndpoint = async (
   context: ProbeContext,
   target: DetailTarget,
-): Promise<ContractCheckResult> {
+): Promise<ContractCheckResult> => {
   const rawUrl = toRawReplayUrl(target.filename, target.detailUrl);
 
   const outcome = await tryFetch(
@@ -215,15 +214,15 @@ async function probeRawEndpoint(
     },
     warnings: context.warnings,
   };
-}
+};
 
 // ---------------------------------------------------------------------------
 // Main probe
 // ---------------------------------------------------------------------------
 
-export async function runContractCheck(
+export const runContractCheck = async (
   options: RunContractCheckOptions,
-): Promise<ContractCheckResult> {
+): Promise<ContractCheckResult> => {
   const { sourceClient, sourceUrl } = options;
   const context: ProbeContext = {
     listPageUrl: sourceUrl.toString(),
@@ -295,4 +294,4 @@ export async function runContractCheck(
   }
 
   return probeRawEndpoint(context, { detailUrl, detailUrlString, filename });
-}
+};

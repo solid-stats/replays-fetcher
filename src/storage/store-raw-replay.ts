@@ -1,9 +1,8 @@
 import { calculateSha256 } from "./checksum.js";
 import { toRawReplayObjectKey } from "./object-key.js";
-import {
-  ReplayByteFetchError,
-  type ReplayByteClient,
-} from "./replay-byte-client.js";
+import { ReplayByteFetchError } from "./replay-byte-client.js";
+
+import type { ReplayByteClient } from "./replay-byte-client.js";
 
 import type { S3RawReplayStorage } from "./s3-raw-storage.js";
 import type { RawReplayStorageEvidence } from "./types.js";
@@ -29,9 +28,9 @@ interface StoreRawReplayInput {
   readonly storage: S3RawReplayStorage;
 }
 
-export async function storeRawReplay(
+export const storeRawReplay = async (
   input: StoreRawReplayInput,
-): Promise<StoreRawReplayResult> {
+): Promise<StoreRawReplayResult> => {
   const fetchedAt = (input.now ?? (() => new Date()))().toISOString();
 
   try {
@@ -62,4 +61,4 @@ export async function storeRawReplay(
       status: "failed",
     };
   }
-}
+};

@@ -37,17 +37,14 @@ const candidateWithDiscoveredAt: ReplayCandidate = {
 
 type SentCommand = HeadObjectCommand | PutObjectCommand;
 
-function commandInput(command: SentCommand): unknown {
-  return command.input;
-}
+const commandInput = (command: SentCommand): unknown => command.input;
 
-function createS3Error(name: string): S3ServiceException {
-  return new S3ServiceException({
+const createS3Error = (name: string): S3ServiceException =>
+  new S3ServiceException({
     $fault: "client",
     $metadata: {},
     name,
   });
-}
 
 test("storeRawReplay should HEAD then PUT missing raw replay objects", async () => {
   const commands: SentCommand[] = [];
@@ -280,6 +277,7 @@ test("createS3RawReplayStorageFromConfig should create a configured storage adap
     accessKeyId: "access-key",
     bucket,
     checkpointPrefix: "checkpoints",
+    conditionalWrites: true,
     evidencePrefix: "runs",
     endpoint: "https://s3.example.test",
     forcePathStyle: true,

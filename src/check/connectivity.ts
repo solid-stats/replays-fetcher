@@ -19,10 +19,7 @@ export interface ConnectivityCheckResults {
   readonly stagingConnectivity: ConnectivityCheck;
 }
 
-export function connectivityOk(checks: ConnectivityCheckResults): boolean {
-  return (
-    checks.s3Connectivity.status === "passed" &&
-    checks.sourceConnectivity.status === "passed" &&
-    checks.stagingConnectivity.status === "passed"
-  );
-}
+export const connectivityOk = (checks: ConnectivityCheckResults): boolean =>
+  checks.s3Connectivity.status === "passed" &&
+  checks.sourceConnectivity.status === "passed" &&
+  checks.stagingConnectivity.status === "passed";

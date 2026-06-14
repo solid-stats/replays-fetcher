@@ -67,6 +67,17 @@ const transientNetworkCodes = new Set<string>([
 
 const transientTlsCodes = new Set<string>(["EPROTO"]);
 
+/**
+ * Error `name`s that signal an aborted/timed-out transport read and must stay
+ * retryable (F2). The per-request timeout controller aborts the in-flight
+ * `fetch`, which rejects with a DOMException named `AbortError`
+ * (`AbortSignal.timeout()` yields `TimeoutError`). Its legacy `.code` is the
+ * numeric `ABORT_ERR` (20), not a string errno, so `readErrorCode` discards it
+ * and — without this name check — the generic fallback would map a recoverable
+ * timeout to `permanent`, killing the whole run instead of retrying the page.
+ */
+const transientErrorNames = new Set<string>(["AbortError", "TimeoutError"]);
+
 const undiciCodePrefix = "UND_ERR_";
 const tlsCodePrefix = "ERR_TLS_";
 const certCodePrefix = "CERT_";
@@ -74,9 +85,10 @@ const certCodePrefix = "CERT_";
 interface UnwrappedCause {
   readonly code?: string;
   readonly message?: string;
+  readonly name?: string;
 }
 
-function readErrorCode(error: Error): string | undefined {
+const readErrorCode = (error: Error): string | undefined => {
   if (!("code" in error)) {
     return undefined;
   }
@@ -87,18 +99,18 @@ function readErrorCode(error: Error): string | undefined {
   }
 
   return undefined;
-}
+};
 
-function selectAggregateInner(aggregate: AggregateError): unknown {
+const selectAggregateInner = (aggregate: AggregateError): unknown => {
   const withCode = aggregate.errors.find(
     (inner): inner is Error =>
       inner instanceof Error && readErrorCode(inner) !== undefined,
   );
 
   return withCode ?? aggregate.errors[0];
-}
+};
 
-function unwrapCause(error: unknown): UnwrappedCause {
+const unwrapCause = (error: unknown): UnwrappedCause => {
   let current: unknown = error;
 
   if (
@@ -118,36 +130,32 @@ function unwrapCause(error: unknown): UnwrappedCause {
   }
 
   const code = readErrorCode(current);
-  const result: UnwrappedCause = {
+  let result: UnwrappedCause = {
     message: current.message.slice(0, causeMessageMaxLength),
+    name: current.name,
   };
 
-  if (code === undefined) {
-    return result;
+  if (code !== undefined) {
+    result = { ...result, code };
   }
 
-  return { ...result, code };
-}
+  return result;
+};
 
-function isTransientCauseCode(code: string): boolean {
-  return (
-    transientNetworkCodes.has(code) ||
-    transientTlsCodes.has(code) ||
-    code.startsWith(undiciCodePrefix) ||
-    code.startsWith(tlsCodePrefix) ||
-    code.startsWith(certCodePrefix)
-  );
-}
+const isTransientCauseCode = (code: string): boolean =>
+  transientNetworkCodes.has(code) ||
+  transientTlsCodes.has(code) ||
+  code.startsWith(undiciCodePrefix) ||
+  code.startsWith(tlsCodePrefix) ||
+  code.startsWith(certCodePrefix);
 
-function isServerError(status: number): boolean {
-  return status >= httpServerErrorFloor && status < httpServerErrorCeiling;
-}
+const isServerError = (status: number): boolean =>
+  status >= httpServerErrorFloor && status < httpServerErrorCeiling;
 
-function isClientError(status: number): boolean {
-  return status >= httpClientErrorFloor && status < httpServerErrorFloor;
-}
+const isClientError = (status: number): boolean =>
+  status >= httpClientErrorFloor && status < httpServerErrorFloor;
 
-function classifyByStatus(status: number): FailureKind | undefined {
+const classifyByStatus = (status: number): FailureKind | undefined => {
   if (status === httpTooManyRequestsStatus) {
     return "rate_limited";
   }
@@ -165,7 +173,7 @@ function classifyByStatus(status: number): FailureKind | undefined {
   }
 
   return undefined;
-}
+};
 
 interface ClassificationParts {
   readonly cause: UnwrappedCause;
@@ -174,9 +182,9 @@ interface ClassificationParts {
   readonly kind: FailureKind;
 }
 
-function buildClassification(
+const buildClassification = (
   parts: ClassificationParts,
-): FailureClassification {
+): FailureClassification => {
   const { cause, cfChallenge, input, kind } = parts;
   let result: FailureClassification = { cfChallenge, kind };
 
@@ -193,13 +201,13 @@ function buildClassification(
   }
 
   return result;
-}
+};
 
-function resolveKind(
+const resolveKind = (
   input: ClassifyInput,
   cause: UnwrappedCause,
   cfChallenge: boolean,
-): FailureKind {
+): FailureKind => {
   if (cfChallenge) {
     return "transient";
   }
@@ -219,13 +227,19 @@ function resolveKind(
     return "transient";
   }
 
-  return "permanent";
-}
+  if (cause.name !== undefined && transientErrorNames.has(cause.name)) {
+    return "transient";
+  }
 
-export function classifyFailure(input: ClassifyInput): FailureClassification {
+  return "permanent";
+};
+
+export const classifyFailure = (
+  input: ClassifyInput,
+): FailureClassification => {
   const cause = unwrapCause(input.error);
   const cfChallenge = input.cfChallenge === true;
   const kind = resolveKind(input, cause, cfChallenge);
 
   return buildClassification({ cause, cfChallenge, input, kind });
-}
+};

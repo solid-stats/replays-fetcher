@@ -44,8 +44,35 @@ if (!stagingResult.stageable) {
 
 const { payload } = stagingResult;
 
+const noopCleanup = (): Promise<void> => Promise.resolve();
+
 let stopPool = noopCleanup;
 let stopContainer = noopCleanup;
+
+const applyStagingSchema = async (client: Pool): Promise<void> => {
+  await client.query("create extension if not exists pgcrypto");
+  await client.query(
+    "create type ingest_status as enum ('pending', 'processing', 'promoted', 'conflict', 'failed')",
+  );
+  await client.query(`
+    create table ingest_staging_records (
+      id uuid primary key default gen_random_uuid(),
+      source_system text not null,
+      source_replay_id text not null,
+      object_key text not null,
+      checksum text not null,
+      size_bytes bigint not null check (size_bytes >= 0),
+      replay_timestamp timestamptz,
+      status ingest_status not null default 'pending',
+      promotion_evidence jsonb not null default '{}'::jsonb,
+      conflict_details jsonb not null default '{}'::jsonb,
+      created_at timestamptz not null default now(),
+      updated_at timestamptz not null default now(),
+      unique (source_system, source_replay_id),
+      unique (checksum, object_key)
+    )
+  `);
+};
 
 afterEach(async () => {
   const endPool = stopPool;
@@ -96,32 +123,3 @@ test("PostgreSQL staging repository should insert idempotent discovered timestam
   expect(rows.rows[0]?.promotion_evidence.run_id).toBe(runId);
   expect(second).toMatchObject({ status: "already_staged" });
 });
-
-async function applyStagingSchema(client: Pool): Promise<void> {
-  await client.query("create extension if not exists pgcrypto");
-  await client.query(
-    "create type ingest_status as enum ('pending', 'processing', 'promoted', 'conflict', 'failed')",
-  );
-  await client.query(`
-    create table ingest_staging_records (
-      id uuid primary key default gen_random_uuid(),
-      source_system text not null,
-      source_replay_id text not null,
-      object_key text not null,
-      checksum text not null,
-      size_bytes bigint not null check (size_bytes >= 0),
-      replay_timestamp timestamptz,
-      status ingest_status not null default 'pending',
-      promotion_evidence jsonb not null default '{}'::jsonb,
-      conflict_details jsonb not null default '{}'::jsonb,
-      created_at timestamptz not null default now(),
-      updated_at timestamptz not null default now(),
-      unique (source_system, source_replay_id),
-      unique (checksum, object_key)
-    )
-  `);
-}
-
-function noopCleanup(): Promise<void> {
-  return Promise.resolve();
-}

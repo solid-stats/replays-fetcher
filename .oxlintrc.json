@@ -1,0 +1,21 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "extends": [
+    "./node_modules/@solid-stats/ts-toolchain/oxlint/base.oxlintrc.json"
+  ],
+  "plugins": ["typescript", "unicorn", "import", "oxc"],
+  "rules": {
+    "no-await-in-loop": "off",
+    "typescript/require-await": "off",
+    "typescript/no-magic-numbers": [
+      "warn",
+      {
+        "ignore": [-2, 0, 1, 2, 4],
+        "ignoreArrayIndexes": true,
+        "ignoreDefaultValues": true,
+        "ignoreEnums": true,
+        "ignoreReadonlyClassProperties": true
+      }
+    ]
+  }
+}

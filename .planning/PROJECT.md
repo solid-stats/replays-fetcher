@@ -10,18 +10,9 @@ The service is intentionally narrow. It fetches replay bytes and records source 
 
 Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
 
-## Current Milestone: v2.0 Full-Corpus Ingest Resilience
+## Current Milestone
 
-**Goal:** Make full-corpus replay ingest reliable enough that a failed source request or pod restart does not waste hours or leave operators guessing what completed. The output is durable full-run input for `server-2` parity and infrastructure diff readiness.
-
-**Target features:**
-- Source-failure diagnostics that preserve HTTP status, low-level error name/message, page number, and detail URL, plus bounded retry/backoff that distinguishes transient failures from permanently malformed source data.
-- Checkpoint and resume so a restarted run continues from the first incomplete page or candidate instead of restarting at page 1.
-- Dynamic source-range discovery (drop hardcoded `REPLAY_SOURCE_MAX_PAGES`) with bounded concurrency, operator-configurable pacing, and pages/candidates-per-minute plus ETA.
-- Compact progress events during the run, with the final summary reduced to counts and failure categories and detailed per-candidate evidence kept in an opt-in artifact.
-- Source-contract guard tests and an operator contract check that proves raw bytes are fetched from the JSON data endpoint without writing S3 or PostgreSQL state.
-
-**Key context:** Grounded in the 2026-05-11 full run over `sg.zone/replays` (786 pages, ~23.5k replays) that failed twice on `source_unavailable` (p=129, p=259) and restarted from page 1, wasting hours. The dependency on `server-2` full-run-readiness and export contracts is satisfied (shipped in `server-2` v2.0). Boundaries are unchanged: S3 raw objects plus staging rows only.
+No active milestone. **v3.0 Track C Toolchain Convergence (pilot) shipped 2026-06-14** — see Current State below. Define the next one through `/gsd-new-milestone`.
 
 ## Requirements
 
@@ -35,10 +26,17 @@ Reliably discover and stage new replay files without corrupting `server-2` busin
 - ✓ Dynamic source-range discovery, bounded concurrency, adaptive throttling, configurable pacing, and ETA (no hardcoded `REPLAY_SOURCE_MAX_PAGES`) — v2.0.
 - ✓ Compact progress events with a summarized final output and an opt-in durable evidence artifact — v2.0.
 - ✓ Source-contract guard tests and a no-write operator `contract-check` command — v2.0.
+- ✓ Shared `@solid-stats/ts-toolchain` git repo (presets + `lefthook.yml`) with self-validating CI, consumed as a tag-pinned pnpm git-dependency — v3.0.
+- ✓ Repository cleanup + convention-skill compliance (dead code, stale TODO/FIXME, redundant suppressions, `cli.ts` god-file split) — v3.0.
+- ✓ Linter ESLint → Oxlint (ported rule options, import-plugin dropped, dependency-cruiser + knip cover the gap, type-aware re-validated non-blocking) — v3.0.
+- ✓ Formatter Prettier → Oxfmt as one isolated reformat commit — v3.0.
+- ✓ Build `tsc` → tsdown single-entry ESM bundle with a Docker smoke-run — v3.0.
+- ✓ lefthook pre-commit (Oxfmt + Oxlint staged) / pre-push (tsc + Vitest) hooks from the shared preset, mirroring CI `verify`, bypassable with `--no-verify` — v3.0.
+- ✓ Full new `verify` surface (oxfmt → oxlint → tsc → unit → integration → coverage → tsdown → depcruise → knip) green at 100% coverage; CI rewritten onto it — v3.0.
 
 ### Active
 
-None — v2.0 Full-Corpus Ingest Resilience shipped 2026-06-12. Define the next milestone via `/gsd-new-milestone`.
+No active requirements. Define the next milestone with `/gsd-new-milestone`.
 
 ### Out of Scope
 
@@ -85,6 +83,8 @@ Verification for the shipped milestone passed `pnpm run verify`: format, ESLint,
 
 The full milestone audit passed (25/25 requirements, 6/6 phases, integration clean, 1 E2E flow). `pnpm run verify` is green: format, ESLint, typecheck, 444 unit tests, Docker-backed integration (testcontainers MinIO + PostgreSQL), 100% V8 coverage, and build. The local machine still emits the expected Node engine warning (Node 24 vs target 25).
 
+**v3.0 Track C Toolchain Convergence (pilot) shipped 2026-06-14** (Phases 13-18, 16 plans). The fetcher now rides the shared `@solid-stats/ts-toolchain` preset (pinned `#v0.1.2`): `tsconfig`/`.oxlintrc`/`lefthook.yml` `extends` the preset, `.oxfmtrc` byte-mirrors it, and `vitest.config.ts` `mergeConfig`s the shared coverage base — single source of truth across configs. ESLint→Oxlint, Prettier→Oxfmt, `tsc`-emit→tsdown (`dist/cli.mjs` ESM bundle), `eslint-plugin-import`→dependency-cruiser + knip; lefthook pre-commit (Oxfmt + Oxlint staged) + pre-push (tsc + Vitest) installed from the preset and mirroring CI; the new `verify` surface runs green at 100% V8 coverage (1797/1797) and CI rides it. Behavior-preserving — zero `src/` business-logic change across the milestone; ingest boundaries untouched. The audit surfaced and closed the one real gap (the shared vitest preset shipped raw `.ts`, unimportable under Node type-stripping → fixed in preset `v0.1.2` as `base.js`+`base.d.ts`). One tracked non-blocking follow-up remains: the preset's pre-commit `oxfmt --check` false-blocks all-ignored staged sets (fix prepared, awaits a `v0.1.3` push). The pilot is proven; `server-2` and `web` are next in the rollout.
+
 ## Next Milestone Goals
 
 No active milestone. Define the next one through `/gsd-new-milestone`, with special attention to cross-project compatibility if scope touches staging schema, object identity, parser handoff, operator-visible statuses, `server-2`, or `web`. Candidate directions: production Kubernetes rollout, a guarded historical `~/sg_stats` import, or operating the resilient full run against the live `sg.zone` corpus.
@@ -123,6 +123,10 @@ No active milestone. Define the next one through `/gsd-new-milestone`, with spec
 | Keep source discovery dry-run read-only | Operators need to inspect replay candidates safely before storage/staging phases; Phase 2 validates direct and SSH source reads without S3, database, parser, local replay-list, or `server-2` writes. | Accepted |
 | Preserve discovered timestamp as source evidence only | Source-discovered time belongs in promotion evidence; trusted replay time remains unset until parser/backend logic owns it. | Accepted |
 | Require Docker-backed S3 and PostgreSQL integration validation for v1 readiness | Fake adapters were not enough for milestone closure; MinIO and PostgreSQL Testcontainers now block `pnpm run verify`. | Accepted |
+| [v3.0] Shared TS toolchain lives in a standalone repo `@solid-stats/ts-toolchain` (`git@github.com:solid-stats/ts-toolchain.git`), consumed as a pinned pnpm git-dependency | Polyrepo single source of truth for Oxlint/Oxfmt/tsconfig/vitest/lefthook presets across the TS repos; name scoped to the TS toolchain (not "all of solidstats", not the Rust parser/infra). Built/hardened in the fetcher pilot, then reused by `server-2` → `web`. | ✓ Good |
+| [v3.0] Drop `eslint-plugin-import`; cover the gap with `tsc` + dependency-cruiser (no-cycle/boundaries) + knip (unused/dep hygiene) | Oxlint has no import-resolution plugin; the three tools together cover cycles, ingest-boundary import rules, and dead-module/dep hygiene inside `verify` (planted-cycle proof passed). | ✓ Good |
+| [v3.0] Ship the vitest preset as `base.js` + `base.d.ts`, not raw `.ts` | Node refuses to strip TS types from files under `node_modules` (`ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING`), so the documented `import vitestBaseConfig + mergeConfig` is unloadable from a raw-`.ts` preset. Surfaced by the fetcher pilot (first real consumer); fixed in preset `v0.1.2`. Lesson for `server-2`/`web` adoption. | ✓ Good |
+| [v3.0] lefthook hooks consume the shared `lefthook.yml` via `extends` (+ a `.lefthookrc` PATH shim), never copied bodies; gated behind `allowBuilds: lefthook` | Keeps the preset the single source of truth; the shim only fixes git's minimal hook PATH (`node_modules/.bin`). pnpm silently skips lefthook's postinstall without the `allowBuilds` entry. | ✓ Good |
 
 ## Evolution
 
@@ -142,4 +146,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state.
 
 ---
-*Last updated: 2026-06-12 after v2.0 (Full-Corpus Ingest Resilience) milestone*
+*Last updated: 2026-06-14 after v3.0 (Track C Toolchain Convergence) milestone*
