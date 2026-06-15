@@ -41,3 +41,9 @@ coverage/
 .agents/settings.json
 .agents/settings.local.json
 .agents/skills/gsd-*/
+
+# graphify working dir (build + cache); canonical graph lives in .planning/graphs/
+graphify-out/
+# heavy regenerable graph artifacts (keep GRAPH_COMMUNITIES.md + GRAPH_REPORT.md)
+.planning/graphs/graph.json
+.planning/graphs/graph.html
