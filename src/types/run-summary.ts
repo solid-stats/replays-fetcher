@@ -22,7 +22,12 @@ export type SourceFailureClassification =
   | "rate_limited"
   | "transient";
 
-export type RunStatus = "complete" | "failed" | "partial" | "resumable";
+export type RunStatus =
+  | "complete"
+  | "failed"
+  | "partial"
+  | "resumable"
+  | "truncated";
 
 export interface RunSourceFailure {
   readonly attempts?: number;
