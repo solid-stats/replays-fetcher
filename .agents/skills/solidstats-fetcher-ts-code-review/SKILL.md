@@ -159,6 +159,29 @@ actual impact.)
 
 ---
 
+## Review lenses
+
+For a deep phase/milestone review, run the change through the three adversarial lenses from
+`solidstats-shared-review-standards` §J — many lenses, one report (all findings share the §C buckets,
+§D numbering, one §E verdict). First run §I discovery: locate the plan and **map the change onto the
+codebase** (`.planning/codebase/` for module/role placement; the knowledge graph for the blast radius —
+the downstream consumer is `server-2`, which reads the staging/outbox the fetcher writes). The lenses
+map onto this reviewer's two phases as:
+
+| Lens | Fetcher mandate |
+|------|-----------------|
+| **Contract Adversary** | Assume the change crosses the ingest boundary or corrupts what `server-2` ingests. Drive **Phase 1** — no parser/content-decode import, PG writes staging-only, full source-evidence set, idempotent natural key — and trace the §I.2 blast radius into the server-2 staging/outbox consumers. |
+| **Edge / Failure Hunter** | The happy fetch works. Hunt the failure path: checkpoint advanced **before** the item's writes durably landed, a resume window that drops or double-writes, a floating promise / blocking I/O on the run's shared path, a swallowed source error, unbounded memory/row/object growth — Phase 2 topics 2, 3, and 7. |
+| **Acceptance Auditor** | The task is marked done. Prove the tests prove the plan's `must_haves.truths` (§I.3) — resume-correctness and idempotency truths need a test that actually re-runs the path, not just one happy fetch; §F + the discovered PLAN contract. |
+
+Each lens records what it attacked and ruled out under **Non-Findings Checked** (§D); a lens that
+finds nothing real reports nothing — no forced findings. The parallel-subagent fan-out (one per lens)
+is driven from the invocation layer by the `solidstats-process-review-lenses` skill/Workflow — never by
+editing the vendored `gsd-code-review`/`gsd-verifier` (see `solidstats-shared-review-standards` §J); a
+`/gsd-quick` review collapses the lenses into the single Phase-1→Phase-2 pass.
+
+---
+
 ## Output
 
 Follow the output format, continuous numbering, severity buckets, and verdict rules from
