@@ -88,14 +88,17 @@
       ".agents/skills/solidstats-fetcher-ts-conventions"
     ],
     "gsd-planner": [
-      ".agents/skills/solidstats-fetcher-ts-conventions"
+      ".agents/skills/solidstats-fetcher-ts-conventions",
+      ".agents/skills/solidstats-shared-planning-standards"
     ],
     "gsd-plan-checker": [
-      ".agents/skills/solidstats-fetcher-ts-conventions"
+      ".agents/skills/solidstats-fetcher-ts-conventions",
+      ".agents/skills/solidstats-shared-planning-standards"
     ],
     "gsd-executor": [
       ".agents/skills/solidstats-fetcher-ts-conventions",
-      ".agents/skills/solidstats-fetcher-ts-tests"
+      ".agents/skills/solidstats-fetcher-ts-tests",
+      ".agents/skills/solidstats-shared-planning-standards"
     ],
     "gsd-verifier": [
       ".agents/skills/solidstats-fetcher-ts-conventions",
