@@ -312,6 +312,10 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
   process.exitCode = undefined;
+  // The watch command registers SIGTERM/SIGINT handlers via process.once; clear
+  // any that a watch smoke left behind so they cannot leak across tests.
+  process.removeAllListeners("SIGTERM");
+  process.removeAllListeners("SIGINT");
 });
 
 test("buildCli should write redacted real check output when valid configuration is provided", async () => {
@@ -2138,4 +2142,206 @@ test("buildCli run-once flushLogger rejects when log.flush calls back with an er
       ),
     }).parseAsync(["node", "replays-fetcher", "run-once"]),
   ).rejects.toBe(flushError);
+});
+
+// ─── Task 3: watch command smoke (dispatch, exit codes, signal seam) ─────────
+
+test("buildCli watch should load full config and dispatch to runWatchLoop with assembled deps", async () => {
+  stubValidEnvironment();
+  const byteClient = { fetchBytes: vi.fn() };
+  const sourceClient = { fetchText: vi.fn() };
+  const stagingRepository = { stage: vi.fn() };
+  const storage = { storeRawReplay: vi.fn() };
+  const injectedRunWatchLoop = vi.fn(
+    async (_input: Record<string, unknown>) => ({ exitCode: 0 as const }),
+  );
+  vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+  await buildCli({
+    createPostgresStagingRepository: () => stagingRepository,
+    createReplayByteClient: () => byteClient,
+    createS3CheckpointStore: () => ({ read: vi.fn(), write: vi.fn() }),
+    createS3RawReplayStorage: () => storage,
+    createSourceClient: () => sourceClient,
+    now: () => new Date("2026-06-16T12:00:00.000Z"),
+    runWatchLoop: injectedRunWatchLoop as never,
+  }).parseAsync(["node", "replays-fetcher", "watch"]);
+
+  expect(injectedRunWatchLoop).toHaveBeenCalledWith(
+    expect.objectContaining({
+      attempts: 3,
+      byteClient,
+      concurrency: expect.any(Number) as number,
+      createRunId: expect.any(Function) as (now: Date) => string,
+      discoverReplays: expect.any(Function) as unknown,
+      heartbeatPath: "/tmp/replays-fetcher-watch.heartbeat",
+      intervalMs: 0,
+      log: expect.any(Object) as unknown,
+      now: expect.any(Function) as () => Date,
+      requestSpacingMs: expect.any(Number) as number,
+      shouldStop: expect.any(Function) as () => boolean,
+      sourceClient,
+      sourceUrl: new URL(validEnvironment.REPLAY_SOURCE_URL),
+      stageRawReplay: expect.any(Function) as unknown,
+      stagingRepository,
+      storage,
+      storeRawReplay: expect.any(Function) as unknown,
+      writeHeartbeat: expect.any(Function) as unknown,
+    }),
+  );
+  // The watcher is checkpoint-independent — no checkpointStore reaches the loop.
+  const loopInput = injectedRunWatchLoop.mock.calls[0]?.[0] as
+    | Record<string, unknown>
+    | undefined;
+  expect(Object.hasOwn(loopInput ?? {}, "checkpointStore")).toBe(false);
+  expect(process.exitCode).toBe(0);
+});
+
+test("buildCli watch should emit a config-invalid summary and exit 2 without side effects", async () => {
+  const writes: string[] = [];
+  const createStorage = vi.fn();
+  const createStaging = vi.fn();
+  const injectedRunWatchLoop = vi.fn();
+  vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+    writes.push(String(chunk));
+    return true;
+  });
+
+  await buildCli({
+    createPostgresStagingRepository: createStaging,
+    createRunId: () => "run-watch-config-invalid",
+    createS3RawReplayStorage: createStorage,
+    now: () => new Date("2026-06-16T12:00:00.000Z"),
+    runWatchLoop: injectedRunWatchLoop,
+  }).parseAsync(["node", "replays-fetcher", "watch"]);
+
+  expect(injectedRunWatchLoop).not.toHaveBeenCalled();
+  expect(createStorage).not.toHaveBeenCalled();
+  expect(createStaging).not.toHaveBeenCalled();
+  expect(parseCliOutput(writes)).toMatchObject({
+    failureCategories: ["config_invalid"],
+    issues: expect.arrayContaining([
+      expect.stringContaining("sourceUrl"),
+      expect.stringContaining("s3"),
+    ]) as string[],
+    ok: false,
+    runId: "run-watch-config-invalid",
+  });
+  expect(process.exitCode).toBe(2);
+});
+
+test("buildCli watch should register SIGTERM/SIGINT handlers that flip the stop seam, awaiting flush before exitCode", async () => {
+  stubValidEnvironment();
+  const events: string[] = [];
+  const log = createLogger({
+    destination: new Writable({
+      write(_chunk, _encoding, callback) {
+        callback();
+      },
+    }),
+  });
+  const originalFlush = log.flush.bind(log);
+  log.flush = (callback?: (error?: Error) => void) => {
+    events.push("flush");
+    if (callback === undefined) {
+      originalFlush();
+    } else {
+      originalFlush(callback);
+    }
+  };
+  vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+  await buildCli({
+    createLogger: () => log,
+    createPostgresStagingRepository: () => ({ stage: vi.fn() }),
+    createReplayByteClient: () => ({ fetchBytes: vi.fn() }),
+    createS3CheckpointStore: () => ({ read: vi.fn(), write: vi.fn() }),
+    createS3RawReplayStorage: () => ({ storeRawReplay: vi.fn() }),
+    createSourceClient: () => ({ fetchText: vi.fn() }),
+    now: () => new Date("2026-06-16T12:00:00.000Z"),
+    async runWatchLoop(input: { readonly shouldStop: () => boolean }) {
+      // Before the signal, the loop is asked to keep running.
+      expect(input.shouldStop()).toBe(false);
+      // Simulate SIGTERM: the registered handler must flip the stop seam.
+      process.emit("SIGTERM");
+      expect(input.shouldStop()).toBe(true);
+      events.push("loop");
+
+      return { exitCode: 0 as const };
+    },
+  }).parseAsync(["node", "replays-fetcher", "watch"]);
+
+  // The flush is awaited AFTER the loop resolves and BEFORE exitCode is set.
+  expect(events).toStrictEqual(["loop", "flush"]);
+  expect(process.exitCode).toBe(0);
+});
+
+test("buildCli watch removes BOTH signal handlers after the loop resolves (no leaked listener)", async () => {
+  stubValidEnvironment();
+  vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+  const sigtermBefore = process.listenerCount("SIGTERM");
+  const sigintBefore = process.listenerCount("SIGINT");
+
+  await buildCli({
+    createPostgresStagingRepository: () => ({ stage: vi.fn() }),
+    createReplayByteClient: () => ({ fetchBytes: vi.fn() }),
+    createS3CheckpointStore: () => ({ read: vi.fn(), write: vi.fn() }),
+    createS3RawReplayStorage: () => ({ storeRawReplay: vi.fn() }),
+    createSourceClient: () => ({ fetchText: vi.fn() }),
+    now: () => new Date("2026-06-16T12:00:00.000Z"),
+    // The loop returns WITHOUT any signal firing, so the SIGTERM/SIGINT handlers
+    // are both unfired — production `dispose()` must still remove them. If it
+    // leaned on the test harness's removeAllListeners, the counts would be off
+    // here (the harness only runs in afterEach, after this assertion).
+    runWatchLoop: (async () => ({ exitCode: 0 as const })) as never,
+  }).parseAsync(["node", "replays-fetcher", "watch"]);
+
+  // Both handlers were registered and then removed by dispose() — listener
+  // counts are back to their pre-run baseline, nothing leaked.
+  expect(process.listenerCount("SIGTERM")).toBe(sigtermBefore);
+  expect(process.listenerCount("SIGINT")).toBe(sigintBefore);
+});
+
+test("buildCli watch default writeHeartbeat seam writes the body to the given path", async () => {
+  stubValidEnvironment();
+  vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+  // We do NOT override writeHeartbeat — the CLI's default seam
+  // (`(path, body) => writeFile(path, body, "utf8")`) is captured and invoked.
+  const capturedSeam: {
+    readonly fn: (path: string, body: string) => Promise<void>;
+  } = {
+    fn: async () => {
+      throw new Error("writeHeartbeat seam was not captured");
+    },
+  };
+
+  await buildCli({
+    createPostgresStagingRepository: () => ({ stage: vi.fn() }),
+    createReplayByteClient: () => ({ fetchBytes: vi.fn() }),
+    createS3CheckpointStore: () => ({ read: vi.fn(), write: vi.fn() }),
+    createS3RawReplayStorage: () => ({ storeRawReplay: vi.fn() }),
+    createSourceClient: () => ({ fetchText: vi.fn() }),
+    now: () => new Date("2026-06-16T12:00:00.000Z"),
+    runWatchLoop: (async (input: {
+      readonly writeHeartbeat: (path: string, body: string) => Promise<void>;
+    }) => {
+      Object.assign(capturedSeam, { fn: input.writeHeartbeat });
+
+      return { exitCode: 0 as const };
+    }) as never,
+  }).parseAsync(["node", "replays-fetcher", "watch"]);
+
+  const temporaryPath = `/tmp/watch-seam-test-${String(Date.now())}.heartbeat`;
+  const heartbeatBody = JSON.stringify({
+    timestamp: "2026-06-16T12:00:00.000Z",
+  });
+  await capturedSeam.fn(temporaryPath, heartbeatBody);
+
+  const written = await readFile(temporaryPath, "utf8");
+  expect(written).toBe(heartbeatBody);
+
+  const { unlink } = await import("node:fs/promises");
+  await unlink(temporaryPath);
 });

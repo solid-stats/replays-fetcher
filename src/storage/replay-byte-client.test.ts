@@ -485,6 +485,8 @@ test("createReplayByteClient should fail SSH transport when host is missing", as
     sourceTimeoutMs: Number("30000"),
     sourceTransport: "ssh",
     sourceUrl: validSourceEnvironment.REPLAY_SOURCE_URL,
+    watchHeartbeatPath: "/tmp/replays-fetcher-watch.heartbeat",
+    watchIntervalMs: Number("0"),
   };
   const client = createReplayByteClient(sourceConfig, {
     async execFile() {

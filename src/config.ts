@@ -36,6 +36,25 @@ const MIN_SPACING_MS = 0;
 const MAX_SPACING_MS = 5000;
 const defaultSourceRequestSpacingMs = 250;
 
+// Watch daemon knobs. The watch interval is the inter-cycle idle sleep between
+// page-1 poll cycles. DEFAULT is 0 (continuous polling): the next cycle starts
+// IMMEDIATELY after the previous one finishes, with no idle sleep. interval=0 is
+// SAFE because the watch loop applies REPLAY_SOURCE_REQUEST_SPACING_MS as a
+// source-pacing floor: it awaits a `createPacer` floor before each cycle's
+// page-1 list read AND threads the spacing into discovery (requestDelayMs) so
+// the within-cycle list→detail requests self-pace too — bounding the cycle rate
+// to ~the request-spacing rate rather than flooding the source. The loop also
+// always awaits its injected sleep (sleep(0) is a real event-loop yield) so it
+// can never CPU hot-spin and always observes a shutdown signal promptly. The
+// bounded max is a safety valve.
+const MIN_WATCH_INTERVAL_MS = 0;
+const MAX_WATCH_INTERVAL_MS = 600_000;
+const DEFAULT_WATCH_INTERVAL_MS = 0;
+// MAX_HEARTBEAT_PATH_LEN: a generous filesystem path bound (POSIX PATH_MAX is
+// 4096; the k8s exec-probe heartbeat file lives well under that).
+const MAX_HEARTBEAT_PATH_LEN = 4096;
+const DEFAULT_WATCH_HEARTBEAT_PATH = "/tmp/replays-fetcher-watch.heartbeat";
+
 // Upper-bound constants for externally-sourced string/URL config fields (CLN-04b).
 // Unbounded externally-sourced fields are a DoS vector (solidstats-shared-backend-ts-standards §D).
 // MAX_URL_LEN: conservative HTTP URL limit (RFC 7230 / common server caps)
@@ -88,6 +107,17 @@ const sourceConfigSchema = z
       .int()
       .nonnegative()
       .default(defaultSourceRetryAttempts),
+    watchIntervalMs: z.coerce
+      .number()
+      .int()
+      .min(MIN_WATCH_INTERVAL_MS)
+      .max(MAX_WATCH_INTERVAL_MS)
+      .default(DEFAULT_WATCH_INTERVAL_MS),
+    watchHeartbeatPath: z
+      .string()
+      .min(1)
+      .max(MAX_HEARTBEAT_PATH_LEN)
+      .default(DEFAULT_WATCH_HEARTBEAT_PATH),
   })
   .superRefine((config, context) => {
     if (
@@ -187,6 +217,8 @@ const readSourceConfigInput = (
   readonly sourceTimeoutMs: string | boolean | undefined;
   readonly sourceTransport: SourceTransport | undefined;
   readonly sourceUrl: string | boolean | undefined;
+  readonly watchHeartbeatPath: string | undefined;
+  readonly watchIntervalMs: string | boolean | undefined;
 } => ({
   sourceConcurrency: source["REPLAY_SOURCE_CONCURRENCY"],
   sourceMaxPages: source["REPLAY_SOURCE_MAX_PAGES"],
@@ -199,6 +231,8 @@ const readSourceConfigInput = (
   sourceSshCommand: stringOrUndefined(source["REPLAY_SOURCE_SSH_COMMAND"]),
   sourceTimeoutMs: source["REPLAY_SOURCE_TIMEOUT_MS"],
   sourceRetryAttempts: source["REPLAY_SOURCE_RETRY_ATTEMPTS"],
+  watchIntervalMs: source["REPLAY_WATCH_INTERVAL_MS"],
+  watchHeartbeatPath: stringOrUndefined(source["REPLAY_WATCH_HEARTBEAT_PATH"]),
 });
 
 export const loadConfig = (source: ConfigSource = process.env): AppConfig => {

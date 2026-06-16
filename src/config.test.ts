@@ -34,6 +34,12 @@ const maxSourceRequestSpacingMs = Number("5000");
 const aboveMaxSourceRequestSpacingMs = Number("5001");
 const belowMinSourceRequestSpacingMs = Number("-1");
 const safetyValveMaxPages = Number("5");
+const defaultWatchIntervalMs = Number("0");
+const overrideWatchIntervalMs = Number("15000");
+const minWatchIntervalMs = Number("0");
+const maxWatchIntervalMs = Number("600000");
+const aboveMaxWatchIntervalMs = Number("600001");
+const belowMinWatchIntervalMs = Number("-1");
 
 test("loadConfig should load required source, S3, and staging settings when valid environment is provided", () => {
   const config = loadConfig(validEnvironment);
@@ -409,6 +415,94 @@ test("redactConfig should keep the non-secret source retry attempts visible", ()
   );
 
   expect(redacted.sourceRetryAttempts).toBe(overrideSourceRetryAttempts);
+});
+
+test("loadSourceConfig should default the watch interval to 0 (continuous) when unset", () => {
+  const config = loadSourceConfig({
+    REPLAY_SOURCE_URL: "https://example.test/replays",
+  });
+
+  expect(config.watchIntervalMs).toBe(defaultWatchIntervalMs);
+});
+
+test("loadSourceConfig should parse a watch interval override", () => {
+  const config = loadSourceConfig({
+    REPLAY_SOURCE_URL: "https://example.test/replays",
+    REPLAY_WATCH_INTERVAL_MS: "15000",
+  });
+
+  expect(config.watchIntervalMs).toBe(overrideWatchIntervalMs);
+});
+
+const watchIntervalBoundaryCases: readonly (readonly [string, number])[] = [
+  [String(minWatchIntervalMs), minWatchIntervalMs],
+  [String(maxWatchIntervalMs), maxWatchIntervalMs],
+];
+
+test.each(watchIntervalBoundaryCases)(
+  "loadSourceConfig should accept watch interval at boundary %s",
+  (environmentValue, expected) => {
+    const config = loadSourceConfig({
+      REPLAY_SOURCE_URL: "https://example.test/replays",
+      REPLAY_WATCH_INTERVAL_MS: environmentValue,
+    });
+
+    expect(config.watchIntervalMs).toBe(expected);
+  },
+);
+
+const watchIntervalRejectCases: readonly (readonly [string])[] = [
+  [String(belowMinWatchIntervalMs)],
+  [String(aboveMaxWatchIntervalMs)],
+  ["abc"],
+];
+
+test.each(watchIntervalRejectCases)(
+  "loadConfig should reject an out-of-range watch interval %s",
+  (environmentValue) => {
+    expect(() =>
+      loadConfig({
+        ...validEnvironment,
+        REPLAY_WATCH_INTERVAL_MS: environmentValue,
+      }),
+    ).toThrow("watchIntervalMs");
+  },
+);
+
+test("loadConfig should default the watch heartbeat path when unset", () => {
+  const config = loadConfig(validEnvironment);
+
+  expect(config.watchHeartbeatPath).toBe(
+    "/tmp/replays-fetcher-watch.heartbeat",
+  );
+});
+
+test("loadConfig should honor a REPLAY_WATCH_HEARTBEAT_PATH override", () => {
+  const config = loadConfig({
+    ...validEnvironment,
+    REPLAY_WATCH_HEARTBEAT_PATH: "/var/run/watch.heartbeat",
+  });
+
+  expect(config.watchHeartbeatPath).toBe("/var/run/watch.heartbeat");
+});
+
+test("loadConfig should reject an empty watch heartbeat path", () => {
+  expect(() =>
+    loadConfig({ ...validEnvironment, REPLAY_WATCH_HEARTBEAT_PATH: "" }),
+  ).toThrow(ConfigValidationError);
+});
+
+test("redactConfig should keep the non-secret watch interval and heartbeat path visible", () => {
+  const redacted = redactConfig(
+    loadConfig({
+      ...validEnvironment,
+      REPLAY_WATCH_HEARTBEAT_PATH: "/var/run/watch.heartbeat",
+      REPLAY_WATCH_INTERVAL_MS: "15000",
+    }),
+  );
+
+  expect(redacted.watchIntervalMs).toBe(overrideWatchIntervalMs);
+  expect(redacted.watchHeartbeatPath).toBe("/var/run/watch.heartbeat");
 });
 
 test("redactConfig should fully mask short S3 credentials when configuration is logged", () => {

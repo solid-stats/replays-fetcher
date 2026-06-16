@@ -3,6 +3,8 @@ import { createLimiter } from "../source/concurrency.js";
 import { createPacer } from "../source/pacing.js";
 import { createThrottleController } from "../source/throttle.js";
 
+import { ingestPage } from "./ingest-page.js";
+
 import type { LimitFunction } from "../source/concurrency.js";
 import type { Pacer } from "../source/pacing.js";
 import type { ThrottleController } from "../source/throttle.js";
@@ -152,13 +154,6 @@ interface MutablePageCounts {
   stored: number;
 }
 
-const newPageCounts = (discovered: number): MutablePageCounts => ({
-  discovered,
-  failed: 0,
-  staged: 0,
-  stored: 0,
-});
-
 /**
  * Pure rolling page rate: pages completed per minute over the elapsed window
  * between the first and last captured page timestamp. A single-page window has
@@ -288,36 +283,6 @@ const appendDiscoveryReport = (
   target.ok &&= pageReport.ok;
 };
 
-const tallyRawResult = (
-  counts: MutablePageCounts,
-  result: StoreRawReplayResult,
-): void => {
-  if (result.status === "stored") {
-    counts.stored += 1;
-
-    return;
-  }
-
-  if (result.status === "failed") {
-    counts.failed += 1;
-  }
-};
-
-const tallyStagingResult = (
-  counts: MutablePageCounts,
-  result: IngestStagingResult,
-): void => {
-  if (result.status === "staged") {
-    counts.staged += 1;
-
-    return;
-  }
-
-  if (result.status === "failed") {
-    counts.failed += 1;
-  }
-};
-
 const buildDiscoverInput = (
   input: RunOnceInput,
   pageUrl: URL,
@@ -350,38 +315,6 @@ const buildDiscoverInput = (
 
   return discoverInput;
 };
-
-interface SettledCandidate {
-  readonly index: number;
-  readonly rawResult: StoreRawReplayResult;
-  readonly stagingResult: IngestStagingResult;
-}
-
-/**
- * A rejected `Promise.allSettled` settle is a programmer error (never an
- * operational fetch/storage/staging failure, which returns a result object), so
- * rethrow its reason instead of silently dropping the candidate.
- */
-const rethrowProgrammerError = (
-  settled: readonly PromiseSettledResult<SettledCandidate>[],
-): void => {
-  for (const result of settled) {
-    if (result.status === "rejected") {
-      throw result.reason;
-    }
-  }
-};
-
-const fulfilledInOrder = (
-  settled: readonly PromiseSettledResult<SettledCandidate>[],
-): readonly SettledCandidate[] =>
-  settled
-    .filter(
-      (result): result is PromiseFulfilledResult<SettledCandidate> =>
-        result.status === "fulfilled",
-    )
-    .map((result) => result.value)
-    .toSorted((left, right) => left.index - right.index);
 
 const deriveCandidatesPerMinute = (
   pageTimestampsMs: readonly number[],
@@ -610,51 +543,34 @@ interface ProcessPageInput {
 }
 
 /**
- * RANGE-02/06: fan the per-candidate store→stage sequence out over the single
- * shared limiter and gather with `Promise.allSettled`, then re-order the
- * fulfilled values by their captured candidate index BEFORE any tally or
- * checkpoint so evidence ordering stays deterministic and race-free regardless
- * of completion order. Operational outcomes (`failed`/`conflict`/`not_stageable`)
- * are returned as result objects and tallied; a REJECTED settle is a programmer
- * error (`storeRawReplay` rethrows non-`ReplayByteFetchError`, `repository.stage`
- * can reject on a raw DB error) and is rethrown — preserving the Phase 5
- * operational-vs-programmer boundary (A3 RESOLVED).
+ * RANGE-02/06: delegate the per-candidate store→stage fan-out to the shared,
+ * checkpoint-free `ingestPage` helper (DRY core also used by the watch loop)
+ * over the single shared limiter; the helper gathers with `Promise.allSettled`,
+ * re-orders fulfilled values by candidate index, tallies operational outcomes,
+ * and rethrows a programmer-error settle. The returned ordered rawStorage/
+ * staging arrays are appended to the run's accumulators BEFORE any tally or
+ * checkpoint so evidence ordering stays deterministic regardless of completion
+ * order, and the helper's per-page counts feed the stop-on-all-duplicate signal.
  */
 const processPage = async (
   input: RunOnceInput,
   page: ProcessPageInput,
 ): Promise<MutablePageCounts> => {
-  const pageCounts = newPageCounts(page.candidates.length);
+  const result = await ingestPage({
+    byteClient: input.byteClient,
+    candidates: page.candidates,
+    limit: page.limit,
+    runId: input.runId,
+    stageRawReplay: input.stageRawReplay,
+    stagingRepository: input.stagingRepository,
+    storage: input.storage,
+    storeRawReplay: input.storeRawReplay,
+  });
 
-  const settled = await Promise.allSettled(
-    page.candidates.map((candidate, index) =>
-      page.limit(async (): Promise<SettledCandidate> => {
-        const rawResult = await input.storeRawReplay({
-          byteClient: input.byteClient,
-          candidate,
-          storage: input.storage,
-        });
-        const stagingResult = await input.stageRawReplay({
-          rawResult,
-          repository: input.stagingRepository,
-          runId: input.runId,
-        });
+  page.rawStorage.push(...result.rawStorage);
+  page.staging.push(...result.staging);
 
-        return { index, rawResult, stagingResult };
-      }),
-    ),
-  );
-
-  rethrowProgrammerError(settled);
-
-  for (const value of fulfilledInOrder(settled)) {
-    page.rawStorage.push(value.rawResult);
-    tallyRawResult(pageCounts, value.rawResult);
-    page.staging.push(value.stagingResult);
-    tallyStagingResult(pageCounts, value.stagingResult);
-  }
-
-  return pageCounts;
+  return { ...result.counts };
 };
 
 /**

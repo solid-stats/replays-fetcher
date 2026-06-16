@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { writeFile } from "node:fs/promises";
+import { rename, writeFile } from "node:fs/promises";
 
 import { checkPostgresConnectivity } from "../check/postgres-connectivity.js";
 import { checkS3Connectivity } from "../check/s3-connectivity.js";
@@ -19,6 +19,7 @@ import { createLogger } from "../logging/create-logger.js";
 import type { S3EvidenceStore } from "../evidence/s3-evidence-store.js";
 import type { CreateLoggerOptions } from "../logging/create-logger.js";
 import { runOnce } from "../run/run-once.js";
+import { runWatchLoop } from "../run/watch-loop.js";
 import { createPostgresStagingRepository } from "../staging/postgres-staging-repository.js";
 import { stageRawReplay } from "../staging/stage-raw-replay.js";
 import { createReplayByteClient } from "../storage/replay-byte-client.js";
@@ -75,9 +76,11 @@ export interface BuildCliDependencies {
   readonly loadSourceConfig?: () => SourceConfig;
   readonly now?: () => Date;
   readonly runOnce?: typeof runOnce;
+  readonly runWatchLoop?: typeof runWatchLoop;
   readonly stageRawReplay?: typeof stageRawReplay;
   readonly storeRawReplay?: typeof storeRawReplay;
   readonly writeEvidenceFile?: (path: string, body: string) => Promise<void>;
+  readonly writeHeartbeat?: (path: string, body: string) => Promise<void>;
 }
 
 export interface StoreRawResources {
@@ -92,6 +95,42 @@ export interface StoreRawResources {
 export const writeJson = (value: unknown): void => {
   process.stdout.write(`${JSON.stringify(value, undefined, 2)}\n`);
 };
+
+/**
+ * Atomic heartbeat write for the k8s exec liveness probe. A plain `writeFile`
+ * can be observed mid-write as a torn/empty file by a concurrent probe read,
+ * which the probe would misread as a wedged daemon → spurious restart. Writing
+ * to a sibling temp path then `rename`-ing is atomic on POSIX, so the probe only
+ * ever observes the previous COMPLETE heartbeat or the new COMPLETE one — never
+ * a partial. The temp path is sibling (same directory/filesystem) so the rename
+ * stays within one filesystem and cannot fall back to a non-atomic copy.
+ */
+export const writeHeartbeatAtomic = async (
+  path: string,
+  body: string,
+): Promise<void> => {
+  const temporaryPath = `${path}.${randomUUID()}.tmp`;
+  await writeFile(temporaryPath, body, "utf8");
+  await rename(temporaryPath, path);
+};
+
+/**
+ * Wraps pino's callback-based `log.flush(cb)` in a Promise so a command action
+ * can `await` the flush before setting `process.exitCode` (D-16/PROG-04).
+ * Resolves on success; rejects on error. Never calls `process.exit()`. Shared
+ * by run-once and watch (DRY — both drain pino the same way before exit).
+ */
+export const flushLogger = (log: Logger): Promise<void> =>
+  new Promise<void>((resolve, reject) => {
+    log.flush((flushError) => {
+      if (flushError !== undefined) {
+        reject(flushError);
+        return;
+      }
+
+      resolve();
+    });
+  });
 
 export const createRunId = (now: Date): string =>
   `run-${now.toISOString()}-${randomUUID()}`;
@@ -227,8 +266,10 @@ export const resolveDependencies = (
   loadSourceConfig,
   now: () => new Date(),
   runOnce,
+  runWatchLoop,
   stageRawReplay,
   storeRawReplay,
   writeEvidenceFile: (path, body) => writeFile(path, body, "utf8"),
+  writeHeartbeat: writeHeartbeatAtomic,
   ...dependencies,
 });

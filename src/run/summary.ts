@@ -28,6 +28,7 @@ interface BuildRunSummaryInput {
   readonly discoveryReport: DiscoveryReport;
   readonly finishedAt: string;
   readonly lastCompletedPage?: number;
+  readonly mode?: RunSummary["mode"];
   readonly pageTimestampsMs?: readonly number[];
   readonly rawStorage: readonly StoreRawReplayResult[];
   readonly resumeInvocation?: string;
@@ -398,7 +399,7 @@ export const buildRunSummary = (input: BuildRunSummaryInput): RunSummary => {
     diagnostics: input.discoveryReport.diagnostics,
     failureCategories,
     finishedAt: input.finishedAt,
-    mode: "run-once",
+    mode: input.mode ?? "run-once",
     ok: input.discoveryReport.ok && failureCategories.length === 0,
     rawStorage: input.rawStorage,
     runId: input.runId,

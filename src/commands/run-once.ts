@@ -7,6 +7,7 @@ import {
 import {
   buildRetryWarnEmitter,
   createStoreRawResources,
+  flushLogger,
   loadStoreRawConfig,
   writeJson,
 } from "./shared.js";
@@ -14,30 +15,12 @@ import {
 import type { BuildCliDependencies } from "./shared.js";
 import type { StagingRepository } from "../staging/stage-raw-replay.js";
 import type { Command } from "commander";
-import type { Logger } from "pino";
 
 interface RunOnceOptions {
   readonly emitEvidence?: boolean;
   readonly evidenceFile?: string;
   readonly resume?: boolean;
 }
-
-/**
- * Wraps pino's callback-based `log.flush(cb)` in a Promise so the cli action
- * can `await` the flush before setting `process.exitCode` (D-16/PROG-04).
- * Resolves on success; rejects on error. Never calls `process.exit()`.
- */
-const flushLogger = (log: Logger): Promise<void> =>
-  new Promise<void>((resolve, reject) => {
-    log.flush((flushError) => {
-      if (flushError !== undefined) {
-        reject(flushError);
-        return;
-      }
-
-      resolve();
-    });
-  });
 
 const evidenceFileOption = (
   evidenceFile: string | undefined,

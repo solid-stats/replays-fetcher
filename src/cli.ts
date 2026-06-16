@@ -13,6 +13,7 @@ import { registerContractCheckCommand } from "./commands/contract-check.js";
 import { registerDiscoverCommand } from "./commands/discover.js";
 import { registerRunOnceCommand } from "./commands/run-once.js";
 import { resolveDependencies } from "./commands/shared.js";
+import { registerWatchCommand } from "./commands/watch.js";
 
 import { captureFatal, flushSentry } from "./observability/sentry.js";
 
@@ -30,6 +31,7 @@ export const buildCli = (dependencies: BuildCliDependencies = {}): Command => {
   registerCheckCommand(program, cliDependencies);
   registerDiscoverCommand(program, cliDependencies);
   registerRunOnceCommand(program, cliDependencies);
+  registerWatchCommand(program, cliDependencies);
   registerContractCheckCommand(program, cliDependencies);
 
   return program;

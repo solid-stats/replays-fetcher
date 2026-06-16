@@ -60,7 +60,7 @@ export interface RunSummary {
   readonly etaSeconds?: number;
   readonly failureCategories: readonly RunFailureCategory[];
   readonly finishedAt: string;
-  readonly mode: "run-once";
+  readonly mode: "run-once" | "watch";
   readonly ok: boolean;
   readonly pagesPerMinute?: number;
   readonly rawStorage: readonly StoreRawReplayResult[];
@@ -84,7 +84,7 @@ export interface CompactRunSummary {
   readonly counts: RunSummaryCounts;
   readonly failureCategories: readonly RunFailureCategory[];
   readonly finishedAt: string;
-  readonly mode: "run-once";
+  readonly mode: "run-once" | "watch";
   readonly ok: boolean;
   readonly runId: string;
   readonly startedAt: string;
@@ -103,7 +103,7 @@ export interface RunConfigFailureSummary {
   readonly failureCategories: readonly ["config_invalid"];
   readonly finishedAt: string;
   readonly issues: readonly string[];
-  readonly mode: "run-once";
+  readonly mode: "run-once" | "watch";
   readonly ok: false;
   readonly runId: string;
   readonly startedAt: string;
