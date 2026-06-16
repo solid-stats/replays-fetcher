@@ -53,6 +53,7 @@ interface DeriveRunStatusInput {
   readonly discoveredLastPage: number;
   readonly lastCompletedPage: number;
   readonly ok: boolean;
+  readonly reachedMaxPages?: boolean;
   readonly sourceFailure?: RunSourceFailure;
 }
 
@@ -251,6 +252,11 @@ const isRecoverable = (sourceFailure?: RunSourceFailure): boolean =>
 /**
  * Maps a run's page-loop outcome to the RunStatus taxonomy (RESUME-05):
  * - `complete`: the run is ok and every discovered page finished.
+ * - `truncated`: the run is ok and every discovered page finished, but coverage
+ *   was bounded by the `maxPages` safety cap — more pages may exist beyond the
+ *   cap. Distinct from `partial` (a non-recoverable failure that salvaged some
+ *   pages): a truncated run hit no failure, it just stopped early at the cap, so
+ *   the scheduler should re-run to fetch the remainder.
  * - `resumable`: the stop cause is recoverable (transient/rate_limited), so the
  *   next `--resume` run is expected to make progress (regardless of how far it
  *   got this time).
@@ -261,7 +267,7 @@ const isRecoverable = (sourceFailure?: RunSourceFailure): boolean =>
  */
 export const deriveRunStatus = (input: DeriveRunStatusInput): RunStatus => {
   if (input.ok && input.lastCompletedPage >= input.discoveredLastPage) {
-    return "complete";
+    return input.reachedMaxPages === true ? "truncated" : "complete";
   }
 
   if (isRecoverable(input.sourceFailure)) {

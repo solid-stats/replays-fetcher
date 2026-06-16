@@ -297,6 +297,57 @@ test("deriveRunStatus should treat a no-page recoverable failure as resumable", 
   ).toBe("resumable");
 });
 
+test("deriveRunStatus should return truncated when ok and the maxPages cap was hit", () => {
+  expect(
+    deriveRunStatus({
+      discoveredLastPage: 3,
+      lastCompletedPage: 3,
+      ok: true,
+      reachedMaxPages: true,
+    }),
+  ).toBe("truncated");
+});
+
+test("deriveRunStatus should stay complete when the cap was not hit (explicit false and omitted)", () => {
+  expect(
+    deriveRunStatus({
+      discoveredLastPage: 3,
+      lastCompletedPage: 3,
+      ok: true,
+      reachedMaxPages: false,
+    }),
+  ).toBe("complete");
+
+  expect(
+    deriveRunStatus({
+      discoveredLastPage: 3,
+      lastCompletedPage: 3,
+      ok: true,
+    }),
+  ).toBe("complete");
+});
+
+test("deriveRunStatus should stay resumable on a recoverable failure even when reachedMaxPages is set", () => {
+  // The cap is only consulted on the ok-and-finished branch; a !ok recoverable
+  // stop still resolves to resumable regardless of reachedMaxPages.
+  expect(
+    deriveRunStatus({
+      discoveredLastPage: 5,
+      lastCompletedPage: 2,
+      ok: false,
+      reachedMaxPages: true,
+      sourceFailure: {
+        classification: "transient",
+        code: "source_transient",
+      },
+    }),
+  ).toBe("resumable");
+});
+
+test("runExitCode should map a truncated status to exit 2 so the scheduler retries", () => {
+  expect(runExitCode({ ok: true, status: "truncated" })).toBe(2);
+});
+
 test("buildRunSummary should spread status and resumeInvocation additively", () => {
   const summary = buildRunSummary({
     discoveryReport: discoveryReport(),
