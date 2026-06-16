@@ -1,5 +1,15 @@
 # Changelog — solidstats-fetcher-ts-code-review
 
+## 2026-06-16 — Review-lens mapping (BMAD Improvement 2)
+- Added a **Review lenses** section mapping the three generic adversarial lenses from
+  `solidstats-shared-review-standards` §J onto this reviewer's two phases: **Contract Adversary** →
+  Phase 1 ingest-boundary gate + the §I.2 blast radius into the `server-2` staging/outbox consumers;
+  **Edge / Failure Hunter** → Phase 2 correctness (checkpoint/resume, async) + error-system boundary +
+  lifecycle (topics 2, 3, 7); **Acceptance Auditor** → §F + the discovered PLAN `must_haves.truths` +
+  `<success_criteria>` (§I.3). Notes the no-forced-finding rule and
+  the depth-tied fan-out. Pure addition — Phase 1/2 and the severity table unchanged.
+- Provenance: ADR `decisions/0007-bmad-borrowed-improvements.md`.
+
 ## 2026-06-13 — Post-smoke-test fixes
 - **Phase 2 PENDING carve-out tightened:** the suspended checks are now explicitly limited to
   band-membership, layer-placement, dependency-direction, and module-layout only; all nine Phase 2
