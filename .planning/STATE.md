@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 Phase: Milestone v3.0 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-06-16 — Completed quick task 260616-ucj: stop-on-all-duplicate end-of-corpus + honest "truncated" RunStatus in run-once (fixes the clamp runaway + silent cap-truncation; SG parity follow-up #1)
+Last activity: 2026-06-16 — Completed quick task 260616-vw8: always-on `watch` daemon (continuous page-1 poll, interval=0 self-paced on the source spacing, checkpoint-independent, heartbeat exec-liveness) alongside run-once
 
 ## Cross-repo preset follow-ups — both RESOLVED 2026-06-14
 
@@ -185,6 +185,7 @@ None.
 | 2026-06-15 | shared-clients-config-deltas | complete |
 | 2026-06-15 | sentry-errors-only | complete |
 | 2026-06-16 | fix-unbounded-clamp-crawl-and-silent-cap | complete |
+| 2026-06-16 | add-always-on-watch-daemon-page-1-poll | complete |
 
 ### Parity-baseline fixes (F1/F2) — folded into Track C (2026-06-13)
 
