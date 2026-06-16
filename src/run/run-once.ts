@@ -474,6 +474,7 @@ interface LoopState {
   readonly pageTimestampsMs: number[];
   readonly pages: Record<string, CheckpointPage>;
   readonly rawStorage: StoreRawReplayResult[];
+  reachedMaxPages: boolean;
   readonly staging: IngestStagingResult[];
 }
 
@@ -490,6 +491,7 @@ const buildLoopState = async (
     pageTimestampsMs: [],
     pages: { ...resumeState.pages },
     rawStorage: [],
+    reachedMaxPages: false,
     staging: [],
   };
 };
@@ -782,18 +784,25 @@ interface CompleteOkPageInput {
   readonly throttle: ThrottleController;
 }
 
+interface CompleteOkPageResult {
+  readonly etag: string | undefined;
+  readonly pageCounts: MutablePageCounts;
+}
+
 /**
  * Completes a clean (`ok`, non-empty) list page: AIMD additive-increase grows the
  * shared limiter back toward base concurrency (RANGE-03), the store→stage fan-out
  * runs over the shared limiter, the injected-clock completion timestamp is
  * captured (Pitfall 7), the minimal per-page rate line is emitted (RANGE-05), and
  * the checkpoint is written only AFTER the fan-out is gathered (Phase 9 ordering).
- * Returns the new checkpoint ETag for the next write's IfMatch cursor.
+ * Returns the new checkpoint ETag for the next write's IfMatch cursor AND the
+ * per-page counts so the loop can make the stop-on-all-duplicate decision (the
+ * zero-new signal is `stored === 0 && staged === 0`).
  */
 const completeOkPage = async (
   input: RunOnceInput,
   context: CompleteOkPageInput,
-): Promise<string | undefined> => {
+): Promise<CompleteOkPageResult> => {
   // RANGE-03 AIMD additive-increase: a clean content page lets the throttle
   // recover and grows the shared limiter back toward its base concurrency.
   context.throttle.onCleanWindow(input.now().getTime());
@@ -823,13 +832,15 @@ const completeOkPage = async (
     status: "running",
   };
 
-  return writePageCheckpoint(input, {
+  const etag = await writePageCheckpoint(input, {
     etag: context.etag,
     lastCompletedPage: context.page,
     pages: context.pages,
     slug: context.slug,
     startedAt: context.startedAt,
   });
+
+  return { etag, pageCounts };
 };
 
 interface PageLoopContext {
@@ -853,8 +864,15 @@ const runPageLoop = async (
   state: LoopState,
 ): Promise<void> => {
   // RANGE-01: the loop bound is an OPTIONAL safety-valve cap. With `maxPages`
-  // unset the loop is unbounded and governed by stop-on-empty or a `!ok` page.
+  // unset the loop is unbounded and governed by stop-on-empty, stop-on-all-
+  // duplicate, or a `!ok` page.
   const maxPages = input.maxPages ?? Number.POSITIVE_INFINITY;
+
+  // Records WHY the loop stopped so the cap-hit flag is derived without
+  // re-inspecting cap arithmetic: only an exhausted `for` bound is a cap stop;
+  // the empty/all-duplicate/!ok early breaks are natural ends. Defaults to
+  // "cap" so a loop that exits by exhausting its bound is correctly flagged.
+  let stopReason: "all_duplicate" | "cap" | "empty" | "page_failed" = "cap";
 
   for (
     let page = state.lastCompletedPage + FIRST_PAGE;
@@ -888,17 +906,19 @@ const runPageLoop = async (
       // failures (classification === "permanent"); `page_failed` for recoverable
       // transient/rate_limited page failures.
       emitPageFailureEvent(input, page, pageReport);
+      stopReason = "page_failed";
       break;
     }
 
     // RANGE-01 end-of-corpus: only an `ok` page with zero candidates stops the
     // loop as `complete`.
     if (pageReport.candidates.length === 0) {
+      stopReason = "empty";
       break;
     }
 
     const currentEtag = state.etag;
-    const nextEtag = await completeOkPage(input, {
+    const { etag: nextEtag, pageCounts } = await completeOkPage(input, {
       candidates: pageReport.candidates,
       etag: currentEtag,
       limit: context.limit,
@@ -915,7 +935,34 @@ const runPageLoop = async (
     state.etag = nextEtag;
     // oxlint-disable-next-line require-atomic-updates -- loop is strictly sequential; page is the current iteration value, not read from state before the await.
     state.lastCompletedPage = page;
+
+    // Stop-on-all-duplicate (RANGE-06 ordering preserved: the page is fully
+    // classified, stored, staged, and checkpointed — and lastCompletedPage is
+    // already advanced — BEFORE this decision). A clamping source repeats its
+    // last all-duplicate page forever instead of an empty page; such a page
+    // yields zero NEW work (every candidate is `skipped`/`already_staged`, so
+    // stored === 0 && staged === 0). This is a NATURAL end-of-corpus → keep
+    // stopReason at the default so the status stays `complete`.
+    //
+    // EDGE CASE: a page where candidates FAILED to store/stage (failed > 0)
+    // also has stored === 0 && staged === 0 but is NOT end-of-corpus — it is a
+    // genuine failure, so it must not trigger the stop. Require failed === 0
+    // (pure all-duplicate). A page with at least one new candidate
+    // (stored + staged > 0) likewise continues the loop (the new+duplicate-mix
+    // guard).
+    if (
+      pageCounts.stored === 0 &&
+      pageCounts.staged === 0 &&
+      pageCounts.failed === 0
+    ) {
+      stopReason = "all_duplicate";
+      break;
+    }
   }
+
+  // Only an exhausted `for` bound (the cap) is a truncating stop; every early
+  // break set a non-cap stopReason above.
+  state.reachedMaxPages = stopReason === "cap";
 };
 
 /**
@@ -971,6 +1018,7 @@ interface AssembleResultInput {
   readonly pageTimestampsMs: readonly number[];
   readonly pages: Record<string, CheckpointPage>;
   readonly rawStorage: readonly StoreRawReplayResult[];
+  readonly reachedMaxPages: boolean;
   readonly slug: string;
   readonly staging: readonly IngestStagingResult[];
   readonly startedAt: string;
@@ -986,6 +1034,7 @@ const assembleResult = async (
     discoveredLastPage,
     lastCompletedPage: context.lastCompletedPage,
     ok: context.discoveryReport.ok,
+    reachedMaxPages: context.reachedMaxPages,
     ...sourceFailureOption(sourceFailure),
   });
 
@@ -1073,6 +1122,7 @@ export const runOnce = async (input: RunOnceInput): Promise<RunOnceResult> => {
     pageTimestampsMs: loopState.pageTimestampsMs,
     pages: loopState.pages,
     rawStorage: loopState.rawStorage,
+    reachedMaxPages: loopState.reachedMaxPages,
     slug,
     staging: loopState.staging,
     startedAt,

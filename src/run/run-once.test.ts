@@ -175,8 +175,13 @@ test("runOnce should execute one discovery, raw storage, and staging cycle", asy
     concurrency: testConcurrency,
     requestSpacingMs: 0,
     checkpointStore: fakeCheckpointStore(),
-    discoverReplays: async () => discoveryReport(),
-    maxPages: 1,
+    discoverReplays: async ({ sourceUrl }: { sourceUrl: URL }) =>
+      // Page 1 has content; page 2 is the terminating empty page so the run
+      // ends naturally as `complete` (not capped → not `truncated`).
+      sourceUrl.searchParams.get("p") === pageTwo
+        ? discoveryReport({ candidates: [], sourceUrl: sourceUrl.toString() })
+        : discoveryReport({ sourceUrl: sourceUrl.toString() }),
+    maxPages: twoPages,
     now: createClock([startedAt, finishedAt]),
     runId: "run-1",
     sourceClient: { fetchText: vi.fn() },
@@ -306,8 +311,11 @@ test("runOnce should store and stage each page before discovering the next page"
     sourceClient: expect.any(Object) as unknown,
     sourceUrl: new URL("https://example.test/replays?p=2"),
   });
+  // Both pages had content and the loop stopped only because it exhausted the
+  // maxPages cap, so the honest status is `truncated` (exit 2): coverage was
+  // bounded, more pages may exist beyond page 2.
   expect(result).toMatchObject({
-    exitCode: 0,
+    exitCode: 2,
     summary: {
       counts: {
         discovered: twoPages,
@@ -315,7 +323,7 @@ test("runOnce should store and stage each page before discovering the next page"
         staged: twoPages,
       },
       ok: true,
-      status: "complete",
+      status: "truncated",
     },
   });
 });
@@ -677,11 +685,16 @@ test("runOnce threads each write ETag forward so a multi-page run lands complete
     requestSpacingMs: 0,
     checkpointStore,
     discoverReplays: async ({ sourceUrl }: { sourceUrl: URL }) =>
-      discoveryReport({
-        candidates: [replayCandidate("100", "replay.ocap")],
-        sourceUrl: sourceUrl.toString(),
-      }),
-    maxPages: twoPages,
+      // Pages 1-2 carry content; page 3 is the terminating empty page so the
+      // run finishes naturally as `complete` (not capped) and writes its final
+      // complete checkpoint — the surface this ETag-threading test asserts.
+      sourceUrl.searchParams.get("p") === "3"
+        ? discoveryReport({ candidates: [], sourceUrl: sourceUrl.toString() })
+        : discoveryReport({
+            candidates: [replayCandidate("100", "replay.ocap")],
+            sourceUrl: sourceUrl.toString(),
+          }),
+    maxPages: 3,
     now: createClock([startedAt, finishedAt]),
     runId: "run-etag-thread",
     sourceClient: { fetchText: vi.fn() },
@@ -751,11 +764,15 @@ test("runOnce should write a checkpoint once per completed page with that page n
     requestSpacingMs: 0,
     checkpointStore,
     discoverReplays: async ({ sourceUrl }: { sourceUrl: URL }) =>
-      discoveryReport({
-        candidates: [replayCandidate("100", "replay.ocap")],
-        sourceUrl: sourceUrl.toString(),
-      }),
-    maxPages: twoPages,
+      // Pages 1-2 carry content; page 3 is the terminating empty page so the
+      // run finishes naturally as `complete` and writes its final checkpoint.
+      sourceUrl.searchParams.get("p") === "3"
+        ? discoveryReport({ candidates: [], sourceUrl: sourceUrl.toString() })
+        : discoveryReport({
+            candidates: [replayCandidate("100", "replay.ocap")],
+            sourceUrl: sourceUrl.toString(),
+          }),
+    maxPages: 3,
     now: createClock([startedAt, finishedAt]),
     runId: "run-write",
     sourceClient: { fetchText: vi.fn() },
@@ -1587,6 +1604,232 @@ test("runOnce should surface discovered range and rate metrics, no eta without a
   expect(typeof result.summary.pagesPerMinute).toBe("number");
   expect(result.summary.pagesPerMinute).toBeGreaterThan(0);
   expect(result.summary).not.toHaveProperty("etaSeconds");
+});
+
+// ─── SG parity follow-up #1: stop-on-all-duplicate + truncated cap ────────────
+
+test("runOnce stops on the first all-duplicate page (clamping source) with status complete and a bounded discovery-call count", async () => {
+  // A clamping source repeats the SAME all-duplicate page forever instead of
+  // returning an empty page. Every candidate resolves to skipped/already_staged
+  // (zero new work), so the loop must stop on the FIRST such page — never crawl
+  // to maxPages — and report a NATURAL end-of-corpus (complete, exit 0).
+  const discover = vi.fn(async ({ sourceUrl }: { sourceUrl: URL }) =>
+    discoveryReport({
+      candidates: [replayCandidate("100", "replay-clamp.ocap")],
+      sourceUrl: sourceUrl.toString(),
+    }),
+  );
+
+  const result = await runOnce({
+    byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
+    checkpointStore: fakeCheckpointStore(),
+    discoverReplays: discover,
+    // A generous cap proves the stop comes from zero-new, not the cap.
+    maxPages: 1000,
+    now: createClock([startedAt, finishedAt]),
+    runId: "run-clamp",
+    sourceClient: { fetchText: vi.fn() },
+    sourceUrl: new URL("https://example.test/replays"),
+    async stageRawReplay() {
+      return { status: "already_staged" };
+    },
+    stagingRepository: { stage: vi.fn() },
+    storage: { storeRawReplay: vi.fn() },
+    async storeRawReplay() {
+      return rawSkipped();
+    },
+  });
+
+  // Discovery was invoked exactly once before the stop — not 1000 times.
+  expect(discover).toHaveBeenCalledTimes(1);
+  expect(result.summary.status).toBe("complete");
+  expect(result.exitCode).toBe(0);
+});
+
+test("runOnce reports truncated (exit 2) when the maxPages cap bounds a longer all-new corpus", async () => {
+  // Every page has NEW work and the corpus is longer than the cap, so the loop
+  // stops only because it exhausted maxPages — coverage was bounded, more may
+  // exist → status `truncated`, exit 2 (scheduler retries).
+  const discovered: string[] = [];
+  const discover = vi.fn(async ({ sourceUrl }: { sourceUrl: URL }) => {
+    discovered.push(sourceUrl.searchParams.get("p") ?? "1");
+
+    return discoveryReport({
+      candidates: [
+        replayCandidate(
+          sourceUrl.searchParams.get("p") ?? "1",
+          "replay-new.ocap",
+        ),
+      ],
+      sourceUrl: sourceUrl.toString(),
+    });
+  });
+
+  const result = await runOnce({
+    byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
+    checkpointStore: fakeCheckpointStore(),
+    discoverReplays: discover,
+    maxPages: twoPages,
+    now: createClock([startedAt, finishedAt]),
+    runId: "run-truncated",
+    sourceClient: { fetchText: vi.fn() },
+    sourceUrl: new URL("https://example.test/replays"),
+    async stageRawReplay() {
+      return { stagingId: "staging", status: "staged" };
+    },
+    stagingRepository: { stage: vi.fn() },
+    storage: { storeRawReplay: vi.fn() },
+    async storeRawReplay() {
+      return rawStored();
+    },
+  });
+
+  expect(discovered).toStrictEqual(["1", pageTwo]);
+  expect(result.summary.status).toBe("truncated");
+  expect(result.exitCode).toBe(2);
+});
+
+test("runOnce stays complete on a genuine empty-page end (existing path preserved)", async () => {
+  const discover = vi.fn(async ({ sourceUrl }: { sourceUrl: URL }) =>
+    // Page 1 has content; page 2 is a genuine empty page.
+    sourceUrl.searchParams.get("p") === pageTwo
+      ? discoveryReport({ candidates: [], sourceUrl: sourceUrl.toString() })
+      : discoveryReport({
+          candidates: [replayCandidate("100", "replay-real.ocap")],
+          sourceUrl: sourceUrl.toString(),
+        }),
+  );
+
+  const result = await runOnce({
+    byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
+    checkpointStore: fakeCheckpointStore(),
+    discoverReplays: discover,
+    maxPages: 1000,
+    now: createClock([startedAt, finishedAt]),
+    runId: "run-empty-end",
+    sourceClient: { fetchText: vi.fn() },
+    sourceUrl: new URL("https://example.test/replays"),
+    async stageRawReplay() {
+      return { stagingId: "staging", status: "staged" };
+    },
+    stagingRepository: { stage: vi.fn() },
+    storage: { storeRawReplay: vi.fn() },
+    async storeRawReplay() {
+      return rawStored();
+    },
+  });
+
+  expect(result.summary.status).toBe("complete");
+  expect(result.exitCode).toBe(0);
+});
+
+test("runOnce does NOT stop the loop on a new+duplicate-mix page (continues to the next page)", async () => {
+  // A page with at least one NEW candidate (stored/staged) alongside a
+  // duplicate (skipped/already_staged) has stored + staged > 0, so it must NOT
+  // trigger the all-duplicate stop — the loop continues to the next page.
+  const discovered: string[] = [];
+  const discover = vi.fn(async ({ sourceUrl }: { sourceUrl: URL }) => {
+    discovered.push(sourceUrl.searchParams.get("p") ?? "1");
+
+    if (sourceUrl.searchParams.get("p") === pageTwo) {
+      return discoveryReport({
+        candidates: [],
+        sourceUrl: sourceUrl.toString(),
+      });
+    }
+
+    return discoveryReport({
+      candidates: [
+        replayCandidate("100", "replay-new.ocap"),
+        replayCandidate("101", "replay-dup.ocap"),
+      ],
+      sourceUrl: sourceUrl.toString(),
+    });
+  });
+
+  await runOnce({
+    byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
+    checkpointStore: fakeCheckpointStore(),
+    discoverReplays: discover,
+    maxPages: 1000,
+    now: createClock([startedAt, finishedAt]),
+    runId: "run-mix",
+    sourceClient: { fetchText: vi.fn() },
+    sourceUrl: new URL("https://example.test/replays"),
+    async stageRawReplay({ rawResult }) {
+      return rawResult.status === "stored"
+        ? { stagingId: "staging", status: "staged" }
+        : { status: "already_staged" };
+    },
+    stagingRepository: { stage: vi.fn() },
+    storage: { storeRawReplay: vi.fn() },
+    async storeRawReplay({ candidate: entry }) {
+      return entry.identity.filename === "replay-new.ocap"
+        ? rawStored()
+        : rawSkipped();
+    },
+  });
+
+  // The mixed page 1 did NOT stop the loop — discovery was called for page 2.
+  expect(discovered).toStrictEqual(["1", pageTwo]);
+});
+
+test("runOnce does NOT stop on an all-failed page (failed > 0 is not end-of-corpus)", async () => {
+  // EDGE CASE guard: a page where candidates FAILED to store has stored === 0
+  // && staged === 0, but failed > 0 — this is a genuine failure, NOT an
+  // all-duplicate end-of-corpus, so it must not trigger the stop. The loop
+  // continues to the next page.
+  const discovered: string[] = [];
+  const discover = vi.fn(async ({ sourceUrl }: { sourceUrl: URL }) => {
+    discovered.push(sourceUrl.searchParams.get("p") ?? "1");
+
+    if (sourceUrl.searchParams.get("p") === pageTwo) {
+      return discoveryReport({
+        candidates: [],
+        sourceUrl: sourceUrl.toString(),
+      });
+    }
+
+    return discoveryReport({
+      candidates: [replayCandidate("100", "replay-fail.ocap")],
+      sourceUrl: sourceUrl.toString(),
+    });
+  });
+
+  await runOnce({
+    byteClient: { fetchBytes: vi.fn() },
+    concurrency: testConcurrency,
+    requestSpacingMs: 0,
+    checkpointStore: fakeCheckpointStore(),
+    discoverReplays: discover,
+    maxPages: 1000,
+    now: createClock([startedAt, finishedAt]),
+    runId: "run-all-failed",
+    sourceClient: { fetchText: vi.fn() },
+    sourceUrl: new URL("https://example.test/replays"),
+    async stageRawReplay() {
+      return {
+        reason: "Raw storage status failed is not stageable",
+        status: "not_stageable",
+      };
+    },
+    stagingRepository: { stage: vi.fn() },
+    storage: { storeRawReplay: vi.fn() },
+    async storeRawReplay() {
+      return rawFetchFailed();
+    },
+  });
+
+  // The all-failed page 1 did NOT stop the loop — discovery reached page 2.
+  expect(discovered).toStrictEqual(["1", pageTwo]);
 });
 
 // ─── Task 1: lifecycle event taxonomy (RED) ──────────────────────────────────
