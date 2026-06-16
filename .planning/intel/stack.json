@@ -1,0 +1,39 @@
+{
+  "_meta": {
+    "updated_at": "2026-06-16T11:49:58.168Z",
+    "version": 2
+  },
+  "languages": [
+    "TypeScript"
+  ],
+  "frameworks": [
+    "Commander (CLI)"
+  ],
+  "tools": [
+    "AWS SDK v3 (S3)",
+    "pg (PostgreSQL)",
+    "Zod (config validation)",
+    "pino (logging)",
+    "Sentry (@sentry/node)",
+    "p-limit (concurrency)",
+    "oxlint",
+    "oxfmt",
+    "Vitest",
+    "tsdown",
+    "tsx",
+    "dependency-cruiser",
+    "knip",
+    "lefthook",
+    "Docker",
+    "testcontainers (MinIO, PostgreSQL)"
+  ],
+  "build_system": "tsdown (ESM, node platform)",
+  "test_framework": "Vitest (unit + integration via testcontainers)",
+  "package_manager": "pnpm",
+  "runtime": "Node >=25 <26, ESM (type: module)",
+  "deployment": "short-lived CronJob container; flushes Sentry on every exit path",
+  "content_formats": [
+    "JSON (CLI stdout summary contract)",
+    "NDJSON (pino logs on stderr)"
+  ]
+}

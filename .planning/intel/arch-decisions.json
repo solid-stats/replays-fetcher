@@ -1,0 +1,75 @@
+{
+  "_meta": {
+    "updated_at": "2026-06-16T11:49:58.316Z",
+    "version": 2
+  },
+  "entries": {
+    "overview": {
+      "pattern": "Layered CLI ingest service with dependency injection (composition root at the Command band)",
+      "description": "A short-lived Commander CLI that discovers OCAP replay files from sg.zone, stores raw bytes in S3, and writes ingest staging records into server-2's PostgreSQL for server-2 to promote. It does NOT parse replays and owns no public HTTP API. Domain logic is pure/testable; external clients (S3, pg) are constructed once per command in the Command band and injected into adapters (the 'one client per backend' rule)."
+    },
+    "data-flow": {
+      "flow": "source (sg.zone list+detail+raw HTML/JSON) -> discovery (candidates) -> storeRawReplay (fetch bytes -> sha256 -> S3 raw/sha256/<sha>.ocap) -> stageRawReplay (build payload -> Postgres ingest_staging_records status=pending) -> server-2 promotes",
+      "description": "run-once runs the full paged cycle with S3 checkpointing/resume, concurrency, pacing, and optional evidence artifacts. discover offers narrower dry-run / store-raw / store-raw+stage modes. Each candidate flows raw-store-then-stage sequentially so storage evidence precedes staging."
+    },
+    "cross-app-boundary": {
+      "writes": "server-2 database table ingest_staging_records",
+      "columns": "source_system, source_replay_id, object_key, checksum, size_bytes, replay_timestamp, status (always 'pending'), promotion_evidence (jsonb), conflict_details (jsonb)",
+      "ownership": "replays-fetcher is the WRITER (status=pending); server-2 is the READER/promoter. This is the only cross-app coupling.",
+      "promotion_evidence": "jsonb durable contract: bucket, byteSize, checksum, fetchedAt, objectKey, rawStorageStatus, sourceFilename, sourceUrl (credentials stripped via sanitizeSourceUrl, T-09-01), optional discoveredAt/sourceExternalId/run_id",
+      "idempotency": "Insert relies on a unique constraint; on 23505 unique-violation the repository classifies as already_staged (matching checksum+object_key), conflict (source_identity_conflict or raw_object_identity_conflict), or failed. See src/staging/postgres-staging-repository.ts.",
+      "description": "src/staging/payload.ts builds the IngestStagingPayload; src/staging/postgres-staging-repository.ts performs the insert/classify; src/staging/stage-raw-replay.ts orchestrates. Only 'stored'/'skipped' raw evidence is stageable."
+    },
+    "conventions": {
+      "naming": "kebab-case file names; one exported factory/function per concern (createX adapters, registerXCommand for CLI). camelCase except cross-service jsonb keys (run_id, snake_case DB columns).",
+      "file-organization": "src/ split into ~11 domain modules (check, checkpoint, contract-check, discovery, errors, evidence, logging, observability, run, source, staging, storage) plus commands/ (CLI band) and config.ts. Co-located *.test.ts unit tests and *.integration.test.ts (testcontainers).",
+      "imports": "ESM with explicit .js extensions on relative imports; type-only imports separated via 'import type'.",
+      "error-handling": "AppError base class; never call process.exit() — set process.exitCode and let streams/Sentry drain. Config errors surface as ConfigValidationError -> exit 2.",
+      "io-contract": "stdout carries exactly one JSON document (the machine-readable summary); pino logs go to stderr as NDJSON so they never interleave with the stdout contract."
+    },
+    "component:CLI": {
+      "path": "src/cli.ts + src/commands/",
+      "responsibility": "buildCli wires Commander; resolveDependencies (shared.ts) is the composition root injecting all adapters; clients.ts builds the single S3Client + pg Pool per command. Commands: check, discover, run-once, contract-check."
+    },
+    "component:Discovery": {
+      "path": "src/discovery/",
+      "responsibility": "Fetch and parse sg.zone list/detail/raw HTML+JSON into ReplayCandidate[]; direct or SSH transport; emits identifiers-only diagnostics (no response bodies, DIAG-04)."
+    },
+    "component:Storage": {
+      "path": "src/storage/",
+      "responsibility": "Fetch replay bytes, compute sha256, write to S3 at raw/sha256/<sha>.ocap, return RawReplayStorageEvidence; replay-byte-client handles bounded fetching with ReplayByteFetchError."
+    },
+    "component:Staging": {
+      "path": "src/staging/",
+      "responsibility": "Transform raw storage evidence into the cross-app ingest_staging_records contract and write/classify rows in server-2's PostgreSQL."
+    },
+    "component:Run": {
+      "path": "src/run/",
+      "responsibility": "runOnce orchestrates the full paged ingest cycle with checkpoint resume, concurrency limiter, pacer, adaptive throttle, and the RunSummary/exit-code projection."
+    },
+    "component:Checkpoint": {
+      "path": "src/checkpoint/",
+      "responsibility": "S3-backed page checkpoint store with optional conditional (CAS) writes for safe --resume."
+    },
+    "component:Evidence": {
+      "path": "src/evidence/",
+      "responsibility": "Optional durable per-candidate evidence artifacts written to S3 (and optionally a local file in dev)."
+    },
+    "component:Source": {
+      "path": "src/source/",
+      "responsibility": "Cross-cutting source-fetch resilience: retry with backoff, Retry-After parsing, failure classification, concurrency, pacing, adaptive throttle."
+    },
+    "component:Config": {
+      "path": "src/config.ts",
+      "responsibility": "Zod-validated env config (loadConfig = full app, loadSourceConfig = source-only for dry-run/contract-check); bounds all externally-sourced strings/URLs (DoS guard); redactConfig for safe logging."
+    },
+    "component:Checks": {
+      "path": "src/check/",
+      "responsibility": "Read-only connectivity probes for source, S3, and staging PostgreSQL backing the `check` command."
+    },
+    "observability": {
+      "path": "src/observability/",
+      "responsibility": "instrument.ts initializes errors-only Sentry as the first side-effect import; sentry.ts provides captureFatal/flushSentry. CronJob pods MUST flushSentry on every exit path or events are lost."
+    }
+  }
+}

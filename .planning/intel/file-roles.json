@@ -1,0 +1,542 @@
+{
+  "_meta": {
+    "updated_at": "2026-06-16T11:49:58.206Z",
+    "version": 2
+  },
+  "entries": {
+    "src/cli.ts": {
+      "exports": [
+        "buildCli"
+      ],
+      "imports": [
+        "./observability/instrument.js",
+        "commander",
+        "./commands/check.js",
+        "./commands/contract-check.js",
+        "./commands/discover.js",
+        "./commands/run-once.js",
+        "./commands/shared.js",
+        "./observability/sentry.js"
+      ],
+      "type": "entry-point"
+    },
+    "src/index.ts": {
+      "exports": [
+        "ConfigValidationError",
+        "loadConfig",
+        "redactConfig"
+      ],
+      "imports": [
+        "./errors/config-validation-error.js",
+        "./config.js"
+      ],
+      "type": "entry-point"
+    },
+    "src/config.ts": {
+      "exports": [
+        "loadConfig",
+        "loadSourceConfig",
+        "redactConfig",
+        "defaultSourceRetryAttempts"
+      ],
+      "imports": [
+        "zod",
+        "./errors/config-validation-error.js"
+      ],
+      "type": "config"
+    },
+    "src/commands/shared.ts": {
+      "exports": [
+        "writeJson",
+        "createRunId",
+        "buildRetryWarnEmitter",
+        "loadDryRunSourceConfig",
+        "loadStoreRawConfig",
+        "createStoreRawResources",
+        "resolveDependencies"
+      ],
+      "imports": [
+        "../check/*",
+        "../checkpoint/s3-checkpoint-store.js",
+        "../config.js",
+        "../contract-check/contract-check.js",
+        "../discovery/*",
+        "../evidence/s3-evidence-store.js",
+        "../logging/create-logger.js",
+        "../run/run-once.js",
+        "../staging/*",
+        "../storage/*",
+        "./clients.js"
+      ],
+      "type": "module"
+    },
+    "src/commands/clients.ts": {
+      "exports": [
+        "createS3Client",
+        "createPgPool"
+      ],
+      "imports": [
+        "@aws-sdk/client-s3",
+        "pg",
+        "../config.js"
+      ],
+      "type": "module"
+    },
+    "src/commands/check.ts": {
+      "exports": [
+        "registerCheckCommand"
+      ],
+      "imports": [
+        "../check/connectivity.js",
+        "../config.js",
+        "../errors/config-validation-error.js",
+        "./shared.js"
+      ],
+      "type": "module"
+    },
+    "src/commands/discover.ts": {
+      "exports": [
+        "registerDiscoverCommand"
+      ],
+      "imports": [
+        "./shared.js",
+        "../config.js",
+        "../discovery/types.js",
+        "../staging/types.js",
+        "../storage/store-raw-replay.js"
+      ],
+      "type": "module"
+    },
+    "src/commands/run-once.ts": {
+      "exports": [
+        "registerRunOnceCommand"
+      ],
+      "imports": [
+        "../run/summary.js",
+        "./shared.js",
+        "../staging/stage-raw-replay.js"
+      ],
+      "type": "module"
+    },
+    "src/commands/contract-check.ts": {
+      "exports": [
+        "registerContractCheckCommand"
+      ],
+      "imports": [
+        "./shared.js"
+      ],
+      "type": "module"
+    },
+    "src/discovery/discover.ts": {
+      "exports": [
+        "discoverReplaysDryRun",
+        "toRawReplayUrl"
+      ],
+      "imports": [
+        "./html.js",
+        "./source-client.js",
+        "./types.js",
+        "../source/retry.js"
+      ],
+      "type": "module"
+    },
+    "src/discovery/source-client.ts": {
+      "exports": [
+        "createSourceClient",
+        "SourceFetchError"
+      ],
+      "imports": [
+        "node:child_process",
+        "node:util",
+        "../errors/app-error.js",
+        "../source/backoff.js",
+        "../source/classify-failure.js",
+        "../source/retry.js",
+        "./types.js"
+      ],
+      "type": "module"
+    },
+    "src/discovery/html.ts": {
+      "exports": [
+        "extractReplayRows",
+        "extractFilenameFromDetailHtml"
+      ],
+      "imports": [],
+      "type": "module"
+    },
+    "src/discovery/types.ts": {
+      "exports": [
+        "DiscoveryMode",
+        "DiagnosticSeverity",
+        "DiagnosticCode",
+        "SourceTransport",
+        "ReplayCandidate",
+        "DiscoveryDiagnostic",
+        "DiscoveryReport",
+        "SourceClient",
+        "SourceFetchOptions"
+      ],
+      "imports": [
+        "../source/retry.js"
+      ],
+      "type": "type-def"
+    },
+    "src/run/run-once.ts": {
+      "exports": [
+        "runOnce"
+      ],
+      "imports": [
+        "../source/concurrency.js",
+        "../source/pacing.js",
+        "../source/throttle.js",
+        "./summary.js",
+        "./types.js",
+        "../checkpoint/*",
+        "../discovery/types.js",
+        "../evidence/s3-evidence-store.js",
+        "../staging/*",
+        "../storage/*"
+      ],
+      "type": "module"
+    },
+    "src/run/summary.ts": {
+      "exports": [
+        "buildRunSummary",
+        "deriveRunStatus",
+        "deriveSourceFailure",
+        "runExitCode",
+        "buildConfigInvalidRunSummary",
+        "toCompactSummary"
+      ],
+      "imports": [
+        "./types.js"
+      ],
+      "type": "module"
+    },
+    "src/run/types.ts": {
+      "exports": [
+        "RunExitCode",
+        "RunSourceFailure",
+        "RunSummary"
+      ],
+      "imports": [],
+      "type": "type-def"
+    },
+    "src/contract-check/contract-check.ts": {
+      "exports": [
+        "runContractCheck",
+        "ContractCheckReason",
+        "ContractCheckWarningCode",
+        "ContractCheckWarning",
+        "ContractCheckSample"
+      ],
+      "imports": [
+        "../discovery/discover.js",
+        "../discovery/html.js",
+        "../discovery/source-client.js",
+        "../source/classify-failure.js",
+        "../discovery/types.js"
+      ],
+      "type": "module"
+    },
+    "src/storage/store-raw-replay.ts": {
+      "exports": [
+        "storeRawReplay",
+        "StoreRawReplayResult",
+        "RawReplayFetchFailureEvidence"
+      ],
+      "imports": [
+        "./checksum.js",
+        "./object-key.js",
+        "./replay-byte-client.js",
+        "./s3-raw-storage.js",
+        "./types.js",
+        "../discovery/types.js"
+      ],
+      "type": "module"
+    },
+    "src/storage/object-key.ts": {
+      "exports": [
+        "toRawReplayObjectKey"
+      ],
+      "imports": [],
+      "type": "module"
+    },
+    "src/storage/checksum.ts": {
+      "exports": [
+        "calculateSha256"
+      ],
+      "imports": [
+        "node:crypto"
+      ],
+      "type": "module"
+    },
+    "src/storage/s3-raw-storage.ts": {
+      "exports": [
+        "createS3RawReplayStorage",
+        "S3RawReplayStorage"
+      ],
+      "imports": [
+        "@aws-sdk/client-s3",
+        "./object-key.js",
+        "./types.js"
+      ],
+      "type": "module"
+    },
+    "src/storage/replay-byte-client.ts": {
+      "exports": [
+        "createReplayByteClient",
+        "ReplayByteClient",
+        "ReplayByteFetchError",
+        "ByteFetchOptions"
+      ],
+      "imports": [
+        "../errors/app-error.js"
+      ],
+      "type": "module"
+    },
+    "src/storage/types.ts": {
+      "exports": [
+        "RawReplayStorageEvidence"
+      ],
+      "imports": [],
+      "type": "type-def"
+    },
+    "src/staging/stage-raw-replay.ts": {
+      "exports": [
+        "stageRawReplay",
+        "StagingRepository"
+      ],
+      "imports": [
+        "./payload.js",
+        "./types.js",
+        "../storage/store-raw-replay.js",
+        "../storage/types.js"
+      ],
+      "type": "module"
+    },
+    "src/staging/payload.ts": {
+      "exports": [
+        "toIngestStagingPayload"
+      ],
+      "imports": [
+        "../storage/checksum.js",
+        "./types.js",
+        "../storage/types.js"
+      ],
+      "type": "module"
+    },
+    "src/staging/postgres-staging-repository.ts": {
+      "exports": [
+        "createPostgresStagingRepository",
+        "PostgresStagingRepository",
+        "StagingQueryClient"
+      ],
+      "imports": [
+        "./types.js"
+      ],
+      "type": "module"
+    },
+    "src/staging/types.ts": {
+      "exports": [
+        "IngestStagingStatus",
+        "StagingOutcomeStatus",
+        "IngestStagingPayload",
+        "ExistingStagingEvidence",
+        "StageableRawReplayEvidence",
+        "StagingPayloadResult",
+        "IngestStagingResult"
+      ],
+      "imports": [
+        "../storage/types.js"
+      ],
+      "type": "type-def"
+    },
+    "src/checkpoint/s3-checkpoint-store.ts": {
+      "exports": [
+        "createS3CheckpointStore",
+        "S3CheckpointStore",
+        "CheckpointReadResult",
+        "CheckpointWriteInput",
+        "CheckpointWriteResult"
+      ],
+      "imports": [
+        "@aws-sdk/client-s3",
+        "./checkpoint.js",
+        "./object-key.js"
+      ],
+      "type": "module"
+    },
+    "src/checkpoint/checkpoint.ts": {
+      "exports": [
+        "Checkpoint",
+        "CheckpointPage"
+      ],
+      "imports": [],
+      "type": "module"
+    },
+    "src/evidence/s3-evidence-store.ts": {
+      "exports": [
+        "createS3EvidenceStore",
+        "S3EvidenceStore",
+        "S3EvidenceSender",
+        "EvidenceWriteInput"
+      ],
+      "imports": [
+        "@aws-sdk/client-s3",
+        "./object-key.js"
+      ],
+      "type": "module"
+    },
+    "src/check/connectivity.ts": {
+      "exports": [
+        "connectivityOk",
+        "ConnectivityCheck",
+        "ConnectivityCheckStatus",
+        "ConnectivityCheckResults",
+        "ConnectivityFailureCategory"
+      ],
+      "imports": [],
+      "type": "module"
+    },
+    "src/check/s3-connectivity.ts": {
+      "exports": [
+        "checkS3Connectivity"
+      ],
+      "imports": [
+        "@aws-sdk/client-s3",
+        "./connectivity.js"
+      ],
+      "type": "module"
+    },
+    "src/check/postgres-connectivity.ts": {
+      "exports": [
+        "checkPostgresConnectivity"
+      ],
+      "imports": [
+        "pg",
+        "./connectivity.js"
+      ],
+      "type": "module"
+    },
+    "src/check/source-connectivity.ts": {
+      "exports": [
+        "checkSourceConnectivity"
+      ],
+      "imports": [
+        "../discovery/types.js",
+        "./connectivity.js"
+      ],
+      "type": "module"
+    },
+    "src/source/retry.ts": {
+      "exports": [
+        "withRetry",
+        "RetryAttemptEvent",
+        "RetrySourceReadOptions",
+        "SourceReadPhase"
+      ],
+      "imports": [
+        "./backoff.js",
+        "./classify-failure.js"
+      ],
+      "type": "module"
+    },
+    "src/source/classify-failure.ts": {
+      "exports": [
+        "classifyFailure",
+        "ClassifyInput",
+        "FailureClassification",
+        "FailureKind"
+      ],
+      "imports": [],
+      "type": "module"
+    },
+    "src/source/backoff.ts": {
+      "exports": [
+        "parseRetryAfter",
+        "computeBackoffDelay"
+      ],
+      "imports": [],
+      "type": "module"
+    },
+    "src/source/concurrency.ts": {
+      "exports": [
+        "createLimiter",
+        "LimitFunction"
+      ],
+      "imports": [
+        "p-limit"
+      ],
+      "type": "module"
+    },
+    "src/source/pacing.ts": {
+      "exports": [
+        "createPacer",
+        "Pacer"
+      ],
+      "imports": [],
+      "type": "module"
+    },
+    "src/source/throttle.ts": {
+      "exports": [
+        "createThrottleController",
+        "ThrottleController"
+      ],
+      "imports": [],
+      "type": "module"
+    },
+    "src/logging/create-logger.ts": {
+      "exports": [
+        "createLogger",
+        "CreateLoggerOptions"
+      ],
+      "imports": [
+        "pino"
+      ],
+      "type": "module"
+    },
+    "src/observability/instrument.ts": {
+      "exports": [],
+      "imports": [
+        "@sentry/node"
+      ],
+      "type": "module"
+    },
+    "src/observability/sentry.ts": {
+      "exports": [
+        "captureFatal",
+        "flushSentry"
+      ],
+      "imports": [
+        "@sentry/node"
+      ],
+      "type": "module"
+    },
+    "src/errors/app-error.ts": {
+      "exports": [
+        "AppError"
+      ],
+      "imports": [],
+      "type": "module"
+    },
+    "src/errors/config-validation-error.ts": {
+      "exports": [
+        "ConfigValidationError"
+      ],
+      "imports": [
+        "./app-error.js"
+      ],
+      "type": "module"
+    },
+    "src/errors/checkpoint-conflict-error.ts": {
+      "exports": [
+        "CheckpointConflictError"
+      ],
+      "imports": [
+        "./app-error.js"
+      ],
+      "type": "module"
+    }
+  }
+}

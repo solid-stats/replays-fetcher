@@ -1,0 +1,182 @@
+{
+  "_meta": {
+    "updated_at": "2026-06-16T11:49:58.279Z",
+    "version": 2
+  },
+  "entries": {
+    "@aws-sdk/client-s3": {
+      "version": "^3.1045.0",
+      "type": "production",
+      "invocation": "import",
+      "used_by": [
+        "src/commands/clients.ts",
+        "src/storage/s3-raw-storage.ts",
+        "src/checkpoint/s3-checkpoint-store.ts",
+        "src/evidence/s3-evidence-store.ts",
+        "src/check/s3-connectivity.ts"
+      ]
+    },
+    "pg": {
+      "version": "^8.20.0",
+      "type": "production",
+      "invocation": "import",
+      "used_by": [
+        "src/commands/clients.ts",
+        "src/staging/postgres-staging-repository.ts",
+        "src/check/postgres-connectivity.ts"
+      ]
+    },
+    "commander": {
+      "version": "^14.0.3",
+      "type": "production",
+      "invocation": "import",
+      "used_by": [
+        "src/cli.ts",
+        "src/commands/"
+      ]
+    },
+    "zod": {
+      "version": "^4.4.3",
+      "type": "production",
+      "invocation": "import",
+      "used_by": [
+        "src/config.ts"
+      ]
+    },
+    "pino": {
+      "version": "^10.3.1",
+      "type": "production",
+      "invocation": "import",
+      "used_by": [
+        "src/logging/create-logger.ts",
+        "src/run/run-once.ts",
+        "src/commands/shared.ts"
+      ]
+    },
+    "@sentry/node": {
+      "version": "^10.57.0",
+      "type": "production",
+      "invocation": "import",
+      "used_by": [
+        "src/observability/instrument.ts",
+        "src/observability/sentry.ts"
+      ]
+    },
+    "p-limit": {
+      "version": "^7.3.0",
+      "type": "production",
+      "invocation": "import",
+      "used_by": [
+        "src/source/concurrency.ts"
+      ]
+    },
+    "@solid-stats/ts-toolchain": {
+      "version": "github:solid-stats/ts-toolchain#v0.1.3",
+      "type": "development",
+      "invocation": "implicit",
+      "used_by": [
+        "shared lint/format/ts config toolchain"
+      ]
+    },
+    "vitest": {
+      "version": "^4.1.5",
+      "type": "development",
+      "invocation": "pnpm test",
+      "used_by": [
+        "test",
+        "test:integration",
+        "test:coverage"
+      ]
+    },
+    "@vitest/coverage-v8": {
+      "version": "^4.1.5",
+      "type": "development",
+      "invocation": "pnpm run test:coverage",
+      "used_by": [
+        "test:coverage"
+      ]
+    },
+    "@testcontainers/minio": {
+      "version": "11.14.0",
+      "type": "development",
+      "invocation": "pnpm run test:integration",
+      "used_by": [
+        "src/**/*.integration.test.ts (S3 fixtures)"
+      ]
+    },
+    "@testcontainers/postgresql": {
+      "version": "11.14.0",
+      "type": "development",
+      "invocation": "pnpm run test:integration",
+      "used_by": [
+        "src/staging/postgres-staging-repository.integration.test.ts"
+      ]
+    },
+    "tsdown": {
+      "version": "0.22.2",
+      "type": "development",
+      "invocation": "pnpm run build",
+      "used_by": [
+        "build"
+      ]
+    },
+    "tsx": {
+      "version": "^4.21.0",
+      "type": "development",
+      "invocation": "pnpm run check",
+      "used_by": [
+        "check (dev run via src/cli.ts)"
+      ]
+    },
+    "oxlint": {
+      "version": "1.69.0",
+      "type": "development",
+      "invocation": "pnpm run lint",
+      "used_by": [
+        "lint",
+        "lint:types"
+      ]
+    },
+    "oxfmt": {
+      "version": "0.54.0",
+      "type": "development",
+      "invocation": "pnpm run format",
+      "used_by": [
+        "format",
+        "format:check"
+      ]
+    },
+    "dependency-cruiser": {
+      "version": "^17.4.3",
+      "type": "development",
+      "invocation": "pnpm run depcruise",
+      "used_by": [
+        "depcruise"
+      ]
+    },
+    "knip": {
+      "version": "^6.16.1",
+      "type": "development",
+      "invocation": "pnpm run knip",
+      "used_by": [
+        "knip"
+      ]
+    },
+    "lefthook": {
+      "version": "2.1.9",
+      "type": "development",
+      "invocation": "pnpm run prepare",
+      "used_by": [
+        "git hooks"
+      ]
+    },
+    "typescript": {
+      "version": "^6.0.3",
+      "type": "development",
+      "invocation": "pnpm run typecheck",
+      "used_by": [
+        "typecheck"
+      ]
+    }
+  }
+}
