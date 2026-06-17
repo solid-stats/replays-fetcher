@@ -197,9 +197,13 @@ test.skipIf(!goldenFixturesPresent())(
     // cycle (pins checksum-after-download; dedup-before-fetch is out of scope).
     expect(fetchBytes.mock.calls.length).toBe(stagedCycleOne * cycleCount);
 
-    // Pacing respected: the inter-cycle pacer floor is awaited once per cycle.
+    // Pacing respected: the inter-cycle pacer floor is awaited once per cycle
+    // (inside runCycle, so it fires on every cycle including the last).
     expect(awaitFloor).toHaveBeenCalledTimes(cycleCount);
-    expect(sleep).toHaveBeenCalledTimes(cycleCount);
+    // The inter-cycle `sleep` runs only between cycles: the loop breaks on the
+    // `if (shouldStop()) break` AFTER the final cycle, before reaching the sleep
+    // (watch-loop.ts:232-240) — so it fires cycleCount - 1 times, not cycleCount.
+    expect(sleep).toHaveBeenCalledTimes(cycleCount - 1);
 
     // The staging table holds exactly the cycle-1 rows (dups never grow it).
     const rowCount = await pool.query<{ readonly count: string }>(
