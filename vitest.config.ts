@@ -25,6 +25,13 @@ export default mergeConfig(
         exclude: [
           "dist/**",
           "src/**/*.test.ts",
+          // Test-infrastructure files (shared schema DDL helper + golden fixture
+          // loader) are exercised only by the coverage-excluded integration
+          // suite, never by unit tests — the same legitimate exclusion class as
+          // the CLI entrypoint. The `.fixtures` marker also excludes them from
+          // depcruise.
+          "src/**/*.fixtures.ts",
+          "src/run/golden-fixtures.ts",
           "src/cli.ts",
           "vitest.config.ts",
         ],
