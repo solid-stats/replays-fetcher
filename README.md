@@ -76,7 +76,9 @@ pnpm run build
 pnpm run verify
 ```
 
-`pnpm run test:integration` starts Docker-backed PostgreSQL and MinIO services with Testcontainers. `pnpm run verify` includes this integration gate after the unit suite and before coverage/build, so Docker must be available for full verification.
+`pnpm run verify` is the **fast gate** (format, lint, typecheck, unit tests, coverage, build, depcruise, knip) — no Docker required, safe to run on every change.
+
+`pnpm run test:integration` is a **separate, slower pre-deploy gate** that runs only on `master` before deploy. It starts Docker-backed PostgreSQL and MinIO via Testcontainers and runs the full `*.integration.test.ts` suite — including the golden end-to-end regression tests below — and is **intentionally NOT part of `verify`**: it may take several minutes, and its job is to catch regressions and bugs, not to be fast. Docker must be available to run it.
 
 ### Golden end-to-end fixtures (human capture step)
 
@@ -86,7 +88,7 @@ The golden integration tests (`src/run/golden-e2e.integration.test.ts`, `src/run
 pnpm exec tsx scripts/capture-golden-fixtures.ts
 ```
 
-Run against a configured `.env` (real `REPLAY_SOURCE_*` creds/transport). It reuses the real source/byte clients and the production URL/parse helpers, then writes a three-tier gzip corpus under `src/run/fixtures/golden/`: `manifest.json`, `list/page-*.html.gz` (10 listing pages), `detail/<id>.html.gz` (each replay's detail page), and `bytes/<id>.ocap.gz` (each replay's raw bytes). Until the fixtures exist, the golden tests **skip cleanly** — the suite stays green — and go fully green once the corpus is captured and committed.
+Run against a configured `.env` (real `REPLAY_SOURCE_*` creds/transport). It reuses the real source/byte clients and the production URL/parse helpers, then writes a three-tier gzip corpus under `src/run/fixtures/golden/`: `manifest.json`, `list/page-*.html.gz` (10 listing pages), `detail/<id>.html.gz` (each replay's detail page), and `bytes/<id>.ocap.gz` (each replay's raw bytes). Until the fixtures exist, the golden tests **skip cleanly**, so both `verify` and `test:integration` stay green. Once the corpus is captured and committed, they run for real inside the `test:integration` pre-deploy gate (never in `verify`).
 
 ### Git hooks (lefthook)
 

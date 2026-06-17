@@ -15,13 +15,13 @@
     "lint": "oxlint --config .oxlintrc.json src",
     "lint:types": "oxlint --type-aware --config .oxlintrc.json src",
     "test": "vitest run",
-    "test:integration": "VITEST_INTEGRATION=true VITEST_INTEGRATION_GLOB=\"src/**/*.integration.test.ts\" vitest run --dir src --no-file-parallelism --testTimeout 120000 --hookTimeout 120000",
+    "test:integration": "VITEST_INTEGRATION=true VITEST_INTEGRATION_GLOB=\"src/**/*.integration.test.ts\" vitest run --dir src --no-file-parallelism --testTimeout 300000 --hookTimeout 300000",
     "test:coverage": "vitest run --coverage",
     "depcruise": "dependency-cruiser src --config .dependency-cruiser.cjs",
     "knip": "knip --config knip.jsonc",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "prepare": "lefthook install || true",
-    "verify": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm test && pnpm run test:integration && pnpm run test:coverage && pnpm run build && pnpm run depcruise && pnpm run knip"
+    "verify": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm test && pnpm run test:coverage && pnpm run build && pnpm run depcruise && pnpm run knip"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1045.0",
