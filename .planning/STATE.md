@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 Phase: Milestone v3.0 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-06-16 — Completed quick task 260616-vw8: always-on `watch` daemon (continuous page-1 poll, interval=0 self-paced on the source spacing, checkpoint-independent, heartbeat exec-liveness) alongside run-once
+Last activity: 2026-06-17 — Completed quick task 260617-tvn: golden end-to-end integration tests (run-once + watch) as a behavioral regression oracle before the fetcher refactor — fake source via DI, real MinIO+Postgres testcontainers, full source-evidence + idempotency assertions, watch driven by injected seams; shared staging-schema DDL helper extracted; human-run capture script for the real fixture corpus; integration/golden suite moved OUT of `verify` into a separate pre-deploy gate
 
 ## Cross-repo preset follow-ups — both RESOLVED 2026-06-14
 
@@ -37,7 +37,7 @@ Last activity: 2026-06-16 — Completed quick task 260616-vw8: always-on `watch`
 
 ## Verify Gate: GREEN ✅
 
-`pnpm run verify` exits 0 (Docker available): format → lint → typecheck → unit (444 tests / 35 files) → integration (testcontainers) → coverage (100% statements/branches/functions/lines) → build. The pre-existing phase-11 lint/format/coverage debt in `src/run/*`, `cli.ts`, and `pnpm-lock.yaml` (blamed to `f5a6450c`) was cleared during Phase 12 close (commits `2a03f75`, `7aa54b0`, `78775b3`) at the user's request.
+`pnpm run verify` exits 0 and is now the **fast, Docker-free gate**: format → lint → typecheck → unit (495 tests) → coverage (100% statements/branches/functions/lines) → build → depcruise → knip. As of quick `260617-tvn` (2026-06-17) the Docker-backed integration suite was **moved out of `verify`** into a separate `pnpm run test:integration` **pre-deploy gate** (runs on master before deploy; may take minutes; includes the golden end-to-end regression tests, which skip cleanly until the fixture corpus is captured). The pre-existing phase-11 lint/format/coverage debt in `src/run/*`, `cli.ts`, and `pnpm-lock.yaml` (blamed to `f5a6450c`) was cleared during Phase 12 close (commits `2a03f75`, `7aa54b0`, `78775b3`) at the user's request.
 
 ## Accumulated Context
 
@@ -186,6 +186,7 @@ None.
 | 2026-06-15 | sentry-errors-only | complete |
 | 2026-06-16 | fix-unbounded-clamp-crawl-and-silent-cap | complete |
 | 2026-06-16 | add-always-on-watch-daemon-page-1-poll | complete |
+| 2026-06-17 | golden-end-to-end-integration-test-run-o | complete |
 
 ### Parity-baseline fixes (F1/F2) — folded into Track C (2026-06-13)
 
