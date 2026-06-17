@@ -78,6 +78,16 @@ pnpm run verify
 
 `pnpm run test:integration` starts Docker-backed PostgreSQL and MinIO services with Testcontainers. `pnpm run verify` includes this integration gate after the unit suite and before coverage/build, so Docker must be available for full verification.
 
+### Golden end-to-end fixtures (human capture step)
+
+The golden integration tests (`src/run/golden-e2e.integration.test.ts`, `src/run/golden-watch.integration.test.ts`) pin the full ingest pipeline's behavior against real source pages + real replay bytes, replayed offline so CI never hammers the source. The fixtures are **captured by a human** (the agent is denied live source access):
+
+```bash
+pnpm exec tsx scripts/capture-golden-fixtures.ts
+```
+
+Run against a configured `.env` (real `REPLAY_SOURCE_*` creds/transport). It reuses the real source/byte clients and the production URL/parse helpers, then writes a three-tier gzip corpus under `src/run/fixtures/golden/`: `manifest.json`, `list/page-*.html.gz` (10 listing pages), `detail/<id>.html.gz` (each replay's detail page), and `bytes/<id>.ocap.gz` (each replay's raw bytes). Until the fixtures exist, the golden tests **skip cleanly** — the suite stays green — and go fully green once the corpus is captured and committed.
+
 ### Git hooks (lefthook)
 
 Client-side git hooks are managed by [lefthook](https://lefthook.dev) and sourced from the shared `@solid-stats/ts-toolchain` preset via `extends` (single source of truth — no hook bodies live in this repo). `pnpm install` wires `.git/hooks/pre-commit` (oxfmt + oxlint over staged files) and `.git/hooks/pre-push` (typecheck + unit tests), mirroring CI.
