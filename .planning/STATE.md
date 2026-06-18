@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 Phase: Milestone v3.0 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-06-17 — Completed quick task 260617-tvn: golden end-to-end integration tests (run-once + watch) as a behavioral regression oracle before the fetcher refactor — fake source via DI, real MinIO+Postgres testcontainers, full source-evidence + idempotency assertions, watch driven by injected seams; shared staging-schema DDL helper extracted; human-run capture script for the real fixture corpus; integration/golden suite moved OUT of `verify` into a separate pre-deploy gate
+Last activity: 2026-06-18 — Completed quick task 260618-c4i: golden fixture corpus captured from sg.zone, **trimmed to 3 pages** (manifest + 90 detail + 90 byte blobs, ~37MB — down from 10 pages/~105MB to keep git history light) and committed; fixed the run-once oracle to match real `promotion_evidence` (discoveredAt is optional/absent — discovery does not parse the listing game-date column; `fetchedAt` is the real fetch timestamp) + a latent run-2 idempotency assertion; `maxPages` set to 3 to match the trimmed corpus. `pnpm run test:integration` GREEN 6/6 with both golden tests running live (no skip); `verify` GREEN, 100% coverage. NOT pushed (local master). Prior: 260617-tvn built the golden tests + moved integration out of `verify` into a separate pre-deploy gate. Finding (discovery drops game-date → discoveredAt/replay_timestamp unpopulated) recorded in `../plans/replays-fetcher/TECH-DEBT.md`.
 
 ## Cross-repo preset follow-ups — both RESOLVED 2026-06-14
 
@@ -187,6 +187,7 @@ None.
 | 2026-06-16 | fix-unbounded-clamp-crawl-and-silent-cap | complete |
 | 2026-06-16 | add-always-on-watch-daemon-page-1-poll | complete |
 | 2026-06-17 | golden-end-to-end-integration-test-run-o | complete |
+| 2026-06-18 | trim-golden-fixture-corpus-to-3-pages-an | complete |
 
 ### Parity-baseline fixes (F1/F2) — folded into Track C (2026-06-13)
 
