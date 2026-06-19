@@ -1,3 +1,23 @@
+# replays-fetcher — agent guide
+
+`replays-fetcher` is the Solid Stats ingest service: it discovers OCAP replays from the
+external source, stores raw replay objects in S3-compatible storage, and writes ingest
+staging/outbox records that `server-2` promotes.
+
+**Boundary — owns:** raw replay object storage (S3), ingest staging/outbox records, source
+metadata (source URL/ID, checksums, fetch timestamps, object keys, sizes, fetch status).
+**Must NOT cross:** parse replay contents (that is `replay-parser-2`); mutate `server-2`
+business tables (`replays`, `parse_jobs`, `parse_results`, stats, identity, roles, requests,
+moderation); publish RabbitMQ messages; calculate stats, bounty, canonical identity, or
+moderation decisions. See the cross-app boundary map in
+`solidstats-shared-project-standards` §D.
+
+Shared engineering standards for every SolidStats repo live in the
+[`skills`](https://github.com/solid-stats/skills) repo (`solidstats-shared-project-standards`
+and the per-stack `solidstats-fetcher-ts-*` skills). Read them before changing code here.
+
+---
+
 # AGENTS instructions
 
 ## Skills First
