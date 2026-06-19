@@ -40,7 +40,7 @@ Solid Stats is a multi-project product composed of:
 Read these planning files before planning or implementing:
 
 - `.planning/PROJECT.md`
-- `.planning/REQUIREMENTS.md`
+- `.planning/MILESTONES.md`
 - `.planning/ROADMAP.md`
 - `.planning/STATE.md`
 - `.planning/research/SUMMARY.md`
