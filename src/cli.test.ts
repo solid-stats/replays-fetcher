@@ -1430,8 +1430,24 @@ test("staging path source should not write forbidden business tables or parser a
   expect(sourceText).toMatch(/insert\s+into\s+ingest_staging_records/iu);
 });
 
+// The run-once orchestration now spans the run/ band as cohesive siblings
+// (SPLIT-01): the parent entry, the resume/checkpoint helpers, the rate/emit/
+// assemble helpers, the page loop, and the shared private types. The boundary
+// holds over their UNION — the write surfaces stay within run/, just relocated.
+const runOnceBoundaryFiles = [
+  "src/run/run-once.ts",
+  "src/run/run-once-checkpoint.ts",
+  "src/run/run-once-summary.ts",
+  "src/run/run-once-page.ts",
+  "src/run/run-once-page-rate.ts",
+  "src/run/run-once-types.ts",
+] as const;
+
 test("run-once orchestrator should only touch checkpoint, raw storage, and staging surfaces", async () => {
-  const sourceText = await readProjectFile("src/run/run-once.ts");
+  const sourceTexts = await Promise.all(
+    runOnceBoundaryFiles.map((filePath) => readProjectFile(filePath)),
+  );
+  const sourceText = sourceTexts.join("\n");
 
   for (const token of runOnceBoundaryTokens) {
     expect(sourceText).not.toMatch(token);
