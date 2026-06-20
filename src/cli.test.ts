@@ -1485,7 +1485,12 @@ test("run-once orchestrator should only touch checkpoint, raw storage, and stagi
 // `postgres-staging-repository.boundary.test.ts` (DEDUP-03) scans the staging
 // adapter source to prove it never emits a server-2 business-table mutation — a
 // write-scope boundary contract, not a `boundary.ts` source module.
+// `ingest-page-prefetch-dedup.test.ts` (DEDUP-01) is the "cannot miss a new
+// record" property gate over `ingest-page.ts`'s prefetch decision — a data-loss
+// invariant suite split out of `ingest-page.test.ts` to keep both files under
+// max-lines; it has no `ingest-page-prefetch-dedup.ts` source companion.
 const crossSurfaceTestFiles = new Set([
+  "src/run/ingest-page-prefetch-dedup.test.ts",
   "src/run/no-leak.test.ts",
   "src/depcruise-fences.test.ts",
   "src/staging/postgres-staging-repository.boundary.test.ts",

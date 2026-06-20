@@ -145,6 +145,34 @@ test.each(cannotMissCases)(
   },
 );
 
+test("ingestPage skips using the defaultSourceSystem when sourceSystem is omitted", async () => {
+  // Exercises the `input.sourceSystem ?? defaultSourceSystem` fallback: when the
+  // caller does not thread a sourceSystem, the existence check still keys on the
+  // payload builder's default ("sg-zone") so the SELECT matches the eventual INSERT.
+  const store = vi.fn(async () => rawStored("replay-default-ss.ocap"));
+  const existsBySourceIdentity = vi.fn(async () => true);
+
+  const result = await ingestPage({
+    byteClient: { fetchBytes: vi.fn() },
+    candidates: [candidateWithExternalId({ externalId: "1778269931" })],
+    existsBySourceIdentity,
+    limit: createLimiter(testConcurrency),
+    prefetchDedup: true,
+    runId: "run-default-ss",
+    // sourceSystem intentionally omitted.
+    async stageRawReplay() {
+      return { stagingId: "staging-default-ss", status: "staged" };
+    },
+    stagingRepository: { stage: vi.fn() },
+    storage: { storeRawReplay: vi.fn() },
+    storeRawReplay: store,
+  });
+
+  expect(existsBySourceIdentity).toHaveBeenCalledWith("sg-zone", "1778269931");
+  expect(store).not.toHaveBeenCalled();
+  expect(result.counts.skippedBySourceId).toBe(1);
+});
+
 test("ingestPage never issues the existence check when prefetchDedup is absent (run-once path)", async () => {
   const existsBySourceIdentity = vi.fn(async () => true);
   const store = vi.fn(async () => rawStored("replay-runonce.ocap"));
