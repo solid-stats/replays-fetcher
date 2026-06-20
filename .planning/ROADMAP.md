@@ -77,7 +77,10 @@ Behavior-preserving migration onto the shared `@solid-stats/ts-toolchain` preset
   4. The Docker golden run-once oracle and 100% V8 coverage stay green — no runtime behavior changed.
 **Pre-plan decision (resolve at discuss/plan)**: contracts home naming — `contracts/` (research recommendation) vs the already-encoded `types/`. Settle and encode the choice in the depcruise preset + conventions skill in the same plan.
 **Behavior-preservation gate**: golden oracle (`src/run/golden-e2e.integration.test.ts`) + 100% V8 coverage + depcruise + knip green.
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 19-01-PLAN.md — ARCH-01: move ReplayCandidate/RawReplayStorageEvidence/IngestStagingPayload (+ result wrappers) into src/types/ via downward shims; make run-summary.ts truly leaf
+- [ ] 19-02-PLAN.md — ARCH-02: move SourceTransport into src/types/; remove the config.ts upward import
+- [ ] 19-03-PLAN.md — ARCH-03: delete the no-leak.ts orphan + drop its knip ignore; refresh conventions §5 + depcruise comment to name src/types/ as the leaf band (no fence enforcement)
 
 ### Phase 20: Composition-Root Client Consolidation + Watch Teardown
 **Goal**: Exactly one `S3Client` and one `pg.Pool` exist in `src/`, both built at the `commands/` composition root and injected; the `watch` daemon tears them down cleanly on shutdown; adapters never construct or tear down injected clients.
@@ -180,7 +183,7 @@ Phases execute in numeric order: 19 → 20 → 21 → 22 → 23 → 24 → 25 �
 | 1-6 | v1.0 | 23/23 | Complete | 2026-05-10 |
 | 7-12 | v2.0 | 24/24 | Complete | 2026-06-12 |
 | 13-18 | v3.0 | 16/16 | Complete | 2026-06-14 |
-| 19. Contracts Home + Config Fix + Orphan | v3.1 | 0/TBD | Not started | - |
+| 19. Contracts Home + Config Fix + Orphan | v3.1 | 0/3 | Not started | - |
 | 20. Composition-Root Clients + Watch Teardown | v3.1 | 0/TBD | Not started | - |
 | 21. Mechanical Convention Cleanup | v3.1 | 0/TBD | Not started | - |
 | 22. God-File Decomposition | v3.1 | 0/TBD | Not started | - |
