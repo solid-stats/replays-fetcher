@@ -1,6 +1,93 @@
 import { expect, test } from "vitest";
 
-import { extractFilenameFromDetailHtml, extractReplayRows } from "./html.js";
+import {
+  extractFilenameFromDetailHtml,
+  extractReplayRows,
+  parseGameDateToUtcIso,
+} from "./html.js";
+
+test.each([
+  ["14.06.2026 19:01", "2026-06-14T19:01:00.000Z"],
+  ["13.06.2026 21:08", "2026-06-13T21:08:00.000Z"],
+  ["", undefined],
+  ["not a date", undefined],
+  // Year-first ISO is rejected by the anchored day-first regex.
+  ["2026-06-14 19:01", undefined],
+])(
+  "parseGameDateToUtcIso should map %j to %j",
+  (input: string, expected: string | undefined) => {
+    expect(parseGameDateToUtcIso(input)).toBe(expected);
+  },
+);
+
+test("extractReplayRows should capture the listing game-date cell as metadata.discoveredAt", () => {
+  const rows = extractReplayRows(
+    `
+      <table class="common-table">
+        <tbody>
+          <tr>
+            <td><a href="/replays/100">sg@test</a></td>
+            <td>Altis</td>
+            <td>1</td>
+            <td>14.06.2026 19:01</td>
+          </tr>
+        </tbody>
+      </table>
+    `,
+    1,
+    new URL("https://example.test/replays"),
+  );
+
+  expect(rows).toStrictEqual([
+    {
+      metadata: {
+        discoveredAt: "2026-06-14T19:01:00.000Z",
+        missionText: "sg@test",
+        serverId: 1,
+        world: "Altis",
+      },
+      page: 1,
+      source: {
+        externalId: "100",
+        url: "https://example.test/replays/100",
+      },
+    },
+  ]);
+});
+
+test("extractReplayRows should leave metadata.discoveredAt unset for a malformed game-date cell", () => {
+  const rows = extractReplayRows(
+    `
+      <table class="common-table">
+        <tbody>
+          <tr>
+            <td><a href="/replays/100">sg@test</a></td>
+            <td>Altis</td>
+            <td>1</td>
+            <td>garbage</td>
+          </tr>
+        </tbody>
+      </table>
+    `,
+    1,
+    new URL("https://example.test/replays"),
+  );
+
+  expect(rows).toStrictEqual([
+    {
+      metadata: {
+        missionText: "sg@test",
+        serverId: 1,
+        world: "Altis",
+      },
+      page: 1,
+      source: {
+        externalId: "100",
+        url: "https://example.test/replays/100",
+      },
+    },
+  ]);
+});
 
 test("extractReplayRows should parse replay rows from common-table HTML", () => {
   const rows = extractReplayRows(
