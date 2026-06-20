@@ -13,6 +13,11 @@ test.each([
   ["not a date", undefined],
   // Year-first ISO is rejected by the anchored day-first regex.
   ["2026-06-14 19:01", undefined],
+  // In-shape but out-of-range cells must reject too (range validation), not
+  // ship a bogus timestamptz value.
+  ["32.13.2026 25:99", undefined],
+  ["31.04.2026 10:00", undefined],
+  ["00.00.2026 00:00", undefined],
 ])(
   "parseGameDateToUtcIso should map %j to %j",
   (input: string, expected: string | undefined) => {

@@ -1,5 +1,7 @@
+/* eslint-disable max-lines -- payload precedence + range-validation scenarios are kept together for staging-contract readability. */
 import { expect, test } from "vitest";
 
+import { parseGameDateToUtcIso } from "../discovery/html.js";
 import { calculateSha256 } from "../storage/checksum.js";
 import type { RawReplayStorageEvidence } from "../storage/types.js";
 import { toIngestStagingPayload } from "./payload.js";
@@ -140,6 +142,43 @@ test("replayTimestamp is absent when neither the filename nor the listing game-d
     status: storedEvidence.status,
   };
   const result = toIngestStagingPayload(evidenceWithoutTimestamps);
+
+  if (result.stageable) {
+    expect(result.payload).not.toHaveProperty("replayTimestamp");
+  }
+});
+
+test("an out-of-range listing game-date never produces a discoveredAt, so the fallback stages no bogus replayTimestamp", () => {
+  // The listing cell is range-validated at its producer (`parseGameDateToUtcIso`),
+  // so an in-shape-but-out-of-range cell yields no discoveredAt at all — the
+  // bogus value never reaches the `?? evidence.discoveredAt` fallback and is
+  // never staged into replay_timestamp (Postgres rejects 2026-13-32 outright).
+  const discoveredAt = parseGameDateToUtcIso("32.13.2026 25:99");
+  expect(discoveredAt).toBeUndefined();
+
+  const { discoveredAt: _discoveredAt, ...withoutDiscoveredAt } =
+    storedEvidence;
+  const result = toIngestStagingPayload({
+    ...withoutDiscoveredAt,
+    ...(discoveredAt === undefined ? {} : { discoveredAt }),
+    sourceFilename: "custom-replay-name.ocap",
+  });
+
+  if (result.stageable) {
+    expect(result.payload).not.toHaveProperty("replayTimestamp");
+  }
+});
+
+test("replayTimestamp is absent when the filename timestamp is in-shape but out of range", () => {
+  // `replayTimestampFromFilename` must range-validate too: an impossible
+  // year_month_day__hour_minute_second prefix yields no timestamp rather than a
+  // bogus value. No listing fallback present, so replayTimestamp stays absent.
+  const { discoveredAt: _discoveredAt, ...withoutDiscoveredAt } =
+    storedEvidence;
+  const result = toIngestStagingPayload({
+    ...withoutDiscoveredAt,
+    sourceFilename: "2026_13_32__25_99_99__1_ocap",
+  });
 
   if (result.stageable) {
     expect(result.payload).not.toHaveProperty("replayTimestamp");

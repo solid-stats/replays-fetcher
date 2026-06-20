@@ -1,5 +1,6 @@
 import { calculateSha256 } from "../storage/checksum.js";
 import type { RawReplayStorageEvidence } from "../storage/types.js";
+import { componentsToUtcIso } from "../time/components-to-utc-iso.js";
 import type {
   IngestStagingPayload,
   StagingPayloadResult,
@@ -49,22 +50,32 @@ const toSourceReplayId = (evidence: StageableRawReplayEvidence): string => {
   )}`;
 };
 
+/**
+ * Parse the leading `YYYY_MM_DD__HH_MM_SS__` timestamp from a replay filename
+ * into a UTC ISO string, or undefined when the filename carries no timestamp or
+ * the parsed date is out of range (e.g. `2026_13_32__25_99_99__`). Range
+ * validation is delegated to the shared `componentsToUtcIso`, so the listing
+ * (`parseGameDateToUtcIso`) and filename timestamp paths reject invalid dates
+ * identically — neither ships a bogus value into `replay_timestamp`.
+ */
 const replayTimestampFromFilename = (filename: string): string | undefined => {
-  const match =
+  const groups =
     /^(?<year>\d{4})_(?<month>\d{2})_(?<day>\d{2})__(?<hour>\d{2})_(?<minute>\d{2})_(?<second>\d{2})__/u.exec(
       filename,
-    );
+    )?.groups;
 
-  if (match?.groups === undefined) {
+  if (groups === undefined) {
     return undefined;
   }
 
-  const { day, hour, minute, month, second, year } = match.groups as Record<
-    "day" | "hour" | "minute" | "month" | "second" | "year",
-    string
-  >;
-
-  return `${year}-${month}-${day}T${hour}:${minute}:${second}.000Z`;
+  return componentsToUtcIso({
+    day: Number(groups["day"]),
+    hour: Number(groups["hour"]),
+    minute: Number(groups["minute"]),
+    month: Number(groups["month"]),
+    second: Number(groups["second"]),
+    year: Number(groups["year"]),
+  });
 };
 
 const basePayload = (

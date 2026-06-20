@@ -214,9 +214,13 @@ test.skipIf(!goldenFixturesPresent())(
       // canonical replay_timestamp stays filename-derived across this corpus —
       // every fixture filename carries a timestamp — so the listing fallback for
       // replay_timestamp is proven by the payload unit test, not here.)
-      expect(row.promotion_evidence.discoveredAt).toMatch(
-        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:00\.000Z$/u,
-      );
+      const { discoveredAt } = row.promotion_evidence;
+      expect(discoveredAt).toBeDefined();
+      expect(discoveredAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:00\.000Z$/u);
+      // The shape regex alone would also pass a range-invalid value like
+      // 2026-13-32T25:99:00.000Z; assert it parses to a real date so an
+      // out-of-range date surviving into evidence is caught here too.
+      expect(Number.isNaN(Date.parse(discoveredAt ?? ""))).toBe(false);
       expect(row.promotion_evidence.run_id).toBe(runId);
     }
     // Raw objects landed in MinIO under the checksum-addressed key layout. Bytes

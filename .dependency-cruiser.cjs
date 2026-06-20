@@ -232,7 +232,7 @@ module.exports = {
       comment:
         "cross-cutting (config, errors, logging, source, types, observability) must import nothing upward.",
       from: {
-        path: "^src/(config[.]ts|errors|logging|source|types|observability)/?",
+        path: "^src/(config[.]ts|errors|logging|source|time|types|observability)/?",
         pathNot: TEST,
       },
       to: {

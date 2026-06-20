@@ -1,3 +1,5 @@
+import { componentsToUtcIso } from "../time/components-to-utc-iso.js";
+
 type ReplayRowObservation = {
   readonly metadata: {
     readonly discoveredAt?: string;
@@ -43,8 +45,10 @@ const stripTags = (html: string): string =>
  * Parse the listing "Game date" cell (day-first `DD.MM.YYYY HH:MM`, no seconds)
  * into a UTC ISO string. Mirrors `replayTimestampFromFilename` in staging, but
  * for the day-first listing format — UTC by parity with the live filename
- * convention. Returns undefined for empty/malformed/year-first input (never
- * throws). The regex is fully anchored with fixed-width groups — ReDoS-safe.
+ * convention. Returns undefined for empty/malformed/year-first input, or for an
+ * in-shape-but-out-of-range date (e.g. month 13, day 32, or calendar rollover
+ * like 31.04) — never throws. The regex is fully anchored with fixed-width
+ * groups — ReDoS-safe; range validation is delegated to `componentsToUtcIso`.
  */
 export const parseGameDateToUtcIso = (cell: string): string | undefined => {
   const match =
@@ -56,12 +60,13 @@ export const parseGameDateToUtcIso = (cell: string): string | undefined => {
     return undefined;
   }
 
-  const { day, hour, minute, month, year } = match.groups as Record<
-    "day" | "hour" | "minute" | "month" | "year",
-    string
-  >;
-
-  return `${year}-${month}-${day}T${hour}:${minute}:00.000Z`;
+  return componentsToUtcIso({
+    day: Number(getMatchGroup(match, "day")),
+    hour: Number(getMatchGroup(match, "hour")),
+    minute: Number(getMatchGroup(match, "minute")),
+    month: Number(getMatchGroup(match, "month")),
+    year: Number(getMatchGroup(match, "year")),
+  });
 };
 
 const hrefToUrl = (
