@@ -5,21 +5,13 @@ import { ReplayByteFetchError } from "./replay-byte-client.js";
 import type { ReplayByteClient } from "./replay-byte-client.js";
 
 import type { S3RawReplayStorage } from "./s3-raw-storage.js";
-import type { RawReplayStorageEvidence } from "./types.js";
-import type { ReplayCandidate } from "../discovery/types.js";
+import type { ReplayCandidate } from "../types/replay-candidate.js";
+import type { StoreRawReplayResult } from "../types/raw-replay.js";
 
-export interface RawReplayFetchFailureEvidence {
-  readonly failureCategory: "fetch_failed";
-  readonly fetchedAt: string;
-  readonly message: string;
-  readonly source: ReplayCandidate["source"];
-  readonly sourceFilename: string;
-  readonly status: "failed";
-}
-
-export type StoreRawReplayResult =
-  | RawReplayFetchFailureEvidence
-  | RawReplayStorageEvidence;
+export type {
+  RawReplayFetchFailureEvidence,
+  StoreRawReplayResult,
+} from "../types/raw-replay.js";
 
 interface StoreRawReplayInput {
   readonly byteClient: ReplayByteClient;

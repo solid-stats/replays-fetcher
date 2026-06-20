@@ -1,11 +1,11 @@
+import type { SourceReadPhase } from "../source/retry.js";
 import type {
   DiagnosticCode,
   DiscoveryDiagnostic,
-  ReplayCandidate,
-} from "../discovery/types.js";
-import type { SourceReadPhase } from "../source/retry.js";
-import type { IngestStagingResult } from "../staging/types.js";
-import type { StoreRawReplayResult } from "../storage/store-raw-replay.js";
+} from "./discovery-diagnostic.js";
+import type { StoreRawReplayResult } from "./raw-replay.js";
+import type { ReplayCandidate } from "./replay-candidate.js";
+import type { IngestStagingResult } from "./staging.js";
 
 export type RunFailureCategory =
   | "config_invalid"

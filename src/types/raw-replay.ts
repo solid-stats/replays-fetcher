@@ -21,3 +21,16 @@ export interface RawReplayStorageEvidence extends RawReplayObjectIdentity {
   readonly sourceFilename: string;
   readonly status: RawReplayStorageStatus;
 }
+
+export interface RawReplayFetchFailureEvidence {
+  readonly failureCategory: "fetch_failed";
+  readonly fetchedAt: string;
+  readonly message: string;
+  readonly source: ReplayCandidate["source"];
+  readonly sourceFilename: string;
+  readonly status: "failed";
+}
+
+export type StoreRawReplayResult =
+  | RawReplayFetchFailureEvidence
+  | RawReplayStorageEvidence;
