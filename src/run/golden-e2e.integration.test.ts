@@ -209,9 +209,14 @@ test.skipIf(!goldenFixturesPresent())(
       expect(row.promotion_evidence.checksum).toBe(row.checksum);
       expect(row.promotion_evidence.objectKey).toBe(row.object_key);
       expect(row.promotion_evidence.byteSize).toBe(Number(row.size_bytes));
-      // Real sg.zone discovery does not parse the listing game-date column, so
-      // discoveredAt is never populated; fetchedAt is the real fetch-time evidence.
-      expect(row.promotion_evidence.discoveredAt).toBeUndefined();
+      // Discovery now parses the listing "Game date" column into the discoveredAt
+      // audit evidence, so every staged row carries a concrete UTC value. (The
+      // canonical replay_timestamp stays filename-derived across this corpus —
+      // every fixture filename carries a timestamp — so the listing fallback for
+      // replay_timestamp is proven by the payload unit test, not here.)
+      expect(row.promotion_evidence.discoveredAt).toMatch(
+        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:00\.000Z$/u,
+      );
       expect(row.promotion_evidence.run_id).toBe(runId);
     }
     // Raw objects landed in MinIO under the checksum-addressed key layout. Bytes
