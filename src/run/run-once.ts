@@ -1,14 +1,9 @@
-import type { Logger } from "pino";
-
-import type { Checkpoint, CheckpointPage } from "../checkpoint/checkpoint.js";
-import type { S3CheckpointStore } from "../checkpoint/s3-checkpoint-store.js";
+import type { CheckpointPage } from "../checkpoint/checkpoint.js";
 import type {
-  DiscoveryDiagnostic,
   DiscoveryReport,
   ReplayCandidate,
   SourceClient,
 } from "../discovery/types.js";
-import type { S3EvidenceStore } from "../evidence/s3-evidence-store.js";
 /* oxlint-disable max-lines -- the run-once orchestrator keeps the page loop, resume/checkpoint wiring, and the per-page checkpoint builders co-located so the ingest cycle reads as one unit. */
 import { createLimiter } from "../source/concurrency.js";
 import type { LimitFunction } from "../source/concurrency.js";
@@ -17,12 +12,25 @@ import type { Pacer } from "../source/pacing.js";
 import type { RetryAttemptEvent } from "../source/retry.js";
 import { createThrottleController } from "../source/throttle.js";
 import type { ThrottleController } from "../source/throttle.js";
-import type { StagingRepository } from "../staging/stage-raw-replay.js";
 import type { IngestStagingResult } from "../staging/types.js";
-import type { ReplayByteClient } from "../storage/replay-byte-client.js";
-import type { S3RawReplayStorage } from "../storage/s3-raw-storage.js";
 import type { StoreRawReplayResult } from "../storage/store-raw-replay.js";
 import { ingestPage } from "./ingest-page.js";
+import {
+  buildLoopState,
+  discoveredRangeOption,
+  resumeInvocationOption,
+  sourceFailureOption,
+  writeFinalCheckpoint,
+  writePageCheckpoint,
+} from "./run-once-checkpoint.js";
+import type { LoopState } from "./run-once-checkpoint.js";
+import { FIRST_PAGE } from "./run-once-types.js";
+import type {
+  AssembleResultInput,
+  MutableDiscoveryReport,
+  MutablePageCounts,
+  RunOnceInput,
+} from "./run-once-types.js";
 import {
   buildRunSummary,
   deriveRunStatus,
@@ -31,77 +39,14 @@ import {
 } from "./summary.js";
 import type { RunExitCode, RunSourceFailure, RunSummary } from "./types.js";
 
-type RunOnceInput = {
-  readonly attempts?: number;
-  readonly byteClient: ReplayByteClient;
-  readonly checkpointStore: S3CheckpointStore;
-  readonly concurrency: number;
-  readonly createLimiter?: (concurrency: number) => LimitFunction;
-  readonly createPacer?: (spacingMs: number) => Pacer;
-  readonly createThrottle?: (options: {
-    readonly baseConcurrency: number;
-    readonly baseSpacingMs: number;
-    readonly max: number;
-    readonly min: number;
-  }) => ThrottleController;
-  readonly discoverReplays: (input: {
-    readonly attempts?: number;
-    readonly maxPages?: number;
-    readonly onRetry?: (event: RetryAttemptEvent) => void;
-    readonly requestDelayMs?: number;
-    readonly sourceClient: SourceClient;
-    readonly sourceUrl: URL;
-  }) => Promise<DiscoveryReport>;
-  readonly log?: Logger;
-  readonly maxPages?: number;
-  readonly now: () => Date;
-  readonly onRetry?: (event: RetryAttemptEvent) => void;
-  readonly requestSpacingMs: number;
-  readonly resume?: boolean;
-  readonly runId: string;
-  readonly sourceClient: SourceClient;
-  readonly sourceUrl: URL;
-  readonly stageRawReplay: (input: {
-    readonly rawResult: StoreRawReplayResult;
-    readonly repository: StagingRepository;
-    readonly runId?: string;
-  }) => Promise<IngestStagingResult>;
-  readonly stagingRepository: StagingRepository;
-  readonly storage: S3RawReplayStorage;
-  readonly storeRawReplay: (input: {
-    readonly byteClient: ReplayByteClient;
-    readonly candidate: ReplayCandidate;
-    readonly storage: S3RawReplayStorage;
-  }) => Promise<StoreRawReplayResult>;
-  // D-12/D-13: opt-in evidence write seams (independent, log-and-continue).
-  // `emitEvidence` gates the S3 store write; `evidenceFile`+`writeEvidenceFile`
-  // gate the dev-only local-disk write. Both default to off.
-  readonly emitEvidence?: boolean;
-  readonly evidenceStore?: S3EvidenceStore;
-  readonly evidenceFile?: string;
-  readonly writeEvidenceFile?: (path: string, body: string) => Promise<void>;
-};
-
 export type RunOnceResult = {
   readonly exitCode: RunExitCode;
   readonly summary: RunSummary;
 };
 
-type MutableDiscoveryReport = {
-  candidates: ReplayCandidate[];
-  counts: DiscoveryReport["counts"];
-  diagnostics: DiscoveryDiagnostic[];
-  generatedAt: string;
-  mode: "dry-run";
-  ok: boolean;
-  sourceUrl: string;
-};
-
-const FIRST_PAGE = 1;
 const CONCURRENCY_FLOOR = 1;
 const MS_PER_MINUTE = 60_000;
 const LAST_TIMESTAMP_INDEX = -1;
-const RESUME_INVOCATION = "replays-fetcher run-once --resume";
 
 const toPageUrl = (sourceUrl: URL, page: number): URL => {
   if (page === 1) {
@@ -113,20 +58,6 @@ const toPageUrl = (sourceUrl: URL, page: number): URL => {
 
   return pageUrl;
 };
-
-const emptyDiscoveryReport = (sourceUrl: string): MutableDiscoveryReport => ({
-  candidates: [],
-  counts: {
-    candidates: 0,
-    diagnostics: 0,
-    discovered: 0,
-  },
-  diagnostics: [],
-  generatedAt: new Date().toISOString(),
-  mode: "dry-run",
-  ok: true,
-  sourceUrl,
-});
 
 /**
  * Normalize the source URL for durable persistence: drop any `username`/
@@ -143,13 +74,6 @@ const sanitizeSourceUrl = (sourceUrl: URL): string => {
 };
 
 const defaultPacer = (spacingMs: number): Pacer => createPacer({ spacingMs });
-
-type MutablePageCounts = {
-  discovered: number;
-  failed: number;
-  staged: number;
-  stored: number;
-};
 
 /**
  * Pure rolling page rate: pages completed per minute over the elapsed window
@@ -172,98 +96,6 @@ export const derivePagesPerMinute = (
   const minutes = Math.max((last - first) / MS_PER_MINUTE, Number.EPSILON);
 
   return pageTimestampsMs.length / minutes;
-};
-
-const startFresh = (etag: string | undefined): ResumeState => {
-  if (etag === undefined) {
-    return { startPage: FIRST_PAGE, pages: {} };
-  }
-
-  return { etag, startPage: FIRST_PAGE, pages: {} };
-};
-
-const resumeFrom = (
-  etag: string | undefined,
-  checkpoint: Checkpoint,
-): ResumeState => {
-  const startPage = checkpoint.lastCompletedPage + FIRST_PAGE;
-  if (etag === undefined) {
-    return { startPage, pages: { ...checkpoint.pages } };
-  }
-
-  return { etag, startPage, pages: { ...checkpoint.pages } };
-};
-
-const sourceFailureOption = (
-  sourceFailure: RunSourceFailure | undefined,
-): {
-  sourceFailure?: RunSourceFailure;
-} => {
-  if (sourceFailure === undefined) {
-    return {};
-  }
-
-  return { sourceFailure };
-};
-
-const resumeInvocationOption = (
-  status: RunSummary["status"],
-): {
-  resumeInvocation?: string;
-} => {
-  if (status === "complete") {
-    return {};
-  }
-
-  return { resumeInvocation: RESUME_INVOCATION };
-};
-
-/**
- * RANGE-05: the discovered source range spans page 1 to the last completed page,
- * present only when at least one page completed (additive spread; omitted
- * otherwise so the summary shape stays exact-optional safe).
- */
-const discoveredRangeOption = (
-  lastCompletedPage: number,
-): {
-  discoveredRange?: { readonly firstPage: number; readonly lastPage: number };
-} => {
-  if (lastCompletedPage < FIRST_PAGE) {
-    return {};
-  }
-
-  return {
-    discoveredRange: { firstPage: FIRST_PAGE, lastPage: lastCompletedPage },
-  };
-};
-
-const writeInput = (
-  slug: string,
-  checkpoint: Checkpoint,
-  etag: string | undefined,
-): { checkpoint: Checkpoint; etag?: string; slug: string } => {
-  if (etag === undefined) {
-    return { checkpoint, slug };
-  }
-
-  return { checkpoint, etag, slug };
-};
-
-const aggregatePageCounts = (
-  pages: Record<string, CheckpointPage>,
-): Checkpoint["counts"] => {
-  let counts = { discovered: 0, failed: 0, staged: 0, stored: 0 };
-
-  for (const page of Object.values(pages)) {
-    counts = {
-      discovered: counts.discovered + page.counts.discovered,
-      failed: counts.failed + page.counts.failed,
-      staged: counts.staged + page.counts.staged,
-      stored: counts.stored + page.counts.stored,
-    };
-  }
-
-  return counts;
 };
 
 const appendDiscoveryReport = (
@@ -350,186 +182,6 @@ const buildRunRuntime = (input: RunOnceInput): RunRuntime => {
   const pacer = (input.createPacer ?? defaultPacer)(input.requestSpacingMs);
 
   return { limit, pacer, throttle };
-};
-
-type ResumeState = {
-  readonly etag?: string;
-  readonly pages: Record<string, CheckpointPage>;
-  readonly startPage: number;
-};
-
-const resolveResumeState = async (
-  input: RunOnceInput,
-  slug: string,
-): Promise<ResumeState> => {
-  const read = await input.checkpointStore.read(slug);
-  const { checkpoint } = read;
-
-  if (checkpoint === undefined) {
-    input.log?.warn(
-      { slug },
-      "checkpoint missing or corrupt; starting a clean page-1 run",
-    );
-
-    return { startPage: FIRST_PAGE, pages: {} };
-  }
-
-  if (checkpoint.status === "complete") {
-    // Both paths produce a clean page-1 start, but the distinction is observable
-    // (CR-02): an explicit `--resume` is an intentional re-run of a finished
-    // corpus, while a scheduled run auto-skips. `input.resume` is consulted here
-    // so the flag is a live contract, not a dead parameter.
-    if (input.resume === true) {
-      input.log?.info(
-        { slug },
-        "explicit --resume on a complete checkpoint; re-running the full corpus from page 1",
-      );
-    } else {
-      input.log?.info(
-        { slug },
-        "complete checkpoint auto-resumed; starting a clean page-1 run",
-      );
-    }
-
-    return startFresh(read.etag);
-  }
-
-  return resumeFrom(read.etag, checkpoint);
-};
-
-type LoopState = {
-  discoveryReport: MutableDiscoveryReport;
-  etag: string | undefined;
-  lastCompletedPage: number;
-  readonly pageTimestampsMs: number[];
-  readonly pages: Record<string, CheckpointPage>;
-  readonly rawStorage: StoreRawReplayResult[];
-  reachedMaxPages: boolean;
-  readonly staging: IngestStagingResult[];
-};
-
-const buildLoopState = async (
-  input: RunOnceInput,
-  slug: string,
-): Promise<LoopState> => {
-  const resumeState = await resolveResumeState(input, slug);
-
-  return {
-    discoveryReport: emptyDiscoveryReport(slug),
-    etag: resumeState.etag,
-    lastCompletedPage: resumeState.startPage - FIRST_PAGE,
-    pageTimestampsMs: [],
-    pages: { ...resumeState.pages },
-    rawStorage: [],
-    reachedMaxPages: false,
-    staging: [],
-  };
-};
-
-type BuildCheckpointInput = {
-  readonly discoveredLastPage?: number;
-  readonly lastCompletedPage: number;
-  readonly pages: Record<string, CheckpointPage>;
-  readonly slug: string;
-  readonly startedAt: string;
-  readonly status: Checkpoint["status"];
-};
-
-const buildCheckpoint = (
-  input: RunOnceInput,
-  context: BuildCheckpointInput,
-): Checkpoint => {
-  const updatedAt = input.now().toISOString();
-  const checkpoint: {
-    -readonly [Key in keyof Checkpoint]: Checkpoint[Key];
-  } = {
-    counts: aggregatePageCounts(context.pages),
-    createdAt: context.startedAt,
-    discoveredLastPage: context.discoveredLastPage ?? context.lastCompletedPage,
-    lastCompletedPage: context.lastCompletedPage,
-    pages: context.pages,
-    runId: input.runId,
-    sourceUrl: context.slug,
-    status: context.status,
-    updatedAt,
-  };
-
-  return checkpoint;
-};
-
-type WritePageCheckpointInput = {
-  readonly etag: string | undefined;
-  readonly lastCompletedPage: number;
-  readonly pages: Record<string, CheckpointPage>;
-  readonly slug: string;
-  readonly startedAt: string;
-};
-
-const writePageCheckpoint = async (
-  input: RunOnceInput,
-  page: WritePageCheckpointInput,
-): Promise<string | undefined> => {
-  const checkpoint = buildCheckpoint(input, {
-    lastCompletedPage: page.lastCompletedPage,
-    pages: page.pages,
-    slug: page.slug,
-    startedAt: page.startedAt,
-    status: "running",
-  });
-
-  try {
-    const result = await input.checkpointStore.write(
-      writeInput(page.slug, checkpoint, page.etag),
-    );
-
-    // Carry the object's new ETag forward so the next write's IfMatch matches
-    // the current object instead of 412-ing on a stale start ETag (CR-01).
-    return result.etag;
-  } catch (error) {
-    // A transient (non-precondition) checkpoint-write error must never fail the
-    // run. The ETag is unchanged on failure, so reuse the one we held. Log the
-    // error itself so a persistent failure (e.g. a backend that rejects the CAS
-    // conditional headers) is diagnosable instead of silently degrading resume.
-    input.log?.warn(
-      { error, page: page.lastCompletedPage, slug: page.slug },
-      "checkpoint write failed; continuing run",
-    );
-
-    return page.etag;
-  }
-};
-
-const writeFinalCheckpoint = async (
-  input: RunOnceInput,
-  context: AssembleResultInput,
-  discoveredLastPage: number,
-): Promise<void> => {
-  const checkpoint = buildCheckpoint(input, {
-    discoveredLastPage,
-    lastCompletedPage: context.lastCompletedPage,
-    pages: context.pages,
-    slug: context.slug,
-    startedAt: context.startedAt,
-    status: "complete",
-  });
-
-  try {
-    // The final complete-checkpoint write uses the LATEST ETag carried through
-    // the page loop, not the stale start ETag, so it lands as `status:
-    // "complete"` without a spurious 412 + merge that would downgrade it to
-    // `running` (CR-01).
-    await input.checkpointStore.write(
-      writeInput(context.slug, checkpoint, context.etag),
-    );
-  } catch (error) {
-    // Log the error itself (parity with writePageCheckpoint) so a persistent
-    // final-write CAS failure — the exact mode S3_CHECKPOINT_CONDITIONAL_WRITES
-    // was added to fix — is diagnosable instead of silently degrading resume.
-    input.log?.warn(
-      { error, slug: context.slug },
-      "final checkpoint write failed; continuing run",
-    );
-  }
 };
 
 type ProcessPageInput = {
@@ -919,22 +571,6 @@ const writeEvidence = async (
       );
     }
   }
-};
-
-type AssembleResultInput = {
-  readonly discoveryReport: MutableDiscoveryReport;
-  readonly etag: string | undefined;
-  readonly lastCompletedPage: number;
-  // Per-page completion timestamps (injected clock, ms) carried for Wave 3's
-  // summary rate/ETA derivation. This plan captures and threads the data; the
-  // summary-field derivation lands in Plan 05.
-  readonly pageTimestampsMs: readonly number[];
-  readonly pages: Record<string, CheckpointPage>;
-  readonly rawStorage: readonly StoreRawReplayResult[];
-  readonly reachedMaxPages: boolean;
-  readonly slug: string;
-  readonly staging: readonly IngestStagingResult[];
-  readonly startedAt: string;
 };
 
 const assembleResult = async (
