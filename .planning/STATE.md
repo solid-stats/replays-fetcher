@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.1
 milestone_name: Convention Compliance & Tech-Debt Closure
 status: executing
-stopped_at: Phase 19 complete (ARCH-01/02/03, 3/3 plans, verify + golden-oracle green); autonomous run continuing to Phase 20.
-last_updated: "2026-06-20T08:44:55.226Z"
+stopped_at: Phase 20 complete (2/2 plans, ARCH-04/05; verify + golden run-once/watch oracles green; review W-01 fixed, W-02/I-01 deferred to Phase 26). Autonomous run continuing to Phase 21.
+last_updated: "2026-06-20T09:51:13.091Z"
 last_activity: 2026-06-20
 progress:
   total_phases: 8
-  completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
-  percent: 13
+  completed_phases: 2
+  total_plans: 5
+  completed_plans: 5
+  percent: 25
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-20)
 
 **Core value:** Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
-**Current focus:** Phase 20 — Composition-Root Client Consolidation + Watch Teardown (Phase 19 shipped)
+**Current focus:** Phase 21 — Mechanical Convention Cleanup (Phases 19, 20 shipped)
 
 ## Current Position
 
-Phase: 20 of 26 (Composition-Root Client Consolidation + Watch Teardown)
-Plan: Not started (next: plan Phase 20)
-Status: Phase 19 complete — autonomous run advancing to Phase 20
-Last activity: 2026-06-20 — Phase 19 done (3/3 plans, ARCH-01/02/03, verify + golden oracle green, code review APPROVE)
+Phase: 21 of 26 (Mechanical Convention Cleanup) — next to plan
+Plan: Not started
+Status: Phases 19 + 20 complete — autonomous run advancing to Phase 21
+Last activity: 2026-06-20 — Phase 20 done (2/2 plans, ARCH-04/05; verify + golden run-once/watch oracles green; review W-01 fixed)
 
-Progress: [█░░░░░░░░░] 13% (1/8 phases)
+Progress: [██░░░░░░░░] 25% (2/8 phases)
 
 ## v3.1 Roadmap Summary (Phases 19-26)
 
@@ -82,7 +82,7 @@ loosened) only for the two intentional behavior changes (Phases 24 and 25).
 
 ## Verify Gate: GREEN ✅
 
-`pnpm run verify` exits 0: format → lint → typecheck → unit (495 tests) → coverage (100%
+`pnpm run verify` exits 0: format → lint → typecheck → unit (502 tests) → coverage (100%
 statements/branches/functions/lines) → build → depcruise → knip. The Docker-backed integration
 suite (incl. the golden end-to-end regression test) is a separate `pnpm run test:integration`
 pre-deploy gate (runs on master before deploy). The golden oracle is the v3.1 behavior-preservation
@@ -125,15 +125,27 @@ None.
 
 - **DISC-02 server-2 dependency (v3.1):** see Open Gates above — hard blocker, may slip DISC-02 to v3.2.
 
+- **Carry-forward (Phase 20 → 22):** `src/commands/shared.ts` is now AT the 300-line `max-lines`
+  limit after the pool-ownership move (no suppression, but zero headroom). It is NOT one of the
+  four `max-lines`-suppressed god-files Phase 22 targets (`run-once.ts`, `discover.ts`,
+  `source-client.ts`, `replay-byte-client.ts`), but Phase 22 should keep an eye on it — any
+  further growth needs a split within `commands/`.
+
+- **Carry-forward (Phase 20 → 26):** two code-review findings deferred — W-02 (`watch.ts:19`
+  raw `Error` on a v8-ignored unreachable guard → typed error) and I-01 (`flushLogger` try-scope
+  doc). See `.planning/phases/20-*/deferred-items.md`; route into Phase 26 CORR-01.
+
 ## Next Step
 
-1. Plan Phase 20 (Composition-Root Client Consolidation + Watch Teardown) — one `S3Client` +
-   one `pg.Pool` built and injected at the `commands/` root; `watch` drains them on
-   SIGTERM/SIGINT. Requirements ARCH-04, ARCH-05.
-2. Codebase map is current (refreshed today for v3.1); contracts home settled as `src/types/`.
+1. Plan Phase 21 (Mechanical Convention Cleanup) — bulk `interface→type` (~138 sites) +
+   import-order (~17), lint/formatter-enforced so they cannot regress. Requirements MECH-01,
+   MECH-02. Spike `oxlint --fix` first; only add `ts-morph` as a dev-only one-shot if it cannot
+   convert all sites with `tsc` green. Sequenced before the god-file splits (Phase 22).
+2. Note: the new `src/types/` leaf contracts (Phase 19) mean `interface→type` there creates no
+   upward imports — safe for the bulk conversion.
 
 ## Session
 
 **Last session:** 2026-06-20
-**Stopped at:** Phase 19 complete (3/3 plans, ARCH-01/02/03; verify + golden oracle green; review clean). Autonomous run continuing to Phase 20.
+**Stopped at:** Phase 20 complete (2/2 plans, ARCH-04/05; watch now drains pg.Pool + S3Client on SIGTERM/SIGINT; verify + golden run-once/watch oracles green; W-01 fixed, W-02/I-01 deferred to Phase 26). Autonomous run continuing to Phase 21.
 **Resume file:** None
