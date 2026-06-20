@@ -1,427 +1,414 @@
 # Testing Patterns
 
-**Analysis Date:** 2026-06-13
+**Analysis Date:** 2026-06-20
+
+---
 
 ## Test Framework
 
-**Runner:**
-- Vitest 4.1.5
-- Config: `vitest.config.ts`
-- TypeScript test execution via Vitest (no separate compilation step)
+**Runner:** Vitest 4.x (`vitest@^4.1.5`)
+**Config:** `vitest.config.ts` — merges `@solid-stats/ts-toolchain/vitest/base` (shared preset) with repo-local include/exclude overrides
 
-**Assertion Library:**
-- Vitest native `expect()` API (based on Vitest's built-in assertions)
-- No external assertion library required
+**Coverage:** V8 provider (`@vitest/coverage-v8@^4.1.5`), 100% thresholds inherited from toolchain preset
 
 **Run Commands:**
+
 ```bash
-pnpm test                    # Run unit and normal tests (excludes .integration.test.ts)
-pnpm test:integration       # Run only integration tests (MinIO, PostgreSQL containers)
-pnpm test:coverage          # Run with V8 coverage reporting
-pnpm verify                 # Full verification: format + lint + typecheck + test + integration + coverage + build
+pnpm test                       # Unit tests only (excludes *.integration.test.ts)
+pnpm test:integration           # Integration tests only (testcontainers, VITEST_INTEGRATION=true)
+pnpm test:coverage              # Unit tests + V8 coverage report
 ```
 
-**Test Filtering:**
-```bash
-vitest run --grep "checkpoint"  # Run tests matching pattern
-```
+---
 
 ## Test File Organization
 
-**Location:**
-- Colocated: `*.test.ts` files sit beside source files in same directory
-- Example: `src/config.ts` pairs with `src/config.test.ts`
-- Never placed in separate `__tests__` or `tests/` directory
+**Location:** Co-located with source — `src/<area>/<module>.test.ts` beside `src/<area>/<module>.ts`
 
-**Naming:**
-- Unit tests: `filename.test.ts`
-- Integration tests: `filename.integration.test.ts`
-- Fixtures: `filename.fixtures.ts` (shared test data builders)
+**Naming conventions:**
+- `<module>.test.ts` — unit tests (run in default `pnpm test` pass)
+- `<module>.integration.test.ts` — container-backed integration tests (excluded from unit pass, run with `pnpm test:integration`)
+- `<module>.fixtures.ts` — shared test-double builders and fixture helpers (excluded from coverage; never unit-tested directly)
 
-**Structure:**
+**Directory map:**
+
 ```
 src/
-├── discovery/
-│   ├── discover.ts
-│   ├── discover.test.ts           # Unit tests
-│   ├── types.ts
-│   ├── source-client.ts
-│   └── source-client.test.ts      # Unit tests
+├── config.test.ts                                    # Zod env validation
+├── cli.test.ts                                       # CLI command-surface smoke tests
 ├── checkpoint/
-│   ├── s3-checkpoint-store.ts
-│   ├── s3-checkpoint-store.test.ts
-│   ├── s3-checkpoint-store.integration.test.ts  # Integration (MinIO)
-│   └── s3-checkpoint-store.fixtures.ts
+│   ├── checkpoint.test.ts
+│   ├── s3-checkpoint-store.test.ts                   # unit (mocked S3 sender)
+│   ├── s3-checkpoint-store.integration.test.ts       # MinIO testcontainer
+│   └── s3-checkpoint-store.fixtures.ts               # shared fake-sender builders
+├── discovery/
+│   ├── discover.test.ts
+│   └── source-client.test.ts
+├── evidence/
+│   ├── s3-evidence-store.test.ts
+│   └── s3-evidence-store.fixtures.ts
+├── observability/
+│   ├── instrument.test.ts
+│   └── sentry.test.ts
+├── run/
+│   ├── run-once.test.ts
+│   ├── ingest-page.test.ts
+│   ├── summary.test.ts
+│   ├── watch-loop.test.ts
+│   ├── no-leak.test.ts                               # cross-surface secret-leak guard
+│   ├── golden-e2e.integration.test.ts                # MinIO+Postgres, fixtured source
+│   ├── golden-watch.integration.test.ts              # MinIO+Postgres, watch loop
+│   └── golden-fixtures.ts                            # presence-guarded fixture loader
 ├── staging/
-│   ├── postgres-staging-repository.ts
-│   └── postgres-staging-repository.integration.test.ts  # Integration (PostgreSQL)
+│   ├── payload.test.ts
+│   ├── stage-raw-replay.test.ts
+│   ├── postgres-staging-repository.test.ts           # unit (typed SQL stubs)
+│   ├── postgres-staging-repository.integration.test.ts  # PostgreSQL testcontainer
+│   └── staging-schema.fixtures.ts                    # DDL helper (applies schema to container)
+├── storage/
+│   ├── checksum.test.ts
+│   ├── object-key.test.ts
+│   ├── replay-byte-client.test.ts
+│   ├── store-raw-replay.test.ts
+│   └── s3-raw-storage.integration.test.ts            # MinIO testcontainer
+└── source/
+    ├── retry.test.ts
+    └── ...
 ```
 
-## Test Structure
+---
 
-**Suite Organization:**
+## Test Structure (AAA)
+
+All tests follow strict Arrange → Act → Assert. No `describe` blocks — tests are
+flat `test(...)` calls at module level with full-sentence names:
+
 ```typescript
-import { expect, test, afterEach, vi } from "vitest";
+import { expect, test } from "vitest";
+import { stageRawReplay } from "./stage-raw-replay.js";
 
-// Shared test helpers and constants at top
-const validEnvironment = { ... };
+// Shared fixtures at module scope (ARRANGE data, not wired state)
+const checksum = "aaaaaaaaaaaaaaaa...";
+const rawEvidence: RawReplayStorageEvidence = { ... };
 
-interface TestOutput { ... }
+test("stageRawReplay should map stageable raw evidence and call the staging repository", async () => {
+  // ARRANGE
+  const payloads: IngestStagingPayload[] = [];
+  // ACT
+  const result = await stageRawReplay({
+    rawResult: rawEvidence,
+    repository: { async stage(payload) { payloads.push(payload); return ...; } },
+  });
+  // ASSERT
+  expect(payloads).toHaveLength(1);
+  expect(result).toMatchObject({ status: "staged" });
+});
+```
 
-function parseOutput(writes: readonly string[]): TestOutput {
-  return JSON.parse(writes.join("")) as TestOutput;
+**Naming:** `"<unit> should <behavior>"` or `"<unit>: <scenario>"` — full declarative
+sentence, no ambiguity.
+
+---
+
+## Unit Tests
+
+### DI seams via inline fakes (preferred)
+
+All production adapters accept their dependencies as injected arguments. Tests pass
+inline object literals that satisfy the dependency type — no `vi.mock()` for module
+boundaries:
+
+```typescript
+// Fake repository as inline object literal
+const repository = {
+  async stage(payload: IngestStagingPayload): Promise<IngestStagingResult> {
+    payloads.push(payload);
+    return { stagingId: "...", status: "staged" };
+  },
+};
+
+// Fake clock injection
+const now = (): Date => new Date("2026-05-09T12:00:00.000Z");
+```
+
+### Builder functions for complex fakes
+
+When a fake needs internal state (captured calls, conditional returns), it is
+expressed as a factory function rather than `vi.fn()`:
+
+```typescript
+// src/run/run-once.test.ts — typed fake with captured writes
+interface FakeCheckpointStore extends S3CheckpointStore {
+  readonly writes: CheckpointWriteInput[];
 }
 
-// Individual test cases
-test("description of behavior", () => {
-  // Arrange
-  const input = createInput();
-  
-  // Act
-  const result = myFunction(input);
-  
-  // Assert
-  expect(result).toStrictEqual(expectedValue);
-});
-
-// Cleanup
-afterEach(() => {
-  vi.restoreAllMocks();
-});
+const fakeCheckpointStore = (initial?: Checkpoint, etag?: string): FakeCheckpointStore => {
+  const writes: CheckpointWriteInput[] = [];
+  return {
+    writes,
+    read(): Promise<CheckpointReadResult> { ... },
+    write(input: CheckpointWriteInput): Promise<CheckpointWriteResult> {
+      writes.push(input);
+      return Promise.resolve({ status: "written" });
+    },
+  };
+};
 ```
 
-**Patterns:**
-- **Arrange-Act-Assert (AAA):** Every test follows this structure with clear phases
-- **Setup:** Constants and builder functions defined at module scope (reused across tests)
-- **Factories:** `createCandidate()`, `createRunSummary()`, `createStorageResult()` functions create test fixtures
-- **Cleanup:** `afterEach()` with `vi.restoreAllMocks()`, `vi.unstubAllEnvs()`, `vi.unstubAllGlobals()`
-- **Descriptive names:** Test description is a complete sentence about behavior, not just "it works"
+### `vi.fn()` usage
 
-**Example from `src/config.test.ts`:**
+`vi.fn()` is reserved for cases where call-count assertions or spy inspection is
+needed and an inline function would be verbose:
+
 ```typescript
-test("loadConfig should load required source, S3, and staging settings when valid environment is provided", () => {
-  const config = loadConfig(validEnvironment);
-  
-  expect(config.sourceUrl).toBe("https://example.test/replays");
-  expect(config.s3.bucket).toBe("solid-stats-replays");
-  expect(config.staging.databaseUrl).toBe("postgres://...");
-});
-
-test("loadConfig should reject a zero source max pages cap", () => {
-  expect(() =>
-    loadConfig({ ...validEnvironment, REPLAY_SOURCE_MAX_PAGES: "0" }),
-  ).toThrow("sourceMaxPages");
-});
+// src/run/watch-loop.test.ts
+const discoverReplays = vi.fn(async () => report([candidate("100")]));
+expect(discoverReplays).toHaveBeenCalledTimes(2);
 ```
 
-## Mocking
+### `vi.mock()` (module-level mock)
 
-**Framework:** Vitest's built-in `vi` module (no external mock library)
+Used only for third-party modules that cannot be injected:
 
-**Patterns:**
 ```typescript
-// Function mocking
-const mockFn = vi.fn();
-const mockFnWithImplementation = vi.fn(async (input) => ({
-  exitCode: 0,
-  summary: createRunSummary({ runId: input.runId }),
+// src/observability/sentry.test.ts — mocks @sentry/node
+const initMock = vi.fn<(options: unknown) => void>();
+vi.mock("@sentry/node", () => ({
+  init: initMock,
+  captureException: captureExceptionMock,
+  flush: flushMock,
 }));
-
-// Verifying calls
-expect(mockFn).toHaveBeenCalledWith(expectedArg);
-expect(mockFn).toHaveBeenCalledTimes(1);
-expect(mockFn).not.toHaveBeenCalled();
-
-// Module/global stubbing
-vi.stubEnv("REPLAY_SOURCE_URL", "https://example.test");
-vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, text: ... })));
-vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
-  writes.push(String(chunk));
-  return true;
-});
-
-// Restoration
-vi.restoreAllMocks();
-vi.unstubAllEnvs();
-vi.unstubAllGlobals();
 ```
 
-**What to Mock:**
-- External network calls: `fetch`, SSH `execFile`
-- Environment variables: `process.env` via `vi.stubEnv()`
-- S3 clients and storage operations
-- PostgreSQL connections and queries
-- System time: `now: () => new Date("2026-05-09T12:00:00.000Z")`
+### Fake timers
 
-**What NOT to Mock:**
-- Config loading logic (test real Zod parsing)
-- Error classes and error wrapping
-- Type guards and discriminators
-- HTML parsing (test real DOM extraction)
-- Checksum calculation (test real SHA256)
-- JSON serialization/parsing (test real behavior)
+`vi.useFakeTimers()` / `vi.useRealTimers()` pattern used when testing timing
+logic (e.g., `replay-byte-client.ts` retry delays, `watch-loop.ts` pacing):
 
-## Fixtures and Factories
-
-**Test Data:**
 ```typescript
-// From src/cli.test.ts
-function createCandidate(externalId: string): ReplayCandidate {
-  return {
-    identity: {
-      filename: `replay-${externalId}.ocap`,
-    },
-    source: {
-      externalId,
-      url: `https://example.test/replays/${externalId}`,
-    },
-  };
-}
+// src/run/watch-loop.test.ts — fake clock for pacing test
+const clockMs = 0;
+vi.useFakeTimers({ now: clockMs });
+// advance clock explicitly:
+await vi.advanceTimersByTimeAsync(intervalMs);
+```
 
-function createDiscoveryReport(candidates: readonly ReplayCandidate[]): DiscoveryReport {
-  return {
-    candidates,
-    counts: {
-      candidates: candidates.length,
-      diagnostics: 0,
-      discovered: candidates.length,
-    },
-    diagnostics: [],
-    generatedAt: "2026-05-09T12:00:00.000Z",
-    mode: "dry-run",
-    ok: true,
-    sourceUrl: "https://example.test/replays",
-  };
-}
+Injected `now: () => Date` parameter (present in `storeRawReplay`, `runOnce`,
+`watchLoop`) is preferred when production code already accepts a clock injection —
+avoids `vi.useFakeTimers()` entirely for non-timer logic.
 
-function createStorageResult(
-  candidate: ReplayCandidate,
-  status: StoreRawReplayResult["status"],
-): StoreRawReplayResult {
-  if (status === "failed") {
-    return {
-      failureCategory: "fetch_failed",
-      fetchedAt: "2026-05-09T12:00:00.000Z",
-      message: "Replay byte request failed",
-      source: candidate.source,
-      sourceFilename: candidate.identity.filename,
-      status,
-    };
-  }
+---
+
+## Integration Tests
+
+### Testcontainers
+
+Both PostgreSQL and MinIO containers are used. No RabbitMQ. Containers are started
+inside each test (not in `beforeAll`) for isolation:
+
+```typescript
+import { MinioContainer } from "@testcontainers/minio";
+import { PostgreSqlContainer } from "@testcontainers/postgresql";
+
+// Inside test body — ARRANGE phase
+const minio = await new MinioContainer("minio/minio:RELEASE.2025-09-07T16-13-09Z").start();
+const pg = await new PostgreSqlContainer().start();
+const pool = new Pool({ connectionString: pg.getConnectionUri() });
+await applyStagingSchema(pool);  // DDL from staging-schema.fixtures.ts
+
+// Teardown via afterEach with noop-default pattern
+const noopCleanup = (): Promise<void> => Promise.resolve();
+let stopPool = noopCleanup;
+let stopMinio = noopCleanup;
+let stopPostgres = noopCleanup;
+
+afterEach(async () => {
+  const endPool = stopPool;
+  // capture and reset to noop before awaiting, so double-cleanup is harmless
+  stopPool = noopCleanup;
+  await endPool();
   // ...
-}
+});
 ```
 
-**Location:**
-- Inline in test file for single-use fixtures
-- In `*.fixtures.ts` for shared across multiple test files (e.g., `s3-checkpoint-store.fixtures.ts`)
-- Example: `src/checkpoint/s3-checkpoint-store.fixtures.ts` exports `checkpointSourceUrl`, `makeCheckpoint`
+### Integration test timeout
 
-**Fixture Pattern:**
-- Factory functions over static constants (allows customization)
-- Sensible defaults (e.g., fixed ISO timestamps for deterministic tests)
-- Builders support partial override: `createRunSummary({ runId: "custom", counts: { ... } })`
+`pnpm test:integration` sets `--testTimeout 300000 --hookTimeout 300000` (5 min)
+and `--no-file-parallelism` to avoid container port conflicts.
 
-## Coverage
+### Staging schema fixture
 
-**Requirements:**
-- V8 provider (configured in `vitest.config.ts`)
-- **100% coverage thresholds for reachable source code:**
-  - Branches: 100%
-  - Functions: 100%
-  - Lines: 100%
-  - Statements: 100%
+`src/staging/staging-schema.fixtures.ts` — `applyStagingSchema(pool: Pool)` applies
+the DDL for `ingest_staging` and related tables against a container pool. Excluded
+from coverage (same class as CLI entrypoint).
 
-**Excluded from coverage:**
-- `dist/**` (compiled output)
-- `src/**/*.test.ts` (test files themselves)
-- `vitest.config.ts` (configuration file)
+---
 
-**View Coverage:**
-```bash
-pnpm run test:coverage
-# Outputs to coverage/index.html
-```
+## Golden End-to-End Oracle
 
-**Coverage Discipline:**
-- All reachable code paths tested (no dead code allowed)
-- Integration tests count toward coverage (PostgreSQL, MinIO helpers tested in place)
-- Fixture builders and test helpers are part of coverage (tested indirectly)
+### What it is
 
-## Test Types
+The golden e2e suite (`src/run/golden-e2e.integration.test.ts`,
+`src/run/golden-watch.integration.test.ts`) runs the complete ingest pipeline
+against real MinIO + PostgreSQL testcontainers, using **captured HTTP fixture data**
+as a fake `SourceClient` and `ReplayByteClient`. This verifies the full pipeline
+contract without touching the live replay source.
 
-**Unit Tests:**
-- Scope: Single function or module in isolation
-- Mocking: External dependencies (network, storage, time)
-- Location: `*.test.ts` colocated with source
-- Run: `pnpm test` (excludes `.integration.test.ts`)
-- Examples:
-  - `src/config.test.ts` - Zod schema parsing, boundary conditions
-  - `src/discovery/html.test.ts` - DOM parsing and row extraction
-  - `src/evidence/object-key.test.ts` - Key sanitization and validation
-  - `src/cli.test.ts` - CLI command routing, exit codes, output serialization
+### Fixture corpus
 
-**Integration Tests:**
-- Scope: Real service (PostgreSQL, MinIO/S3-compatible) with mocked application code
-- Mocking: Application factories, crypto, S3 clients (but talking to real containers)
-- Location: `*.integration.test.ts` (separate run)
-- Run: `pnpm test:integration` (spawns Docker containers via Testcontainers)
-- Isolation: `afterEach()` cleanup with container stop and connection teardown
-- Examples:
-  - `src/checkpoint/s3-checkpoint-store.integration.test.ts` - MinIO conditional writes, 412 merge
-  - `src/staging/postgres-staging-repository.integration.test.ts` - PostgreSQL idempotent inserts
-  - `src/storage/s3-raw-storage.integration.test.ts` - S3 object storage
-  - `src/evidence/s3-evidence-store.integration.test.ts` - Evidence serialization to S3
+- Location: `src/run/fixtures/golden/` — gzipped list/detail/byte files + `manifest.json`
+- Captured by: `scripts/capture-golden-fixtures.ts` (human-run only — agents cannot capture)
+- Loader: `src/run/golden-fixtures.ts` (`goldenFixturesPresent()`, `loadGoldenFixtures()`)
+- Tests skip cleanly when corpus is absent (`test.skipIf(!goldenFixturesPresent())(...)`)
 
-**E2E Tests:**
-- Not used in v1 (integration tests cover end-to-end service behavior)
-- CLI tests in `src/cli.test.ts` validate command routing, exit codes, JSON output (close to E2E)
+### Pattern
 
-## Common Patterns
-
-**Async Testing:**
 ```typescript
-test("function should handle async operations", async () => {
-  const result = await asyncFunction(input);
-  expect(result).toBeDefined();
-});
+test.skipIf(!goldenFixturesPresent())(
+  "golden run-once: drives the full ingest pipeline over real MinIO+Postgres ...",
+  async () => {
+    // ARRANGE
+    const fixtures = loadGoldenFixtures();
+    const fakeSource: SourceClient = {
+      async fetchText(url) {
+        const html = fixtures.htmlByUrl.get(url.toString());
+        if (html === undefined) throw new Error(`No fixture HTML for ${url.toString()}`);
+        return html;
+      },
+    };
+    const fakeBytes: ReplayByteClient = {
+      async fetchBytes(url) {
+        const bytes = fixtures.bytesByUrl.get(url.toString());
+        if (bytes === undefined) throw new Error(`No fixture bytes for ${url.toString()}`);
+        return bytes;
+      },
+    };
 
-test("function should resolve with correct payload", async () => {
-  const promise = asyncFunction();
-  const result = await expect(promise).resolves.toBe(expectedValue);
-});
+    // Start real MinIO + Postgres containers
+    // Wire real storage/staging/checkpoint adapters
+    // ACT
+    await runOnce({ sourceClient: fakeSource, byteClient: fakeBytes, ... });
 
-test("function should reject with specific error", async () => {
-  await expect(asyncFunction()).rejects.toThrow(ConfigError);
-});
-```
-
-**Error Testing:**
-```typescript
-test("function should throw ConfigError when required field is missing", () => {
-  expect(() => loadConfig({})).toThrow(ConfigError);
-});
-
-test("function should throw with correct error message", () => {
-  expect(() => loadConfig({ invalid: true })).toThrow("sourceUrl");
-});
-
-test("function should preserve error details", () => {
-  const error = new ConfigError(["field1: message", "field2: message"]);
-  expect(error.issues).toHaveLength(2);
-  expect(error.code).toBeUndefined(); // ConfigError doesn't extend AppError
-});
-```
-
-**Parametrized Tests (test.each):**
-```typescript
-const sourceConcurrencyBoundaryCases: readonly (readonly [string, number])[] = [
-  [String(minSourceConcurrency), minSourceConcurrency],
-  [String(maxSourceConcurrency), maxSourceConcurrency],
-];
-
-test.each(sourceConcurrencyBoundaryCases)(
-  "loadSourceConfig should accept source concurrency at boundary %s",
-  (environmentValue, expected) => {
-    const config = loadSourceConfig({
-      REPLAY_SOURCE_CONCURRENCY: environmentValue,
-      REPLAY_SOURCE_URL: "https://example.test/replays",
-    });
-    
-    expect(config.sourceConcurrency).toBe(expected);
+    // ASSERT — full evidence row in Postgres, object in MinIO, idempotency
+    const rows = await pool.query<StagingRow>("SELECT * FROM ingest_staging");
+    expect(rows.rows).toHaveLength(fixtures.expectedExternalIds.length);
+    // Second run must not create duplicate rows
+    await runOnce({ ... });
+    const rowsAfterRerun = await pool.query<StagingRow>("SELECT * FROM ingest_staging");
+    expect(rowsAfterRerun.rows).toHaveLength(fixtures.expectedExternalIds.length);
   },
 );
 ```
 
-**Testcontainers Integration:**
+---
+
+## Coverage Gate
+
+**Threshold:** 100% for all reachable source (enforced by `@solid-stats/ts-toolchain` vitest preset)
+
+**Coverage exclusions** (`vitest.config.ts`):
+
 ```typescript
-import { PostgreSqlContainer } from "@testcontainers/postgresql";
-import { MinioContainer } from "@testcontainers/minio";
-
-let stopContainer = noopCleanup;
-
-afterEach(async () => {
-  const stop = stopContainer;
-  stopContainer = noopCleanup;
-  await stop();
-});
-
-test("real PostgreSQL should insert and retrieve records", async () => {
-  const container = await new PostgreSqlContainer("postgres:17-alpine")
-    .withDatabase("solid_stats")
-    .withUsername("solid")
-    .withPassword("solid")
-    .start();
-  stopContainer = async (): Promise<void> => {
-    await container.stop();
-  };
-  
-  const pool = new Pool({ connectionString: container.getConnectionUri() });
-  // ... test against real PostgreSQL
-  await pool.end();
-});
+coverage: {
+  exclude: [
+    "dist/**",
+    "src/**/*.test.ts",
+    // Fixtures (test-infrastructure, exercised only by integration suite)
+    "src/**/*.fixtures.ts",
+    "src/run/golden-fixtures.ts",
+    // CLI entrypoint (exercised by installed binary, not unit tests)
+    "src/cli.ts",
+    "vitest.config.ts",
+  ],
+  include: ["src/**/*.ts"],
+}
 ```
 
-**Spy and Stub Pattern:**
+### v8 ignore for in-source defensive guards
+
+When a code path is structurally unreachable by unit tests (defensive guard,
+binary entrypoint block), use `/* v8 ignore ... */` with a reason:
+
 ```typescript
-test("function should call external service with correct argument", async () => {
-  const spy = vi.spyOn(module, "externalFunction").mockResolvedValue({ ok: true });
-  
-  const result = await myFunction(input);
-  
-  expect(spy).toHaveBeenCalledWith(expectedArg);
-  expect(result).toBeDefined();
-});
+/* v8 ignore start -- exercised by the installed binary, not unit tests. */
+if (entrypointPath !== undefined && import.meta.url === `file://${entrypointPath}`) {
+  await buildCli().parseAsync(process.argv);
+}
+/* v8 ignore stop */
 
-test("should capture stdout writes", () => {
-  const writes: string[] = [];
-  vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
-    writes.push(String(chunk));
-    return true;
-  });
-  
-  await cliCommand();
-  
-  const output = JSON.parse(writes.join(""));
-  expect(output).toHaveProperty("ok");
-});
+/* v8 ignore next -- defensive guard for unexpected config loader failures. */
+logger.fatal({ err }, "Unexpected config error");
 ```
-
-**Fixture Verification:**
-```typescript
-test("created fixture should match expected shape", () => {
-  const candidate = createCandidate("100");
-  
-  expect(candidate).toStrictEqual({
-    identity: { filename: "replay-100.ocap" },
-    source: {
-      externalId: "100",
-      url: "https://example.test/replays/100",
-    },
-  });
-});
-```
-
-## Test Coverage Summary
-
-| Module | Type | Test Count | Coverage Focus |
-|--------|------|------------|-----------------|
-| `src/config.ts` | Unit | 30+ | Zod parsing, boundary conditions, redaction |
-| `src/discovery/` | Unit + Integration | 50+ | HTML parsing, source discovery, error classification |
-| `src/storage/` | Unit + Integration | 40+ | S3 operations, checksum calculation, key formatting |
-| `src/checkpoint/` | Unit + Integration | 20+ | Conditional writes, conflict resolution, merge logic |
-| `src/staging/` | Unit + Integration | 25+ | PostgreSQL idempotency, payload transformation |
-| `src/cli.ts` | Unit | 70+ | Command routing, exit codes, JSON output contract |
-| `src/errors/` | Unit | 10+ | Error class construction, detail discipline |
-| `src/logging/` | Unit | 10+ | Secret redaction, pino configuration |
-
-**Key Contract Tests:**
-- `src/cli.test.ts` includes boundary enforcement tests:
-  - Dry-run source should not contain mutation tokens
-  - Raw storage path should not write to business tables
-  - Staging path should only write `ingest_staging_records`
-  - Run-once orchestrator touches only checkpoint, storage, and staging
 
 ---
 
-*Testing analysis: 2026-06-13*
+## Fixtures and Shared Test Helpers
+
+### `*.fixtures.ts` files
+
+Extracted when shared test-double builders would push a test file past the
+`max-lines` lint limit, or when multiple test files reuse the same seam:
+
+- `src/checkpoint/s3-checkpoint-store.fixtures.ts` — fake S3 sender, `makeCheckpoint()` builder
+- `src/evidence/s3-evidence-store.fixtures.ts` — `capturingStore` fake
+- `src/staging/staging-schema.fixtures.ts` — `applyStagingSchema(pool)` DDL helper
+
+Pattern inside a fixtures file:
+
+```typescript
+// Build a valid typed value — no secrets, no bytes (threat T-09-01)
+export const makeCheckpoint = (
+  lastCompletedPage = 1,
+  runId = "run-local",
+): Checkpoint => ({
+  counts,
+  createdAt: timestamp,
+  discoveredLastPage: lastCompletedPage,
+  ...
+});
+```
+
+### Module-scope constants
+
+Shared test data (fixed checksums, timestamps, object keys) is declared as
+module-scope `const` at the top of each test file, not in `beforeEach`:
+
+```typescript
+const checksum = "aaaaaaaaaaaaaaaa...";
+const fetchedAt = "2026-06-16T13:40:05.000Z";
+const objectKey = `raw/sha256/${checksum}.ocap`;
+```
+
+---
+
+## Test Types Summary
+
+| Type | Suffix | Infra | When |
+|------|--------|-------|------|
+| Unit | `.test.ts` | None (inline fakes / `vi.fn`) | Default `pnpm test` |
+| Integration | `.integration.test.ts` | Testcontainers (MinIO, PostgreSQL) | `pnpm test:integration` |
+| Golden E2E | `.integration.test.ts` in `src/run/` | MinIO + PostgreSQL + fixture corpus | `pnpm test:integration` (skip when corpus absent) |
+| CLI smoke | `src/cli.test.ts` | None | Default `pnpm test` |
+| No-leak contract | `src/run/no-leak.test.ts` | None (injected sinks) | Default `pnpm test` |
+
+---
+
+## Error Testing
+
+```typescript
+// Expected operational errors — assert code and isOperational
+test("should throw ConfigValidationError for missing required env", () => {
+  expect(() => loadConfig()).toThrow(ConfigValidationError);
+  try {
+    loadConfig();
+  } catch (error) {
+    expect(error).toBeInstanceOf(ConfigValidationError);
+    expect((error as ConfigValidationError).code).toBe("config_invalid");
+    expect((error as ConfigValidationError).isOperational).toBe(true);
+  }
+});
+```
+
+---
+
+*Testing analysis: 2026-06-20*

@@ -1,208 +1,341 @@
 # Coding Conventions
 
-**Analysis Date:** 2026-06-13
+**Analysis Date:** 2026-06-20
 
-## Naming Patterns
-
-**Files:**
-- Kebab-case for filenames: `s3-checkpoint-store.ts`, `create-logger.ts`, `replay-byte-client.ts`
-- Test files colocated beside source: `source-client.ts` paired with `source-client.test.ts`
-- Integration tests marked with `.integration.test.ts` suffix: `s3-checkpoint-store.integration.test.ts`
-- Fixture files use `.fixtures.ts`: `s3-evidence-store.fixtures.ts`, `s3-checkpoint-store.fixtures.ts`
-
-**Functions:**
-- Camel case: `fetchBytes`, `storeRawReplay`, `extractReplayRows`, `toEvidenceObjectKey`
-- Constructors: `createSourceClient`, `createLogger`, `createS3CheckpointStoreFromConfig`
-- Predicates: `isRawStorageEvidence`, `connectivityOk`
-- Converters: `toIngestStagingPayload`, `toRawReplayObjectKey`, `redactConfig`
-
-**Variables:**
-- Camel case for mutable: `candidates`, `writes`, `pool`, `container`
-- Uppercase constants for literal values: `MIN_CONCURRENCY = 1`, `MAX_CONCURRENCY = 32`, `DEFAULT_SOURCE_TIMEOUT_MS = 30_000`
-- Readonly for config/data holders: `readonly bucket: string`, `readonly sourceUrl: URL`
-- Underscore prefix only for parameter exclusion: `_encoding` in stream callbacks where parameter is not used
-
-**Types:**
-- PascalCase for interfaces: `AppConfig`, `SourceConfig`, `DiscoveryReport`, `ReplayCandidate`
-- PascalCase for error classes: `AppError`, `ConfigError`, `SourceFetchError`, `CheckpointConflictError`
-- Union types for status values: `type DiscoveryMode = "dry-run"`
-- Result/discriminated union types: `type SourceConfigResult = { readonly config: SourceConfig; readonly ok: true } | { readonly issues: ...; readonly ok: false }`
-
-## Code Style
-
-**Formatting:**
-- Prettier 3.8.3 with no explicit config file (defaults applied)
-- Line length: 80 characters (soft limit, enforced via ESLint)
-- Indentation: 2 spaces (inferred from consistent codebase usage)
-- Trailing commas in multiline objects/arrays
-
-**Linting:**
-- ESLint 10.3.0 with ESLint `all` config plus TypeScript strict rules
-- Unicorn plugin with abbreviation whitelist: `cli`, `env`, `s3`
-- Function complexity limits:
-  - Max 100 lines per function (skipping blanks and comments)
-  - Max 25 statements per function
-- Magic number exception list: `-2, 0, 1, 2, 4` plus array indexes and default values
-- No floating promises: `@typescript-eslint/no-floating-promises: error`
-- No misused promises: `@typescript-eslint/no-misused-promises: error`
-- No function style preference (arrow vs. named allowed)
-- `require-await` disabled to allow async wrappers that don't await internally
-
-**Ignored in linting:**
-- `dist/`, `coverage/`, `.agents/`, `.planning/`
-- `eslint.config.js` self-reference
-
-## Import Organization
-
-**Order:**
-1. Node.js builtins: `import { randomUUID } from "node:crypto"`
-2. External packages: `import { Command } from "commander"`
-3. Internal absolute (sibling modules): `import { fetchBytes } from "./replay-byte-client.js"`
-4. Parent directory imports: `import { AppError } from "../errors/app-error.js"`
-5. Same directory imports: `import { StagingRepository } from "./types.js"`
-6. Index/barrel imports last
-7. Type imports at end: `import type { Logger } from "pino"`
-
-**Path Aliases:**
-- No path aliases configured. All imports use relative paths with explicit `./` and `../`
-- ES modules only: `import...from "...js"` (not `.ts`)
-- Consistent extension: always `.js` for both source and type imports
-
-## Error Handling
-
-**Base Error Class:**
-- All domain errors extend `AppError<Code>` from `src/errors/app-error.ts`
-- Generic over a narrow literal code for type safety (e.g., `AppError<"checkpoint-conflict">`)
-- Fields: `code`, `message`, `cause` (native Error.cause), `isOperational`, optional `details`
-- `isOperational` defaults to `true` — marking expected vs. unexpected failures
-
-**Concrete Error Subclasses:**
-- `ConfigError` (`src/config.ts`): configuration validation failures, carries `issues: string[]`
-- `SourceFetchError` (`src/discovery/source-client.ts`): network/source failures, code unions `"rate_limited" | "source_transient" | "source_unavailable"`
-- `CheckpointConflictError` (`src/errors/checkpoint-conflict-error.ts`): S3 conditional-write races, carries identifiers-only details (no secrets)
-- `ReplayByteFetchError` (`src/storage/replay-byte-client.ts`): byte fetch failures
-
-**Details Discipline:**
-- `details` payload carries ONLY identifiers: `runId`, `page`, `filename`, `code`, `slug`
-- NEVER include secrets, raw bytes, response bodies, or sensitive infrastructure info (threat T-07-01, T-09-01)
-- Details are logged and may be serialized — assume public visibility
-
-**Error Flow:**
-- Configuration errors caught early, before mutating resources (checkpoints, S3, PostgreSQL)
-- Operational errors (network, transient) caught and wrapped with failure categorization
-- Unexpected errors rethrown unmodified to crash the CLI with exit code 1
-- Exit code 2 reserved for expected operational failures (ConfigError, source unavailable, etc.)
-
-## Logging
-
-**Framework:** Pino 10.3.1 with synchronous destination
-
-**Patterns:**
-- Structured JSON logs only: `log.warn({ event: "retry", attempt, page, phase, delayMs, causeCode })`
-- Log level env var: `LOG_LEVEL` (default `"info"`)
-- Destination: `process.stderr` by default — preserves stdout as clean JSON summary (contract CR-01)
-- Redaction paths hardcoded in `createLogger`:
-  - `config.s3.accessKeyId`, `config.s3.secretAccessKey`
-  - `config.sourceSshCommand`, `config.staging.databaseUrl`
-  - Pino `*` wildcard matches one level only (NOT arbitrary depth)
-- Callers log identifiers only (runId, page, filename, code) — never whole config/candidate objects
-
-**Redaction Example:**
-```typescript
-// ✓ Safe: identifiers only
-log.warn({ event: "retry", runId, page, phase, attempt })
-
-// ✗ Unsafe: never log secrets
-log.warn({ config })  // contains accessKeyId, secretAccessKey
-```
-
-**Synchronous Contract (WR-05):**
-- Destination must flush synchronously
-- No async transports or buffering workers
-- Ensures log ordering and eventual flush before exit (PROG-04)
-- Never competes with stdout JSON summary
-
-## Comments
-
-**When to Comment:**
-- Threat references: `// threat T-07-01` for security-relevant constraints
-- Plan/phase references: `// Plan 04 D-13` for decision context
-- Cross-system contracts: `// CR-01: stdout JSON summary`, `// WR-08-01: SSH timeout bounds`
-- Pitfalls and gotchas: `// Pitfall 3: ISO8601 timestamps contain colons unsafe in S3 keys`
-- Disabled rules justified: `/* eslint-disable max-lines -- CLI command handlers kept together for readability */`
-- Complex logic: when branching or merging logic requires context (e.g., checkpoint merge on 412)
-
-**JSDoc/TSDoc:**
-- Used for public module exports and error classes
-- Example from `src/errors/app-error.ts`:
-```typescript
-/**
- * Cross-cutting typed error base for the ingest service (CORE-01).
- * Generic over a narrow literal `Code` so each subclass keeps its own
- * literal-union code without widening to `string`.
- */
-export abstract class AppError<Code extends string = string> extends Error { ... }
-```
-- Blocks document intent, constraints, and threat references
-- One-liners for simple helpers
-
-## Function Design
-
-**Size:**
-- Max 100 lines per function (ESLint enforced)
-- Max 25 statements (ESLint enforced)
-- Async boundaries separated: orchestrators call async helpers, don't inline large blocks
-
-**Parameters:**
-- Single object param for multiple related values: `storeRawReplay(input: { byteClient, candidate, now?, storage })`
-- Readonly on object params and results: `readonly candidate: ReplayCandidate`
-- No rest params in public functions (explicit over variadic)
-- Defaults via `??` operator: `(input.now ?? (() => new Date()))()`
-
-**Return Values:**
-- Result discriminated unions for multiple outcomes:
-```typescript
-type StoreRawReplayResult =
-  | RawReplayFetchFailureEvidence
-  | RawReplayStorageEvidence;
-```
-- Never null for error: use `never` type or explicit error subclass
-- Async functions return `Promise<T>` (no sync-or-error dual)
-- Single JSON summary objects for CLI output (not arrays for heavy results)
-
-**Null/Undefined:**
-- Optional values marked: `readonly maxPages?: number`
-- Explicit guards: `if (value !== undefined) { ... }`
-- No implicit `any` from unsugared optionals
-
-## Module Design
-
-**Exports:**
-- Barrel files avoided (each module exports its own types and functions)
-- `index.ts` at root exports public API only: `export { loadConfig, redactConfig }` and types
-- Private helpers not exported: kept in same file or imported internally
-
-**Export Pattern:**
-```typescript
-// Public
-export class ConfigError extends Error { ... }
-export function loadConfig(source: ConfigSource = process.env): AppConfig { ... }
-export type AppConfig = z.infer<typeof configSchema>;
-
-// Type guards and helpers internal
-function readSourceConfigInput(...): { ... } { ... }
-function stringOrUndefined(...): string | undefined { ... }
-```
-
-**Module Isolation:**
-- No circular imports (enforced by architecture)
-- Dependencies: discovery → config, storage → discovery, staging → storage
-- Seams injected via `create*FromConfig` factories (dependency injection)
-
-**Readonly Discipline:**
-- All config objects frozen at type level: `readonly s3: { readonly endpoint: ... }`
-- Immutability documented for mutable boundary types (e.g., checkpoint merge results)
+> **v3.1 drift note:** The codebase carries known convention drift that the
+> v3.1 milestone will close. Specifics are called out inline. The sections below
+> describe the conventions **as enforced**, not the current code average.
 
 ---
 
-*Convention analysis: 2026-06-13*
+## Toolchain
+
+### Formatter: oxfmt
+
+- Tool: `oxfmt` 0.54.0 (Rust-based)
+- Run: `pnpm run format` / `pnpm run format:check`
+- Config: no project-level override — inherits `@solid-stats/ts-toolchain` defaults
+
+### Linter: oxlint
+
+- Tool: `oxlint` 1.69.0
+- Config: `.oxlintrc.json` — extends `@solid-stats/ts-toolchain/oxlint/base.oxlintrc.json`
+- Plugins: `typescript`, `unicorn`, `import`, `oxc`
+- Repo-local overrides in `.oxlintrc.json`:
+  - `no-await-in-loop`: `off` (pipeline loops use intentional sequential awaits)
+  - `typescript/require-await`: `off`
+  - `typescript/no-magic-numbers`: `warn` with allow list `[-2, 0, 1, 2, 4]`
+- Run: `pnpm run lint` / `pnpm run lint:types` (type-aware pass)
+
+### Type checker
+
+- Tool: `tsc` (TypeScript 6.x)
+- Config: `tsconfig.json` extends `@solid-stats/ts-toolchain/tsconfig/base.json`
+- Run: `pnpm run typecheck`
+
+### Dependency auditing
+
+- `dependency-cruiser` — enforced layer rules: `pnpm run depcruise`
+- `knip` — dead-export detection: `pnpm run knip` (`knip.jsonc`)
+
+### Pre-commit gate (lefthook)
+
+- `lefthook.yml` runs format check, lint, typecheck, and unit tests before commit.
+
+---
+
+## Lint Suppression Policy
+
+Suppressions MUST carry a reason comment on the same line. Two syntaxes in use:
+
+### File-level (4 files in current HEAD — v3.1 drift)
+
+```typescript
+/* eslint-disable max-lines -- <reason> */          // test files only
+/* oxlint-disable max-lines -- <reason> */          // source files (run-once.ts, summary.ts, source-client.ts, discover.ts)
+/* oxlint-disable camelcase -- <reason> */          // postgres-staging-repository.test.ts (DB column names)
+```
+
+File-level suppressions are a last resort. Each one must justify why the file
+stays together (e.g., "co-located so the ingest cycle reads as one unit").
+
+### Line-level
+
+```typescript
+// oxlint-disable-next-line <rule> -- <reason>
+// eslint-disable-next-line <rule> -- <reason>
+```
+
+Known legitimate line suppressions:
+- `import/no-unassigned-import` in `src/cli.ts` — Sentry side-effect import ordering
+- `camelcase` in `src/staging/payload.ts` and staging tests — `run_id` is the cross-service JSONB contract key (RESUME-04)
+- `require-atomic-updates` in `src/run/run-once.ts` — sequential loop with no concurrent iteration
+- `no-await-in-loop` in `src/checkpoint/s3-checkpoint-store.ts` — bounded CAS rounds
+- `typescript/no-useless-constructor` in error subclasses — widens constructor visibility
+
+### v8 coverage ignore
+
+```typescript
+/* v8 ignore start -- <reason> */
+...
+/* v8 ignore stop */
+/* v8 ignore next -- <reason> */
+/* v8 ignore next 3 -- <reason> */
+```
+
+Used for CLI entrypoint boot block (`src/cli.ts:42-63`), defensive guards in
+`src/commands/shared.ts`, and unreachable branches in adapter layers. Every
+ignore MUST have an inline reason.
+
+---
+
+## Naming
+
+### Files
+
+- `kebab-case.ts` everywhere
+- Test files: `<module>.test.ts` (unit), `<module>.integration.test.ts` (container-backed)
+- Fixture helpers: `<module>.fixtures.ts` — excluded from coverage and depcruise
+- Types-only files: `types.ts` per domain directory
+
+### Functions and constants
+
+- `camelCase` for all functions and variables
+- `SCREAMING_SNAKE_CASE` for module-level constants: `MAX_CONCURRENCY`, `DEFAULT_WATCH_INTERVAL_MS`, `REDACT_PATHS`
+- Factory functions follow `create<Resource>` naming: `createS3Client`, `createPostgresStagingRepository`, `createLogger`, `createPacer`
+- Command registration follows `register<Command>Command`: `registerRunOnceCommand`
+
+### Types and interfaces
+
+**Convention:** prefer `type` over `interface`.
+
+**Current drift:** ~155 `interface` usages exist in HEAD (v3.1 will migrate them).
+The correct form for new code:
+
+```typescript
+// Correct
+export type ReplayCandidate = {
+  readonly identity: { filename: string };
+  readonly source: { externalId: string; url: string };
+};
+
+// Drift (do not add more)
+export interface ReplayCandidate { ... }
+```
+
+Exception: `interface` is currently retained in `src/discovery/types.ts` (e.g.,
+`ReplayCandidate`, `DiscoveryReport`, `SourceClient`, `SourceFetchOptions`) and
+`src/staging/types.ts` (`IngestStagingPayload`, `IngestStagingResult`).
+
+### Discriminated union types
+
+Prefer literal-union discriminators over enums. No TypeScript `enum` keyword is
+used anywhere in this codebase. Status fields use string literal unions:
+
+```typescript
+export type StagingOutcomeStatus =
+  | "already_staged"
+  | "conflict"
+  | "failed"
+  | "not_stageable"
+  | "staged";
+```
+
+---
+
+## Import Style
+
+- ESM only (`"type": "module"` in `package.json`)
+- All local imports use `.js` extension (ESM interop): `import { foo } from "./foo.js"`
+- `import type` for type-only imports — enforced by `import` plugin:
+
+```typescript
+import { stageRawReplay } from "./stage-raw-replay.js";
+
+import type { IngestStagingPayload } from "./types.js";
+import type { StoreRawReplayResult } from "../storage/store-raw-replay.js";
+```
+
+- Import groups: node built-ins → third-party → internal value imports → `import type` block
+
+---
+
+## TypeScript Style
+
+- `type` over `interface` (see Naming above; enforce for new code)
+- No `any` — enforced by `typescript-eslint` strict settings inherited from toolchain
+- No `as` casts except at narrow, justified boundaries (e.g., `promisify` return narrowing, `as const` spreads). Each cast site has a comment.
+- `satisfies` used to type-check object literals without widening
+- `as const` used for frozen arrays and discriminator fields
+
+---
+
+## Typed Error System
+
+### Base class: `src/errors/app-error.ts`
+
+```typescript
+export abstract class AppError<Code extends string = string> extends Error {
+  public readonly isOperational: boolean;
+  public readonly code: Code;
+  public readonly details?: Readonly<Record<string, unknown>>;
+
+  protected constructor(
+    code: Code,
+    message: string,
+    options?: {
+      readonly cause?: unknown;
+      readonly details?: Readonly<Record<string, unknown>>;
+      readonly isOperational?: boolean;
+    },
+  ) { ... }
+}
+```
+
+Key invariants (CORE-01):
+- `code` is a string literal — each subclass uses a unique literal type
+- `isOperational: true` = expected condition (config error, network failure); `false` = programmer bug
+- `details` carries **identifiers only** (codes, keys, page numbers, filenames) — NEVER replay bytes, secrets, or large response bodies (threat T-07-01)
+- NO `httpStatus` field — this is a CLI, not an HTTP service
+
+### Concrete subclasses
+
+| Class | Code | File |
+|-------|------|------|
+| `ConfigValidationError` | `"config_invalid"` | `src/errors/config-validation-error.ts` |
+| `CheckpointConflictError` | `"checkpoint-conflict"` | `src/errors/checkpoint-conflict-error.ts` |
+| `SourceFetchError` (local alias) | narrow literal | `src/discovery/source-client.ts` |
+| `ReplayByteFetchError` (local alias) | narrow literal | `src/storage/replay-byte-client.ts` |
+
+### Adding a new error subclass
+
+```typescript
+export class MyDomainError extends AppError<"my_code"> {
+  public constructor(details: MyDetails, options?: { readonly cause?: unknown }) {
+    super("my_code", "Human readable message", {
+      cause: options?.cause,
+      details: toDetailsRecord(details),  // identifiers only
+      isOperational: true,                // or false for bugs
+    });
+    this.name = "MyDomainError";          // MUST set this.name explicitly
+  }
+}
+```
+
+Subclasses that need a public constructor (to override `AppError`'s `protected`)
+suppress `typescript/no-useless-constructor` with an inline comment explaining why.
+
+---
+
+## Zod Configuration Pattern
+
+`src/config.ts` owns environment validation. Pattern:
+
+1. Declare module-level `SCREAMING_SNAKE` constants for all bounds (max lengths, min/max numeric ranges)
+2. Build sub-schemas (`sourceConfigSchema`, `s3ConfigSchema`, etc.) as `z.object(...)` with `.coerce`, `.optional()`, `.default()`, `.min()`, `.max()`
+3. Compose into one top-level `appConfigSchema`
+4. Export a `loadConfig()` function that calls `schema.safeParse(process.env)` and throws `ConfigValidationError` on failure
+
+```typescript
+// Bounds as named constants
+const MAX_URL_LEN = 2048;       // RFC 7230 conservative HTTP URL limit
+const MAX_CONCURRENCY = 32;
+
+// Schema composition
+const sourceConfigSchema = z.object({
+  sourceConcurrency: z.coerce.number().int().min(MIN_CONCURRENCY).max(MAX_CONCURRENCY),
+  // ...
+});
+
+// Fail before any I/O
+export const loadConfig = (): AppConfig => {
+  const result = appConfigSchema.safeParse(process.env);
+  if (!result.success) {
+    throw new ConfigValidationError(result.error.issues.map((i) => i.message));
+  }
+  return result.data;
+};
+```
+
+External-source string fields MUST have explicit `.max()` bounds (unbounded
+external fields are a DoS vector, `solidstats-shared-backend-ts-standards §D`).
+
+---
+
+## Factory Pattern (DI Seams)
+
+Infrastructure adapters are plain object factories, not classes:
+
+```typescript
+// Correct pattern
+export const createPostgresStagingRepository = (
+  pool: Pool,
+): StagingRepository => ({
+  async stage(payload) { ... },
+});
+
+export const createS3RawReplayStorage = (
+  s3: S3Client,
+  config: ...,
+): RawReplayStorage => ({
+  async storeRawReplay(...) { ... },
+});
+```
+
+- Factory returns an object satisfying a `type` (or `interface`) declared in `types.ts`
+- No constructor classes for infrastructure
+- All dependencies injected as factory arguments — no global singletons
+
+---
+
+## Error Handling
+
+- Operational errors (`isOperational: true`): caught at command boundary, logged, sets `process.exitCode = 2`
+- Non-operational errors (programmer bugs): allowed to propagate to top-level `cli.ts` catch, which sets `process.exitCode = 1` and reports to Sentry
+- `process.exit()` is NEVER called — `process.exitCode` is set and the process drains naturally (pino flushes, Sentry flushes)
+
+```typescript
+// Command boundary pattern
+try {
+  await runOnce(deps);
+  process.exitCode = runExitCode(summary);
+} catch (error) {
+  if (error instanceof AppError && error.isOperational) {
+    logger.error({ err: error }, error.message);
+    process.exitCode = 2;
+  } else {
+    throw error; // escalate to CLI top-level handler
+  }
+}
+```
+
+---
+
+## Logging
+
+- Library: `pino` (structured JSON)
+- Logger factory: `src/logging/create-logger.ts` → `createLogger(options?)`
+- All output is NDJSON to stdout
+- `REDACT_PATHS` in `create-logger.ts` covers `*.accessKeyId`, `*.secretAccessKey`, `*.databaseUrl`, `*.sourceSshCommand` — config secrets must never appear in log payloads
+
+---
+
+## Comments and JSDoc
+
+- Module-level `/** ... */` JSDoc for every exported function or constant that has non-obvious behavior
+- Inline `//` comments for every suppression (as shown above) and every non-obvious algorithm decision
+- JSDoc references planning decision codes (e.g., `CORE-01`, `RESUME-04`, `CLN-04a`) that link to `.planning/` artifacts
+- No `@param` / `@returns` tags for simple functions — prose description preferred
+
+---
+
+## Security
+
+- Details payload in `AppError` subclasses: identifiers only (see Typed Error System)
+- Config secrets redacted in pino via `REDACT_PATHS`
+- Source URL userinfo stripped before logging (`sanitizeSourceUrl` in `src/run/run-once.ts`)
+- Externally-sourced string config fields have explicit `z.max()` bounds
+
+---
+
+*Convention analysis: 2026-06-20*

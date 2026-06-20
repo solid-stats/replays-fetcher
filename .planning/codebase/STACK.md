@@ -1,96 +1,107 @@
 # Technology Stack
 
-**Analysis Date:** 2026-06-13
+**Analysis Date:** 2026-06-20
 
 ## Languages
 
 **Primary:**
-- TypeScript 6.0.3 - All source code, configuration, and tests
-- JavaScript (ES2023 target) - Runtime module format (ESM)
-
-**Secondary:**
-- Node.js shell scripting - SSH transport via `execFile` (optional SSH adapter in `src/discovery/source-client.ts`)
+- TypeScript 6 (`^6.0.3`) — all source under `src/`, strict mode via `@solid-stats/ts-toolchain` tsconfig preset
+- ESM-only module style (`"type": "module"` in `package.json`)
 
 ## Runtime
 
 **Environment:**
-- Node.js 25 (pinned via `.nvmrc`)
-- Target ES2023, compiled to NodeNext modules
+- Node.js 25 (`>=25 <26`; pinned in `.node-version` and `.nvmrc`, enforced by `package.json#engines`)
+- Production entrypoint: `dist/cli.mjs` (compiled by tsdown)
+- Docker base image: `node:25-alpine` (`Dockerfile`)
 
 **Package Manager:**
-- pnpm 11.0.9 (with onlyBuiltDependencies for native modules: cpu-features, esbuild, protobufjs, ssh2, unrs-resolver)
-- Lockfile: pnpm-lock.yaml (enforced)
+- pnpm 11 (`pnpm@11.0.9`, `>=11 <12` enforced by engines)
+- Lockfile: `pnpm-lock.yaml` — present and frozen (`--frozen-lockfile` in CI)
 
 ## Frameworks
 
-**Core:**
-- Commander 14.0.3 - CLI command structure (`src/cli.ts`)
+**CLI:**
+- `commander` `^14.0.3` — command registration (`check`, `discover`, `run-once`, `watch`); no HTTP framework
+
+**Config validation:**
+- `zod` `^4.4.3` — Zod 4; all env vars parsed through typed schemas in `src/config.ts`
 
 **Testing:**
-- Vitest 4.1.5 - Unit test runner; config: `vitest.config.ts`
-  - Coverage: V8 provider, 100% threshold (branches, functions, lines, statements)
-  - Support for integration tests via `VITEST_INTEGRATION=true` env var
+- `vitest` `^4.1.5` — unit and integration test runner
+- `@vitest/coverage-v8` `^4.1.5` — V8 coverage; 100% gate on reachable source
+- `@testcontainers/minio` `11.14.0` — MinIO container for S3 integration tests
+- `@testcontainers/postgresql` `11.14.0` — PostgreSQL container for staging integration tests
 
-**Build/Dev:**
-- TypeScript 6.0.3 - Compilation (`tsc`)
-- Prettier 3.8.3 - Code formatting (no explicit .prettierrc; uses defaults)
-- ESLint 10.3.0 - Linting with strict rules (config: `eslint.config.js`)
-  - ESLint JS all, TypeScript strict/stylistic, Unicorn, import-x plugins
-  - Max 100 lines per function, max 25 statements per function
-- tsx 4.21.0 - TypeScript execution for CLI commands
+**Build:**
+- `tsdown` `0.22.2` — ESM bundle (`dist/cli.mjs`); invoked as `pnpm run build`
+- `tsx` `^4.21.0` — in-process TS execution for the `check` dev shortcut
 
 ## Key Dependencies
 
-**Critical:**
-- @aws-sdk/client-s3 3.1045.0 - S3-compatible object storage for raw replay bytes and evidence metadata
-- pg 8.20.0 - PostgreSQL client for staging/outbox record writes (typed Query client wrapper)
-- pino 10.3.1 - Structured JSON logging with path-based secret redaction
-- zod 4.4.3 - Environment/config schema validation and type inference
-- p-limit 7.3.0 - Concurrency control for discovery pagination and source fetches
-- commander 14.0.3 - CLI command parsing and help text
+**Critical (production):**
+- `@aws-sdk/client-s3` `^3.1045.0` — S3-compatible raw object storage (raw replay blobs + checkpoints + evidence)
+- `pg` `^8.20.0` — PostgreSQL client; raw SQL; staging/outbox writes only
+- `pino` `^10.3.1` — structured JSON logging
+- `p-limit` `^7.3.0` — bounded concurrency for per-replay fetch/store loop
+- `@sentry/node` `^10.57.0` — errors-only Sentry/GlitchTip wiring; gated on `SENTRY_DSN` env var (absent DSN = no-op)
 
-**Infrastructure:**
-- @types/node 25.6.2 - Node.js type definitions
-- @types/pg 8.20.0 - PostgreSQL client types
+**Types:**
+- `@types/node` `^25.6.2`
+- `@types/pg` `^8.20.0`
 
-**Testing Infrastructure:**
-- @testcontainers/postgresql 11.14.0 - PostgreSQL container for integration tests
-- @testcontainers/minio 11.14.0 - MinIO S3-compatible container for integration tests
-- @vitest/coverage-v8 4.1.5 - V8 coverage reporting
+## Verify Toolchain (`pnpm run verify`)
 
-**Linting/Type-checking:**
-- typescript-eslint 8.59.2 - TypeScript linting rules
-- eslint-plugin-import-x 4.16.2 - Import ordering and circular dependency detection
-- eslint-plugin-unicorn 64.0.0 - Unicorn best-practice rules
-- eslint-import-resolver-typescript 4.4.4 - TypeScript path resolution for ESLint
+The single-command CI gate — runs in this order:
 
-## Configuration
+| Step | Tool | Config |
+|------|------|--------|
+| Format check | `oxfmt --check .` (`oxfmt` `0.54.0`) | preset from `@solid-stats/ts-toolchain` |
+| Lint | `oxlint --config .oxlintrc.json src` (`oxlint` `1.69.0`) | `.oxlintrc.json` |
+| Type check | `tsc -p tsconfig.json --noEmit` | `tsconfig.json` |
+| Unit tests | `vitest run` | `vitest.config.ts` |
+| Coverage | `vitest run --coverage` (V8, 100% gate) | `vitest.config.ts` |
+| Build | `tsdown ...` | inline in `package.json#scripts.build` |
+| Dependency graph | `dependency-cruiser src --config .dependency-cruiser.cjs` (`dependency-cruiser` `^17.4.3`) | `.dependency-cruiser.cjs` |
+| Dead code / import hygiene | `knip --config knip.jsonc` (`knip` `^6.16.1`) | `knip.jsonc` |
 
-**Environment:**
-- Config is validated via Zod schema at startup (`src/config.ts`)
-- Source: `process.env` - no .env file loading (caller supplies vars)
-- Secrets are redacted in logs via pino `redact.paths` config
-- Boolean normalization supports "1", "true", "yes", "y", "0", "false", "no", "n"
+All steps are wired as a single `pnpm verify` command (see `package.json`).
 
-**Build:**
-- `tsconfig.json` - Main compilation config (strict mode enabled)
-- `tsconfig.build.json` - Build-only config (excludes tests)
-- `vitest.config.ts` - Test runner config with coverage thresholds
-- `eslint.config.js` - Flat config (ESLint 10+) with all rule groups
+**Shared preset:**
+- `@solid-stats/ts-toolchain` `github:solid-stats/ts-toolchain#v0.1.3` — provides `tsconfig/base.json`, `lefthook.yml`, oxlint preset, and formatter config. Extended, not forked.
+
+**Pre-commit hooks:**
+- `lefthook` `2.1.9` — git hooks; extends `node_modules/@solid-stats/ts-toolchain/lefthook.yml` via `lefthook.yml`; PATH shim in `.lefthookrc`
+- `lefthook install` runs in `prepare` script
+
+## Configuration Files
+
+| File | Purpose |
+|------|---------|
+| `package.json` | Runtime, scripts, deps, engines |
+| `tsconfig.json` | Extends `@solid-stats/ts-toolchain/tsconfig/base.json`; `outDir: dist`, `include: src/**/*.ts` |
+| `.oxlintrc.json` | oxlint rule config |
+| `.dependency-cruiser.cjs` | Import graph fences (five-band ingest architecture) |
+| `knip.jsonc` | Dead code and export hygiene |
+| `lefthook.yml` | Git hooks — extends toolchain preset |
+| `.lefthookrc` | PATH shim for hooks |
+| `.node-version` / `.nvmrc` | Node 25 pin |
+| `Dockerfile` | Multi-stage Alpine build; entrypoint `node dist/cli.mjs run-once` |
+| `deploy/k8s/staging/cronjob.yaml` | Kubernetes CronJob (`*/30 * * * *`, `Forbid` concurrency, `run-once` default) |
+| `.github/workflows/cd.yml` | CI pipeline (verify → integration → image build+push to GHCR) |
 
 ## Platform Requirements
 
 **Development:**
-- Node.js 25.x (enforced via `engines.node` and `.nvmrc`)
-- pnpm 11.x (enforced via `engines.pnpm`)
-- Docker (optional, for `@testcontainers` integration tests)
+- Node.js 25, pnpm 11
+- Docker (for testcontainers integration tests: MinIO + PostgreSQL)
 
 **Production:**
-- Node.js 25.x runtime
-- S3-compatible endpoint (MinIO, AWS S3, etc.)
-- PostgreSQL 12+ (for `ingest_staging_records` table)
-- SSH capability (optional, for SSH-transport discovery)
+- Kubernetes CronJob (staging namespace `solid-stats-staging`; image from GHCR `ghcr.io/solid-stats/replays-fetcher`)
+- S3-compatible endpoint (Timeweb S3: `https://s3.twcstorage.ru`, region `ru-1`, path-style)
+- PostgreSQL (connection via `DATABASE_URL`)
+- Optional: `SENTRY_DSN` for error reporting (Sentry/GlitchTip)
 
 ---
 
-*Stack analysis: 2026-06-13*
+*Stack analysis: 2026-06-20*

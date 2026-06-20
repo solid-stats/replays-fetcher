@@ -1,180 +1,152 @@
 # Codebase Concerns
 
-**Analysis Date:** 2026-06-13
+**Analysis Date:** 2026-06-20
 
 ## Tech Debt
 
-**Database Pool Lifecycle in `discover` Commands:**
-- Issue: `createPostgresStagingRepositoryFromDatabaseUrl` in `src/cli.ts` creates a `pg.Pool` instance for `discover --store-raw --stage` but there is no explicit connection pool cleanup or graceful shutdown before process exit. The pool will drain on natural exit, but concurrent long-running operations could leave connections in-flight if the process terminates abnormally.
-- Files: `src/cli.ts` (lines 669-671), `src/staging/postgres-staging-repository.ts` (lines 71-75)
-- Impact: Resource leak on abnormal termination; unused connections may linger in the database connection slot limit if the process crashes before draining naturally.
-- Fix approach: Wrap pool creation in a lifecycle manager with explicit `pool.end()` after CLI action completion, or track pools at the CLI level and drain them in a finally block before exit. This is deferred because `run-once` will establish its own pool management pattern in a later phase.
+### TD1 — Watch dedup fires after byte-fetch (latency + source load)
 
-**CLI Dependency Injection Complexity:**
-- Issue: `buildCli` in `src/cli.ts` (lines 159-174) and `resolveDependencies` (lines 176-203) inject many seams. The interfaces (`BuildCliDependencies`, lines 90-120) accept optional injectable implementations but provide defaults from the module scope. This creates a tight coupling between test doubles and production defaults, making it harder to swap implementations without modifying the CLI handler signatures.
-- Files: `src/cli.ts` (lines 90-203)
-- Impact: Adding a new injectable dependency requires updating `BuildCliDependencies`, `resolveDependencies`, and every handler that needs it. The spread pattern (`...dependencies`) masks which dependencies are used by each handler.
-- Fix approach: Consider a more explicit DI pattern (e.g., a service container or explicit handler factory) if the number of injectable seams grows beyond 10-15. For now, document the mapping of handlers to dependencies.
+- Issue: The `watch` daemon checks dedup by checksum **after** downloading bytes. Every page-1 poll cycle re-fetches all ~30 replay files, computes checksums, finds them duplicates, and discards them. Cycle time ≈ 21 s, steady ~2.7 req/s of redundant downloads 24/7.
+- Files: `src/run/watch-loop.ts`, `src/run/ingest-page.ts`, `src/staging/postgres-staging-repository.ts`
+- Impact: (a) new-replay detection latency ≈ one full cycle instead of near-instant; (b) constant redundant load on sg.zone + S3.
+- Fix approach: Before fetching bytes, check `source_replay_id` existence in staging with a cheap PG query. Unknown IDs fall through to the existing byte-fetch + checksum path. Byte-checksum dedup stays as the backstop (cannot silently drop a new replay). Needs human-in-the-loop review + redeploy gate per `TECH-DEBT.md`.
+- v3.1 REQ: **DEDUP-01, DEDUP-02** (Phase 24)
 
-**Unbounded `run-once` Loop (Operator Responsibility):**
-- Issue: When `REPLAY_SOURCE_MAX_PAGES` is not set, `runPageLoop` in `src/run/run-once.ts` (lines 183-255) iterates until it discovers an empty page or hits a `!ok` page. There is no time limit, memory budget, or operator-configurable runaway protection. A source that returns very large pages or a misconfigured fetch could exhaust resources.
-- Files: `src/run/run-once.ts` (lines 183-255, especially line 190: `const maxPages = input.maxPages ?? Number.POSITIVE_INFINITY`)
-- Impact: Unbounded memory if a single page contains tens of thousands of candidates and all are processed sequentially in one memory space (stored in `loopState`). Unbounded runtime if the source is slow or the operator misconfigures concurrency.
-- Fix approach: Operator must set `REPLAY_SOURCE_MAX_PAGES` as a safety valve for production. This is documented in `README.md` but should be reinforced in deployment guides. The fetcher is not responsible for capping legitimate corpus discovery, but operators must be aware of the cost.
+### TD2 — Four files carry file-level `oxlint-disable max-lines`
 
-## Known Bugs
+- Issue: Four source files exceed the `max-lines` structural limit and suppress it with `/* oxlint-disable max-lines … */` at the file top, violating `solidstats-fetcher-ts-conventions` §A lint-suppression policy (structural limits must be split, never disabled).
+- Files and current line counts:
+  - `src/run/run-once.ts` — 1046 lines (page-loop, checkpoint-state, assemble-result, runtime all inlined)
+  - `src/discovery/discover.ts` — 702 lines
+  - `src/discovery/source-client.ts` — 536 lines
+  - `src/storage/replay-byte-client.ts` — 491 lines
+- Impact: Masks multi-responsibility violations; linter passes only because the rule is disabled. Makes targeted edits to any of these files riskier due to size.
+- Fix approach: Pure behavior-preserving split within each file's five-band zone. Remove the `oxlint-disable` comment; never re-add it. `pnpm verify` must stay green and 100% V8 coverage must be preserved after each split.
+- v3.1 REQ: **SPLIT-01, SPLIT-02, SPLIT-03, SPLIT-04** (Phase 22)
 
-**Silent Pagination Boundary on Transient Failures (Closed in Phase 2, Remains a Risk):**
-- Symptoms: A transient HTTP 503 or timeout on page N+1 was previously treated as "end of corpus" instead of "page failed". The run would silently truncate, missing all subsequent pages.
-- Files: `src/run/run-once.ts` (lines 209-226), `src/source/classify-failure.ts` (risk was in the old retry guard)
-- Trigger: Source returns 503 or timeout while fetching page 2+, old code had no explicit !ok check before the stop-on-empty decision
-- Workaround: None needed; Phase 2 added explicit RANGE-06 ordering that classifies the page as `!ok` before checking for empty candidates. The loop now breaks on `!ok` regardless of candidate count.
-- Status: Risk mitigated by current implementation; monitored via integration tests in `src/run/run-once.test.ts` (validate `silent-truncation trap` scenarios).
+### TD3 — Discovery drops listing game-date → `discoveredAt` / `replay_timestamp` unpopulated
 
-**Checkpoint Conflict Loop Exhaustion (Bounded but Possible):**
-- Symptoms: If concurrent invocations of `run-once` repeatedly conflict on checkpoint writes, the bounded CAS loop (5 rounds) may exhaust and throw `CheckpointConflictError`. The run terminates with exit code from the unhandled error, not a graceful `status: "partial"`.
-- Files: `src/checkpoint/s3-checkpoint-store.ts` (lines 132-168, MAX_CAS_ROUNDS = 5)
-- Trigger: Two concurrent runs writing the same checkpoint object with back-to-back 412 PreconditionFailed responses. After 5 rounds, the loop gives up.
-- Workaround: Ensure schedulers do not spawn concurrent `run-once` invocations for the same source checkpoint. Use exclusive locks or cron rate-limiting.
-- Impact: High; the error bubbles as an unhandled exception. Plan to route this through the run summary's `status` and `failureCategories` in a later phase.
+- Issue: `extractReplayRows` in `src/discovery/html.ts` parses the mission link, world, and server-id cells but skips the 4th `<td>` ("Game date", format `DD.MM.YYYY HH:MM`). Consequently `candidate.discoveredAt` is never set by sg.zone discovery, and `staging/payload.ts#toPayload` omits `discoveredAt` from `promotion_evidence`. The staging `replay_timestamp` column stays `NULL` for rows whose filename does not match the `YYYY_MM_DD__HH_MM_SS__` prefix.
+- Files: `src/discovery/html.ts`, `src/staging/payload.ts`, `src/run/golden-e2e.integration.test.ts` (line 216 pins the field's *absence* — `toBeUndefined`)
+- Impact: Cross-app — `server-2` promotes `promotion_evidence` and `web` surfaces the replay date. Without a source-derived game date the canonical replay has only the filename-prefix timestamp (when it matches) plus `fetchedAt`. Metadata gap, not a correctness bug; nothing is corrupted.
+- Fix approach: Parse the Game date cell in `extractReplayRows` → ISO-8601 timestamp → thread through candidate metadata → `promotion_evidence.discoveredAt` and/or `replay_timestamp`. **Cross-app blocker:** coordinate with `server-2` on the canonical date field before writing the contract. Once agreed, flip the golden oracle assertion at line 216 from `toBeUndefined` to assert the concrete value.
+- v3.1 REQ: **DISC-01** (Phase 25); **DISC-02 blocked** on server-2 canonical-date-field decision (may slip to v3.2)
 
-## Security Considerations
+### TD4 — Staging insert-and-catch spams postgres `ERROR: duplicate key` logs
 
-**SSH Source Transport Command Injection (Operator Supplied, Not Validated):**
-- Risk: `REPLAY_SOURCE_SSH_COMMAND` is taken from environment and passed as-is to `execFile` via shell in `src/discovery/source-client.ts` (lines 481-487). If an operator sets `REPLAY_SOURCE_SSH_COMMAND="curl && malicious-command"`, it executes both because the command string is interpolated into a shell invocation.
-- Files: `src/discovery/source-client.ts` (lines 480-491), `src/config.ts` (line 55, default `curl -fsSL --max-time 30`)
-- Current mitigation: The default command is safe (`curl -fsSL --max-time 30`). The SSH path is documented as "operator-managed" in `README.md` (line 233), placing responsibility on the operator to validate the command string.
-- Recommendations: Document this in `docs/integration-contract.md` or a security section of `README.md`. Consider validating the SSH command against a whitelist of allowed patterns (e.g., `curl`, `wget`) if a future phase adds operator-supplied shell scripts.
+- Issue: Every watch cycle the staging layer attempts a plain `INSERT` and catches the unique-constraint violation (`ingest_staging_records_checksum_object_key_key`) to classify duplicates. The app handles the rejection correctly, but postgres logs an `ERROR: duplicate key value violates unique constraint` per rejected row. At ~30 duplicates/cycle every ~21 s that is ~30 ERRORs/cycle, 24/7 — the dominant error stream in the `solid-stats-staging` namespace.
+- Files: `src/staging/postgres-staging-repository.ts` (the `insertStaging` → catch flow at lines 53–84 and the `classifyExistingStaging` fallback at lines 134–174)
+- Impact: Pure log noise — nothing is lost or corrupted — but it buries any genuine postgres error and inflates log volume. Observed as the only ERROR-level stream in the namespace over 24 h (Loki).
+- Fix approach: Change the benign duplicate path to `INSERT … ON CONFLICT (checksum, object_key) DO NOTHING` so the DB resolves the conflict silently. The conflicting-duplicate branch (same `source_replay_id`, different checksum → `"source_identity_conflict"` / `"raw_object_identity_conflict"`) is preserved. **Preferred:** fold with TD1 — if the pre-fetch `source_replay_id` check (DEDUP-01) lands first, no duplicate `INSERT` is ever attempted and TD4 disappears as a side effect.
+- v3.1 REQ: **DEDUP-03** (Phase 24)
 
-**Credentials Exposed in SSH Command Logging:**
-- Risk: If an operator embeds credentials in `REPLAY_SOURCE_SSH_COMMAND` (e.g., `curl -H "Authorization: Bearer secret"`), the command may be logged in error details or debug output.
-- Files: `src/discovery/source-client.ts` (lines 516-529, error building), `src/cli.ts` (lines 518-523, buildRetryWarnEmitter)
-- Current mitigation: No SSH command is logged in structured events; only error classifications and retry counts are emitted. The full command is never copied into error details.
-- Recommendations: Enforce in deployment docs that secrets should not be embedded in `REPLAY_SOURCE_SSH_COMMAND`; use SSH key-based authentication or environment variable substitution external to the fetcher.
+### TD5 (architecture follow-up) — Multiple `S3Client` / `pg.Pool` constructions
 
-**Secrets Redaction in Logged Configuration:**
-- Risk: The `redactConfig` function in `src/config.ts` (lines 175-180) redacts `s3.accessKeyId`, `s3.secretAccessKey`, and `staging.databaseUrl` from the `check` command JSON output. If a developer accidentally logs the full config object before redaction, secrets leak.
-- Files: `src/config.ts` (lines 175-180), `src/cli.ts` (line 243, check command output)
-- Current mitigation: Redaction is applied in the check command handler. The config is typed as `RedactedAppConfig` after redaction, so TypeScript prevents accidental full-config logs downstream in the same handler.
-- Recommendations: Add a lint rule or comment to prevent direct serialization of unredacted `AppConfig` in log output. Document the redaction contract in a SECURITY.md file.
+- Issue: Per `src/commands/clients.ts` the composition-root single-client pattern is documented and the factories (`createS3Client`, `createPgPool`) are in place, but the follow-up in `plans/replays-fetcher/briefs/fetcher-architecture-code-followups.md` records that individual adapter modules previously each called `new S3Client(…)` / `new Pool(…)`. The `*FromConfig` convenience factories were the vehicle for this duplication.
+- Files: `src/commands/clients.ts`, `src/commands/shared.ts`, `src/storage/s3-raw-storage.ts`, `src/checkpoint/s3-checkpoint-store.ts`, `src/evidence/s3-evidence-store.ts`, `src/check/s3-connectivity.ts`
+- Impact: Redundant client instances increase connection overhead and make teardown harder to guarantee. Partially addressed — `clients.ts` now exists as the intended composition root — but a full grep-proof of "exactly one `new S3Client` and one `new Pool` in `src/`" is the ARCH-04 acceptance gate.
+- Fix approach: Audit with `grep -rn "new S3Client\|new Pool" src/` excluding test files; ensure each appears exactly once in `src/commands/clients.ts`. Remove any remaining `*FromConfig` factory calls in adapter constructors.
+- v3.1 REQ: **ARCH-04, ARCH-05** (Phase 20)
 
-## Performance Bottlenecks
+## Architecture-Compliance Gaps
 
-**Sequential Per-Page Processing in `discover --store-raw`:**
-- Problem: `runStoreRawDiscovery` in `src/cli.ts` (lines 566-587) processes each candidate sequentially with explicit `// eslint-disable-next-line no-await-in-loop` comments. On a 100-candidate page with 1MB replays, the sequential store→stage can take 30+ seconds per candidate if network is slow.
-- Files: `src/cli.ts` (lines 566-587), `src/run/run-once.ts` (lines 313-319 uses parallelism via limiter)
-- Cause: `discover --store-raw` is a manual one-off command, not the production `run-once` path. Sequential ensures clear source/storage evidence ordering and simplifies debugging.
-- Improvement path: If operator feedback indicates sequential discovery is a bottleneck, parallelize within the same page using the same `limit` function. For now, `run-once` path already uses concurrency control and is the recommended production path.
+### Cross-band type contracts without a dedicated contracts home
 
-**Checkpoint Reads on Every CAS Retry:**
-- Problem: On a checkpoint write conflict (412), `writeCheckpoint` in `src/checkpoint/s3-checkpoint-store.ts` (lines 153-159) re-reads the entire checkpoint object, parses it, and merges it for each retry round. With 5 rounds, that's 5 GetObjectCommand calls plus JSON parse overhead per write attempt.
-- Files: `src/checkpoint/s3-checkpoint-store.ts` (lines 132-168)
-- Cause: The merge logic requires the fresh checkpoint to compute `max(lastCompletedPage)`. The trade-off is correctness vs. read efficiency.
-- Improvement path: If checkpoint conflicts are frequent (indicating heavy concurrent load), consider caching the last read or implementing a fallback strategy (e.g., exponential backoff with a final abort instead of merging). For now, 5 rounds is a reasonable safety limit.
+- Issue: `ReplayCandidate`, `RawReplayStorageEvidence`, `RunSummary`/`CompactRunSummary`, and `IngestStagingPayload` are defined in their owning-band modules and imported across bands. `src/evidence/s3-evidence-store.ts` imports `RunSummary` from `src/run/types.ts` — an upward import from the Adapter band into the Orchestration band, the confirmed fence violation predicted by the depcruise preset.
+- Files: `src/run/types.ts` (defines `RunSummary`), `src/evidence/s3-evidence-store.ts` (imports it upward), `src/staging/types.ts`, `src/discovery/types.ts`
+- Impact: Upward imports break the downward-only fence. The depcruise preset predicts this as violation F3. Any refactor of `run/types.ts` silently breaks `s3-evidence-store`.
+- Fix approach: Move shared cross-band types to a new `src/contracts/` (or `src/types/`) cross-cutting module at the bottom of the dependency graph. Builders stay in their owning bands; only the bare types move. Decision on `contracts/` vs `types/` naming must be made at Phase 19 discuss/plan and encoded in the depcruise preset.
+- v3.1 REQ: **ARCH-01** (Phase 19)
 
-**Staging Conflict Resolution Query Depth:**
-- Problem: When a unique constraint violation occurs during staging insert, `classifyExistingStaging` in `src/staging/postgres-staging-repository.ts` (lines 112-152) runs two additional SELECT queries to classify the conflict (`findBySourceIdentity` at line 116, then `findByObjectIdentity` at line 136 if needed). This adds latency per conflict.
-- Files: `src/staging/postgres-staging-repository.ts` (lines 112-186)
-- Cause: The schema uses `source_system + source_replay_id` and `checksum + object_key` as conflict identities. To distinguish which constraint fired, two queries are needed.
-- Improvement path: `server-2` could return the constraint name in a custom error or the app could use a single query with a CASE statement, but the current approach is correct and readable. Optimize if profiling shows this is a bottleneck (e.g., use a batch insert with ON CONFLICT ... DO UPDATE).
+### `config.ts` upward import of `SourceTransport` from `discovery/`
+
+- Issue: `src/config.ts` imports `SourceTransport` from `src/discovery/types.ts` (line 5). Config is a foundation module that nothing should depend on upward; importing from a capability band violates the downward-only fence.
+- Files: `src/config.ts` (line 5), `src/discovery/types.ts`
+- Fix approach: Move `SourceTransport` to the cross-cutting contracts module (see ARCH-01 above) so `config.ts` can import it downward.
+- v3.1 REQ: **ARCH-02** (Phase 19)
+
+### `no-leak.ts` orphan module
+
+- Issue: `src/run/no-leak.ts` exports `NoLeakSurface` but is imported by nothing in `src/` (confirmed by grep). It exists as documentation of the PROG-04 no-leak contract but has no callers in production code; `knip` would report it as an orphan.
+- Files: `src/run/no-leak.ts`
+- Impact: Dead code that knip flags; every new agent reading the codebase may treat it as an active abstraction.
+- Fix approach: Either wire it (import `NoLeakSurface` in the no-leak test or the guard that enforces the contract) or remove it and leave the comment inline. Decision at Phase 19 discuss/plan.
+- v3.1 REQ: **ARCH-03** (Phase 19)
+
+### Band-import fences not yet enforced by depcruise
+
+- Issue: `.dependency-cruiser.cjs` exists as a generic preset from `pnpm verify` wiring, but the five-band rules (downward-only, no band-skip, PG write-scope, S3 write-scope, no-parser, discovery-read-only, diagnostics-never-write, composition-root exemption) are not yet encoded as `forbidden` rules. The depcruise draft lives in `plans/archive/replays-fetcher/briefs/fetcher-dependency-cruiser.cjs` and was proven against the current tree, but it has not been promoted to the repo's live config.
+- Files: `.dependency-cruiser.cjs` (generic), `plans/archive/replays-fetcher/briefs/fetcher-dependency-cruiser.cjs` (draft with fetcher rules), `plans/archive/replays-fetcher/briefs/fetcher-depcruise-notes.md`
+- Impact: Architectural fences are manually enforced by code review only. A band-skip or upward import will not be caught by CI until ARCH-06 lands.
+- Fix approach: Promote the draft preset into `.dependency-cruiser.cjs`; add a planted-violation test (`pnpm run deps:validate` in the `verify` chain after `typecheck`). Tune path regexes against the real `src/` tree (adapters live inside capability dirs, not a flat `adapters/` dir).
+- v3.1 REQ: **ARCH-06** (Phase 23)
 
 ## Fragile Areas
 
-**Discovery HTML Parsing and Encoding Assumptions:**
-- Files: `src/discovery/html.ts` (lines 1-150+)
-- Why fragile: The parser assumes the source HTML has a specific structure: `<a>` tags with `href="#filename.ocap"` and optional `data-ocap="filename"` attributes. If the source changes its HTML layout or attribute names, discovery breaks silently or produces wrong filenames.
-- Safe modification: Add comprehensive integration tests with real source HTML samples (or mocked samples that mirror the live format). Document the assumed HTML contract in `docs/integration-contract.md`. Monitor source schema changes via the `contract-check` command.
-- Test coverage: `src/discovery/html.test.ts` has good coverage of the parsing logic, but it uses synthetic HTML fixtures. Add a test that validates against the live source URL if possible.
+### HTML parsing in `src/discovery/html.ts`
 
-**Checkpoint Merge Logic Correctness:**
-- Files: `src/checkpoint/checkpoint.ts` (mergeCheckpoints function, ~line 150+)
-- Why fragile: The merge strategy takes `max(lastCompletedPage)` and unions the `pages` map. If the logic is wrong, a newer checkpoint could be silently downgraded, or page counts could be double-counted.
-- Safe modification: Document the merge invariants clearly in comments (already done). Add property-based tests that generate conflicting checkpoints and verify merge idempotence and monotonicity.
-- Test coverage: `src/checkpoint/checkpoint.test.ts` has unit tests, but lacks parametrized scenarios. Add fuzzing or property tests to validate merge safety.
+- Why fragile: The listing and detail pages are parsed with regex/cheerio-style string selectors against sg.zone's HTML structure. Any layout change on the external site silently breaks discovery — candidates stop appearing with no thrown error, just an empty result set.
+- Files: `src/discovery/html.ts`, `src/run/fixtures/golden/list/`, `src/run/fixtures/golden/detail/`
+- Safe modification: All HTML parsing changes must update the golden fixture corpus and re-run `src/run/golden-e2e.integration.test.ts`. Never remove a `<td>` selector without verifying against a live page capture.
+- Test coverage: Golden integration test covers the real captured corpus; unit tests in `src/discovery/html.test.ts` cover edge cases. Coverage is good but fixtures are point-in-time snapshots — they do not guard against future site changes.
 
-**Staging Payload Construction and Field Mapping:**
-- Files: `src/staging/payload.ts` (lines 1-100+)
-- Why fragile: The payload builder maps raw replay evidence to `ingest_staging_records` fields. Field names are hardcoded strings (`sourceSystem`, `sourceReplayId`, `objectKey`, etc.). If `server-2` renames a column, the mapping breaks at runtime.
-- Safe modification: Add a Zod schema that mirrors the `server-2` table schema as a compile-time check. Use `src/staging/postgres-staging-repository.ts` SQL INSERT to document the expected field order and names.
-- Test coverage: `src/staging/payload.test.ts` has unit tests, but they use mock tables. Add an integration test against a real `ingest_staging_records` schema (testcontainers) to catch schema drift early.
+### `classifyExistingStaging` two-constraint dedup
 
-## Scaling Limits
+- Why fragile: After an insert unique-violation, `classifyExistingStaging` in `src/staging/postgres-staging-repository.ts` (lines 134–174) runs two sequential `SELECT` queries (`findBySourceIdentity` then `findByObjectIdentity`) to decide the conflict type. This is a TOCTOU window: if another worker inserts between the failed INSERT and the two SELECTs, classification may return the wrong branch. In v1 (single fetcher instance) this is safe; it becomes a risk if multiple fetcher pods run concurrently.
+- Files: `src/staging/postgres-staging-repository.ts`
+- Safe modification: Any change to the dedup/conflict classification must preserve all three outcome branches (`already_staged`, `conflict`, `failed`) and must not narrow the `ON CONFLICT` target columns without validating against `server-2`'s ON CONFLICT semantics expectations.
 
-**Single S3 Bucket for All Prefixes:**
-- Current capacity: One S3-compatible bucket with multiple prefixes (`raw/sha256/`, `checkpoints/`, `runs/`, `artifacts/`). S3 scales to millions of objects, but the checkpoint prefix uses a single object (latest per source).
-- Limit: If the service scales to hundreds of sources, each with its own checkpoint, the number of checkpoint objects remains bounded but the list/get operations could incur higher latency if the bucket becomes very large.
-- Scaling path: Partition checkpoints by source hash (e.g., `checkpoints/<hash>/latest.json`) to distribute load, or use S3 lifecycle policies to archive old evidence objects. For v1, a single bucket is sufficient.
+### `pg.Pool` lifecycle in the watch daemon
 
-**PostgreSQL Connection Pool for Staging Writes:**
-- Current capacity: Each CLI command creates its own `pg.Pool` with default configuration (typically 10 idle connections, 5 queued pending connections). Multiple concurrent `run-once` invocations create separate pools.
-- Limit: If 50 concurrent `run-once` processes run, you'd have 50 pools × 10 connections = 500 idle connections, exhausting the PostgreSQL server's max_connections (often 100 on development, 200-1000 on production).
-- Scaling path: Share a singleton pool across all processes (requires a sidecar or supervisor), or use a connection pooler like PgBouncer in front of PostgreSQL. For v1 scheduled jobs, separate pools are acceptable if concurrency is low.
+- Why fragile: The watch daemon (`src/commands/watch.ts`) does not explicitly call `pool.end()` on SIGTERM/SIGINT. The shutdown seam (lines 40–58) flips a `stopRequested` flag and waits for the current cycle to finish, but there is no `finally` block that drains the pool or destroys the S3Client after the loop resolves.
+- Files: `src/commands/watch.ts` (lines 98–138), `src/run/watch-loop.ts`
+- Risk: On Kubernetes pod termination, open PG connections may linger until the server-side `idle_in_transaction_session_timeout` closes them. Not a data-loss risk but causes connection slot exhaustion if pods are cycled rapidly.
+- v3.1 REQ: **ARCH-05** (Phase 20)
 
-**In-Memory RunSummary and Candidate Arrays:**
-- Current capacity: `loopState` in `src/run/run-once.ts` accumulates all candidates, raw storage results, and staging results in memory. With 10,000 candidates per run, that's roughly 10MB JSON + overhead.
-- Limit: With very large sources (100,000+ candidates per corpus), in-memory arrays could consume GBs. The full evidence summary is optional (opt-in `--emit-evidence`), so the compact stdout document is lean, but internal state grows unbounded.
-- Scaling path: Stream candidates to S3 or disk instead of buffering, or paginate checkpoint writes to avoid loading all pages into memory at once. For v1, unbounded arrays are acceptable if sources remain under 10,000 candidates per run.
+## Cross-App Risks
 
-## Dependencies at Risk
+### server-2 canonical replay-date field (DISC-02 hard blocker)
 
-**`p-limit` ESM-Only Dependency:**
-- Risk: `src/source/concurrency.ts` imports `p-limit` as an ESM default export. If a future build tool or Node.js version changes ESM handling, the import could break.
-- Impact: The entire concurrency control system would fail to initialize.
-- Migration plan: `p-limit` is a small, stable library. If import issues arise, consider replacing it with a custom bounded queue or `pqueue` (which has CommonJS support). For now, the bare-specifier import works with Node.js 25 and TypeScript 6.
+- Risk: `DISC-02` requires writing the parsed game-date to the field(s) that `server-2` promotes as the canonical replay date and that `web` surfaces in the UI. The field name, format (ISO-8601 UTC vs local), timezone interpretation, and `promotion_evidence` schema key have not been agreed. Writing the wrong field or format corrupts the canonical replay record in `server-2`.
+- Files (fetcher side): `src/discovery/html.ts`, `src/staging/payload.ts`, `src/staging/types.ts`, `src/run/golden-e2e.integration.test.ts` (line 216 must flip)
+- Current mitigation: DISC-02 is explicitly **Blocked** in `REQUIREMENTS.md` (Phase 25) until the server-2 decision lands. DISC-01 (local parse only, no staging write) can ship independently.
+- Action required: Synchronous question to server-2 team before Phase 25 is planned.
 
-**Zod Configuration Validation:**
-- Risk: `src/config.ts` uses Zod for schema validation. If a future version of Zod changes the `safeParse` API or error format, config loading could break.
-- Impact: Configuration failures would surface at startup, but error messages might change format.
-- Migration plan: Zod is stable and widely used. If migration is needed, create a validation adapter that normalizes error formats. For now, pin the Zod version in `pnpm-lock.yaml` and review major upgrades before adopting.
+### `ON CONFLICT` semantics vs server-2 poller expectations (DEDUP-03)
 
-**AWS SDK for JavaScript v3 S3 Client:**
-- Risk: S3 API calls (`PutObjectCommand`, `GetObjectCommand`, etc.) depend on AWS SDK version 3. If AWS releases a breaking change, the SDK initialization in `src/storage/s3-raw-storage.ts` and `src/checkpoint/s3-checkpoint-store.ts` could fail.
-- Impact: S3 writes and checkpoint operations would fail. The service would be unable to store replays or persist progress.
-- Migration plan: Pin the AWS SDK version and test major upgrades in a staging environment. The codebase uses only core S3 operations (PUT, GET, HEAD), which are stable APIs. Upgrade early and often to avoid security lag.
+- Risk: Changing the staging insert from insert-and-catch to `INSERT … ON CONFLICT … DO NOTHING` changes which rows the server-2 poller sees. If server-2 relies on the ERROR path as a signal, the change must be validated against the poller's polling query.
+- Files: `src/staging/postgres-staging-repository.ts`
+- Current mitigation: Listed as a pre-plan coordination item in `REQUIREMENTS.md`. Must be confirmed with server-2 before Phase 24 is planned.
+
+### `source_replay_id` pre-fetch dedup cannot silently drop replays (DEDUP-01)
+
+- Risk: If the `source_replay_id` existence check has a bug (e.g. wrong column, wrong `source_system` filter), new replays will be silently skipped — ingest coverage is lost without any error. This is the exact property the golden parity harness was built to prove.
+- Files: `src/staging/postgres-staging-repository.ts`, `src/run/watch-loop.ts`, `src/run/ingest-page.ts`
+- Current mitigation: `TECH-DEBT.md` explicitly requires human-in-the-loop review + a new staging deploy gate before this ships. Byte-checksum dedup must remain as the backstop.
 
 ## Missing Critical Features
 
-**No Health Check or Liveness Endpoint:**
-- Problem: `run-once` is a one-shot scheduled job with no HTTP server or health endpoint. A scheduler cannot probe the service to verify readiness before invoking it.
-- Blocks: Kubernetes liveness/readiness probes, external monitoring dashboards.
-- Mitigation: The `check` command validates connectivity, but must be called separately. A future `replays-fetcher serve` endpoint could expose health/readiness checks.
+### Depcruise band fences not in CI
 
-**No Metrics or Observability Export:**
-- Problem: Run summaries are JSON on stdout/stderr. There is no metrics export (Prometheus, StatsD, CloudWatch). Operators must parse JSON logs to derive latency, throughput, or failure rates.
-- Blocks: Real-time dashboards, alerting based on performance thresholds.
-- Mitigation: Structured logging via pino captures events, but a metrics collector (e.g., prom-client) would improve observability. Defer to a later phase if operator demand justifies it.
-
-**No Incremental Resume without Checkpoint:**
-- Problem: If the source checkpoint is lost or corrupted, `run-once` restarts from page 1 with no way to resume from an arbitrary page number. Operators must manually construct a checkpoint JSON to resume.
-- Blocks: Partial recovery from data loss or checkpoint schema changes.
-- Mitigation: Add an operator-supplied `--start-page N` flag for emergency recovery. Checkpoint schema must stay backward-compatible.
+- Problem: There is no automated check that enforces the five-band import layering. A future PR could introduce an upward import or a write-scope fence violation without any CI failure.
+- Blocks: Architecture integrity guarantee; the code-review skill's `[pending]` layer-check annotations cannot be retired until ARCH-06 ships.
 
 ## Test Coverage Gaps
 
-**Untested SSH Source Path (Real SSH Invocation):**
-- What's not tested: `createSshSourceClient` in `src/discovery/source-client.ts` uses real `execFile` to invoke SSH. The unit tests mock `execFile`, but there's no integration test that actually runs SSH against a test host.
-- Files: `src/discovery/source-client.ts` (lines 460-507), `src/discovery/source-client.test.ts` (mocked)
-- Risk: Breakage in the SSH command line construction or timeout handling could go undetected until production.
-- Priority: Medium. SSH is an optional transport. If operators use SSH heavily, add a testcontainers-based SSH server fixture for integration tests.
+### Watch-loop timing paths use real sleeps
 
-**Concurrency Collisions (Limited Test Coverage):**
-- What's not tested: Multiple concurrent `run-once` processes writing the same checkpoint object. The CAS loop is tested, but not with real concurrent AWS SDK clients.
-- Files: `src/checkpoint/s3-checkpoint-store.ts`, integration tests
-- Risk: Race conditions in merge logic could surface in production load tests but not in unit tests.
-- Priority: High. Add a chaos-test scenario where two threads/processes deliberately try to write the same checkpoint.
+- What is not tested: Timing-sensitive branches in `src/run/watch-loop.ts` (inter-cycle sleep, heartbeat interval) use real `setTimeout`-based sleeps in tests rather than `vi.useFakeTimers()`.
+- Files: `src/run/watch-loop.test.ts`, `src/run/golden-watch.integration.test.ts`
+- Risk: Slow CI, flaky results under load, and inability to deterministically test edge cases (sleep interrupted by SIGTERM mid-wait).
+- Priority: Medium — TEST-04 (Phase 26)
 
-**S3 MinIO Compatibility (Partial):**
-- What's not tested: Edge cases like S3-compatible providers with different error codes or behavior (e.g., DigitalOcean Spaces, Linode Object Storage). The integration tests use MinIO, but real providers may differ.
-- Files: `src/checkpoint/s3-checkpoint-store.ts`, `src/storage/s3-raw-storage.ts`, integration tests
-- Risk: Deployment to a different S3 provider could expose unexpected behavior.
-- Priority: Low for v1. Document the tested provider (MinIO). Add provider-specific tests if a new provider is adopted.
+### Multi-behavior tests and duplicated arrange literals
 
-**Database Connection Error Scenarios:**
-- What's not tested: Transient PostgreSQL connection failures (e.g., network timeout, pool exhaustion) during staging writes. Tests use testcontainers but assume the container is always available.
-- Files: `src/staging/postgres-staging-repository.ts`, integration tests
-- Risk: A brief database outage during staging could cause the run to fail ungracefully instead of retrying or logging clearly.
-- Priority: Medium. Add an integration test that kills the PostgreSQL container mid-run to verify error handling.
+- What is not tested (consistently): Some test suites assert multiple behaviors per `it()` block and repeat fixture literals across assertions rather than using named constants or `test.each` tables.
+- Files: `src/staging/postgres-staging-repository.test.ts`, `src/run/run-once.test.ts`
+- Risk: A single test failure masks the unrelated behavior that was bundled in the same block; duplicated literals drift silently.
+- Priority: Low-medium — TEST-01, TEST-02, TEST-03 (Phase 26)
 
 ---
 
-*Concerns audit: 2026-06-13*
+*Concerns audit: 2026-06-20*
