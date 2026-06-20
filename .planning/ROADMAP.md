@@ -61,7 +61,7 @@ Behavior-preserving migration onto the shared `@solid-stats/ts-toolchain` preset
 - [x] **Phase 22: God-File Decomposition** — Split the four `max-lines`-suppressed god-files within their bands and remove the suppressions (completed 2026-06-20)
 - [x] **Phase 23: Depcruise Band-Fence Lock-In** — Turn on the eight five-band import fences in `verify`, proven by a planted-violation test (enforced LAST as a no-op lock-in) (completed 2026-06-20)
 - [x] **Phase 24: Watch Pre-Fetch Dedup + ON CONFLICT Staging** — Skip already-staged candidates before byte-fetch; non-throwing `ON CONFLICT DO NOTHING` ends the duplicate-key log spam (intentional behavior change) (completed 2026-06-20)
-- [ ] **Phase 25: Discovery Game-Date Capture (Cross-App Gated)** — Parse the listing "Game date" cell to ISO-8601; populate the canonical field once agreed with `server-2` (DISC-02 may slip to v3.2)
+- [ ] **Phase 25: Discovery Game-Date Capture (Cross-App Gated)** — Parse the listing "Game date" cell to UTC ISO; populate the canonical staging `replayTimestamp` as a filename-fallback + flip the golden oracle (cross-app gate RESOLVED from server-2 source; both DISC-01 + DISC-02 ship)
 - [ ] **Phase 26: Test-Quality Pass + Correctness Hygiene** — Close the test-quality backlog and the live-verified correctness findings
 
 ## Phase Details
@@ -193,7 +193,7 @@ Plans:
 ### Phase 25: Discovery Game-Date Capture (Cross-App Gated)
 
 **Goal**: The listing "Game date" cell is parsed into an ISO-8601 timestamp and threaded into candidate metadata; once the canonical field is agreed with `server-2`, it populates `promotion_evidence` and the golden oracle assertion that pins the field's absence is flipped to assert the concrete value.
-**Depends on**: Phase 24 (discovery/run-once paths stable). DISC-02 is additionally **hard-blocked** on the server-2 canonical-date-field decision.
+**Depends on**: Phase 24 (discovery/run-once paths stable). The DISC-02 cross-app gate is **RESOLVED** (verified against server-2 source — see Cross-app gate below).
 **Requirements**: DISC-01, DISC-02
 **Success Criteria** (what must be TRUE):
 
@@ -201,9 +201,12 @@ Plans:
   2. Date-parse unit tests cover day/month order, the agreed timezone, and the absent/unparseable cell; the existing filename-prefix timestamp path is confirmed still working.
   3. **(Gated — DISC-02)** The parsed game-date populates the canonical field (`promotion_evidence.discoveredAt` and/or `replay_timestamp`) agreed with `server-2`, and `golden-e2e.integration.test.ts:216` is flipped from `toBeUndefined` to assert the concrete ISO value.
 
-**Cross-app gate (hard blocker, DISC-02)**: the canonical date field, format, timezone, and `web` read-path must be agreed with `server-2` before the DISC-02 contract write and oracle flip land. **If that decision does not land before milestone close, DISC-01 (local parse) ships and DISC-02 explicitly slips to v3.2.** Structure the phase so DISC-01 ships independently of the gate.
-**Behavior-preservation gate**: the golden oracle flip is the intentional behavior change for DISC-02; until then DISC-01 leaves the oracle and 100% V8 coverage untouched. depcruise + knip green throughout.
-**Plans**: TBD
+**Cross-app gate (DISC-02) — RESOLVED**: the canonical date field, format, timezone, and `web` read-path were verified directly against `server-2` source during context/research. Canonical field = staging `replayTimestamp` → `replays.replay_timestamp` (consumed by `resolveReplayTimestamp`, indexed, read by web/stats); `promotion_evidence.discoveredAt` is opaque audit jsonb (zero server-2 reads); format ISO-8601 `timestamptz`; TZ assumed UTC by parity with the live filename convention. The "hard blocker" is retired — DISC-02 ships in this milestone. The listing game-date is a strict FALLBACK for `replayTimestamp` (filename-derived value stays primary, never overridden). Residual: a human confirms the listing's actual TZ before production ship (ship-gate flag, not a dev blocker).
+**Behavior-preservation gate**: the golden oracle flip (assert the concrete `promotion_evidence.discoveredAt` value, since all 90 golden fixtures carry a filename timestamp so the `replay_timestamp` fallback is unit-proven, not corpus-exercised) is the intentional behavior change for DISC-02 — UPDATE, not loosen; 100% V8 coverage held with new branches tested; depcruise + knip green throughout.
+**Plans**: 1 plan
+
+Plans:
+- [ ] 25-01-PLAN.md — Parse the listing "Game date" cell → UTC ISO on candidate metadata.discoveredAt (DISC-01); wire it as a filename-primary / listing-fallback for staging replayTimestamp + flip the golden-e2e oracle to the concrete discoveredAt value (DISC-02)
 
 ### Phase 26: Test-Quality Pass + Correctness Hygiene
 
@@ -236,7 +239,7 @@ Phases execute in numeric order: 19 → 20 → 21 → 22 → 23 → 24 → 25 �
 | 21. Mechanical Convention Cleanup | v3.1 | 2/2 | Complete    | 2026-06-20 |
 | 22. God-File Decomposition | v3.1 | 4/4 | Complete    | 2026-06-20 |
 | 23. Depcruise Band-Fence Lock-In | v3.1 | 1/1 | Complete    | 2026-06-20 |
-| 24. Watch Pre-Fetch Dedup + ON CONFLICT | v3.1 | 3/3 | Complete   | 2026-06-20 |
+| 24. Watch Pre-Fetch Dedup + ON CONFLICT | v3.1 | 3/3 | Complete    | 2026-06-20 |
 | 25. Discovery Game-Date Capture (gated) | v3.1 | 0/TBD | Not started | - |
 | 26. Test-Quality + Correctness Hygiene | v3.1 | 0/TBD | Not started | - |
 

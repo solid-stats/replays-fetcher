@@ -1,9 +1,9 @@
 ---
 phase: 25
 slug: discovery-game-date-capture-cross-app-gated
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: planned
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-06-20
 ---
 
@@ -49,7 +49,9 @@ created: 2026-06-20
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | Status |
 |---------|------|------|-------------|-----------|-------------------|--------|
-| _pending planner_ | — | — | DISC-01, DISC-02 | — | — | ⬜ pending |
+| Task 1 (parse cells[3] → UTC ISO; malformed/empty → undefined; thread metadata.discoveredAt) | 25-01 | 1 | DISC-01 | unit (parse matrix) | `pnpm test src/discovery/html.test.ts` | ⬜ pending |
+| Task 2 (fallback precedence: filename WINS; listing-only fills; neither → undefined) | 25-01 | 1 | DISC-02 | unit (precedence) | `pnpm test src/staging/payload.test.ts` | ⬜ pending |
+| Task 3 (golden oracle FLIPPED: discoveredAt absence-assertion → concrete UTC value) | 25-01 | 1 | DISC-02 | integration (golden oracle) | `pnpm run test:integration src/run/golden-e2e.integration.test.ts` | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -73,10 +75,10 @@ WITH tests (no `v8 ignore` on a reachable branch).
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 30s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] No watch-mode flags
+- [x] Feedback latency < 30s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** planned (3/3 tasks mapped; all automated)
