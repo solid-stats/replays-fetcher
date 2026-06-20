@@ -1438,6 +1438,8 @@ const runOnceBoundaryFiles = [
   "src/run/run-once.ts",
   "src/run/run-once-checkpoint.ts",
   "src/run/run-once-summary.ts",
+  "src/run/run-once-page.ts",
+  "src/run/run-once-page-rate.ts",
   "src/run/run-once-types.ts",
 ] as const;
 
