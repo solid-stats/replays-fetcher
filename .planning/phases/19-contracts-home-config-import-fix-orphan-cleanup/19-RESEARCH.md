@@ -263,9 +263,9 @@ import type { SourceTransport } from "./discovery/types.js";
 **Note:** A1/A2 are flagged for the planner but both are evidence-backed, not speculative. The
 CONTEXT grants Claude's discretion on `no-leak` disposition and the move mechanics.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Granularity of `src/types/` files (one-per-contract vs grouped).**
+1. **(RESOLVED — planner moved cross-band DTOs only; band-local types stay)** **Granularity of `src/types/` files (one-per-contract vs grouped).**
    - What we know: `run-summary.ts` precedent is one cohesive file per concern; no barrel.
    - What's unclear: whether to split `RawReplayObjectIdentity`/`RawReplaySourceEvidence` siblings
      into `raw-replay.ts` with `RawReplayStorageEvidence` or keep band-local.
@@ -275,7 +275,7 @@ CONTEXT grants Claude's discretion on `no-leak` disposition and the move mechani
      per ARCH-01 ("per-band `types.ts` keep band-local types only"). Decide per-type by grepping
      cross-band usage during plan.
 
-2. **Does `IngestStagingResult` cross bands?** It's imported by `src/types/run-summary.ts:7` (Band 5)
+2. **(RESOLVED — planner moves it to `src/types/staging.ts` in 19-01 Task 1)** **Does `IngestStagingResult` cross bands?** It's imported by `src/types/run-summary.ts:7` (Band 5)
    AND defined in `staging/types.ts:59` (Band 3) → it crosses. Recommendation: move it to
    `src/types/` (or shim) so `run-summary.ts` is leaf.
 
