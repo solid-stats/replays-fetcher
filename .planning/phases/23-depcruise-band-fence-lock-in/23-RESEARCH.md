@@ -392,9 +392,9 @@ No missing dependencies.
 
 **Everything else is VERIFIED** against the live tree via the scratch-config runs.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Fixture location for the planted test**
+1. **(RESOLVED — plan 23-01 Task 2 uses runtime temp files cleaned up in afterEach)** **Fixture location for the planted test**
    - What we know: fixtures must be excluded from coverage + knip; the `TEST` `pathNot` already
      covers `*.test.ts`/`*.fixtures.ts`.
    - What's unclear: whether to inline temp files via the test or keep a committed
