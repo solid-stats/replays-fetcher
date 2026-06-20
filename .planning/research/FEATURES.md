@@ -1,131 +1,146 @@
 # Feature Research
 
-**Domain:** Toolchain migration — internal developer tooling (no ingest behavior change)
-**Researched:** 2026-06-13
+**Domain:** Internal compliance / tech-debt refactor of an existing strict-TS scheduled ingest CLI (`replays-fetcher`)
+**Researched:** 2026-06-20
 **Confidence:** HIGH
 
-The "features" of v3.0 Track C are migration deliverables, not ingest product features. Ingest behavior is frozen. All decisions are locked in `.planning/spikes/MANIFEST.md` (spikes 001–004 VALIDATED) and REQUIREMENTS.md. This file maps deliverables to the template structure for roadmap consumption.
+> **Reading note for the roadmapper/planner.** This is a *subsequent* milestone (v3.1) with **no new end-user features**.
+> Each "feature" below is a **refactor / compliance capability**. "Table stakes" = an established, expected property of a
+> mature single-binary TS/Node ingest service that this codebase is currently out of compliance with. "Differentiator" =
+> a genuine behavior or latency win (only two capabilities qualify). "Anti-feature" = the over-engineered version of a
+> capability to explicitly NOT build for a single scheduled CLI binary. Verified against the live source tree at HEAD
+> (not assumed from the tech-debt doc): the composition root, staging insert path, and `discoveredAt` drop were all
+> confirmed in code.
 
-## Feature Landscape
+---
 
-### Table Stakes (Must Land for v3.0 to Be Done)
+## Capability Landscape
 
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| Bootstrap `@solid-stats/ts-toolchain` git repo | Fetcher cannot consume shared presets until the repo exists; blocks all other deliverables that reference presets | MEDIUM | `git@github.com:solid-stats/ts-toolchain.git`; holds tsconfig/oxlint/oxfmt/vitest presets + `lefthook.yml`; self-validating CI required before a consumable tag is cut |
-| Repository cleanup | Dead code and stale suppression comments corrupt the Oxlint signal — genuine findings cannot be separated from pre-existing noise | LOW | CLN-01/02/03: remove dead code, stale TODO/FIXME, redundant `eslint-disable`; tighten ignores |
-| Convention-skill refactor | Unresolved convention violations become false-positive noise in the Oxlint sweep | MEDIUM | CLN-04: pass `solidstats-fetcher-ts-*` code-review skill; ingest-boundary gate stays intact |
-| Oxlint migration | Replaces ESLint as the sole linter; primary Track C work item | MEDIUM-HIGH | LNT-01/02/03: ESLint removed; vocalclub rule **options** ported (not just severities — severity-only produced 1336 false positives in spike 001); `eslint-plugin-import` dropped; `no-await-in-loop` off; before/after rule-delta documented |
-| Type-aware Oxlint re-validation | tsgolint alpha must be validated on this repo before it can inform future blocking decisions | LOW | LNT-04: non-blocking in `verify` until validates clean; result informs `server-2` rollout |
-| Oxfmt migration | Replaces Prettier as the formatter | LOW | FMT-01/02: Prettier removed; `.oxfmtrc.json` from preset; one isolated reformat commit (style delta validated as acceptable in spike 002) |
-| tsdown build | Replaces `tsc --outDir` emit with a single-entry ESM bundle | MEDIUM | BLD-01/02: tsdown bundle; `tsc --noEmit` stays for typecheck; Docker smoke-run of bundled CLI `check` command (validated in spike 003) |
-| dependency-cruiser + knip import gates | Covers the gap left by dropping `eslint-plugin-import` (validated in spike 004) | MEDIUM | IMP-01/02: depcruise covers no-cycle + boundary rules; knip covers unused-modules + dep hygiene; both wired into `verify` |
-| lefthook pre-commit / pre-push hooks | Developer-local mirror of CI `verify`; prevents broken commits/pushes | LOW | HOK-01/02/03: pre-commit = Oxfmt+Oxlint staged; pre-push = tsc+Vitest; config sourced from `@solid-stats/ts-toolchain`; `--no-verify` bypass retained |
-| CI `verify` rewrite + 100% coverage held | End-to-end green on the new command surface from a clean checkout | MEDIUM | VRF-01/02/03: `pnpm verify` runs oxfmt → oxlint → tsc → unit → integration → coverage → tsdown → depcruise → knip; V8 coverage at 100% unchanged |
+### Table Stakes (Expected of a mature TS/Node ingest CLI — currently out of compliance)
 
-### Differentiators (Nice-to-Have, Defer if Time-Short)
+| Capability | Why Expected | Complexity | Notes |
+|---|---|---|---|
+| **1. Shared home for cross-band data contracts** (DTOs used by ≥2 bands) | A layered (five-band) service must not let a lower band import *up* into a higher band to reach a shared DTO. The standard fix is a dependency-free contracts module every band imports *down* into. Without it, `type-over-interface` and `import-order` churn ride on top of structural import violations. | **LOW–MEDIUM** | **Partially present.** `src/types/run-summary.ts` already exists as a shared-contract home. The work is *consolidation*: move `ReplayCandidate` / `RawReplayStorageEvidence` / `RunSummary` constituents into a leaf `src/types/` (or per-band re-export) so the documented `config.ts` upward import and the `no-leak.ts` orphan disappear. Depcruise already fences cycles, so the gate to keep it from regressing is **free**. |
+| **2. Composition-root construction of long-lived clients + graceful teardown** | One `S3Client` and one `pg.Pool` per process, built once at the top and injected; long-running daemons must close the pool/sockets on shutdown so they don't leak across a redeploy. This is the canonical Node service-lifecycle pattern. | **LOW** (for `run-once`) / **MEDIUM** (for `watch` teardown) | **Largely present already** — `src/commands/clients.ts` is an explicit composition root (`createS3Client`, `createPgPool`) with a header comment stating the one-client rule, and adapters take injected clients. The real gap is **graceful teardown in the `watch` daemon**: confirm `pool.end()` / `S3Client.destroy()` on `shouldStop` / SIGTERM. `check.ts` already calls `pool.end()`; the daemon path needs the same discipline. By-hand wiring (no DI container) is correct for one binary. |
+| **3a. Pre-fetch idempotency: cheap existence check before downloading bytes** | A continuous page-1 poller that re-downloads ~30 replays every ~21s purely to discover they are duplicates is wasteful by every ingest standard. The expected shape is: cheap `SELECT 1 ... WHERE source_replay_id = $1` short-circuit **before** the byte fetch. | **MEDIUM** | **Absent — this is a behavior change (the one intentional one).** Correctness obligation is the whole reason it was deferred (TECH-DEBT TD1): the skip must **never** drop a genuinely-new replay. Safe because `source_replay_id` is immutable on sg.zone, but it demands careful tests (new-id → fetched; known-id → skipped pre-fetch) + the golden watch oracle. This is the latency/source-load win — see Differentiators; counted here too because "don't re-download known objects" is table-stakes hygiene. |
+| **3b. Non-throwing staging dedup (`INSERT … ON CONFLICT DO NOTHING`)** | Insert-and-catch-`23505` is a working but log-noisy anti-pattern; the idiomatic Postgres dedup is `ON CONFLICT … DO NOTHING` so duplicates resolve silently in the DB with no `ERROR` line. | **LOW** | **Absent — confirmed in code.** `postgres-staging-repository.ts#insertStaging` does a bare `INSERT … returning id` and catches `23505` via `isUniqueViolation`, then re-classifies. TD4: this is the *dominant ERROR stream* in staging Postgres logs 24/7. **Same root cause as 3a** — if the pre-fetch skip lands, the duplicate INSERT is never attempted and this noise vanishes as a side effect. Fold 3a+3b into one change. Correctness obligation: the existing conflict-classification path (`source_identity_conflict` / `raw_object_identity_conflict`) must be **preserved** — `DO NOTHING` returns zero rows, so the repository must still distinguish "already staged identically" from a genuine conflict via a follow-up `SELECT`, exactly as `classifyExistingStaging` does today. |
+| **5. Test-quality standardization** (AAA no-dup-literals, RITE one-behavior, table-driven, deterministic time, branch-gap closure) | The shared + fetcher test skills already mandate RITE/AAA/determinism and a 100% reachable-source gate; "table stakes" here = bringing existing tests up to the standard the repo already declares. | **LOW–MEDIUM** (mechanical, broad surface) | See the **Vitest-Concrete Test-Quality Patterns** section below. All five sub-patterns are already codified in `solidstats-fetcher-ts-tests` / `solidstats-shared-testing-standards`; the milestone *applies* them, it does not invent them. Severity per review-standards §F: test quality is **never a standalone BLOCK** unless a weak test masks a real bug. |
 
-| Feature | Value Proposition | Complexity | Notes |
-|---------|-------------------|------------|-------|
-| CI drift guard for `.oxlintrc.json` | Catches preset drift before it becomes a silent delta between repos | LOW | DFT-01: diffs repo's `.oxlintrc.json` against `@solid-stats/ts-toolchain` baseline in CI |
-| `import/order` residual (`simple-import-sort`) | Keeps import ordering enforced if depcruise/knip leave that coverage gap | LOW | DFT-02: only add if the gap is confirmed at plan-phase; may not be needed |
+### Differentiators (Genuine behavior / operational win — not mere compliance)
 
-### Anti-Features (Explicitly NOT in Scope)
+| Capability | Value Proposition | Complexity | Notes |
+|---|---|---|---|
+| **3a. Pre-fetch dedup by `source_replay_id`** | Collapses a no-new-replay watch cycle from ~21s + ~2.7 req/s sustained on sg.zone to a single page-1 *list* fetch (sub-second, ~1 request). Turns "near-instant" detection from aspirational into real, and removes constant redundant load on the external source **and** S3. | **MEDIUM** | The single most valuable change in the milestone. Cross-app-safe (read-only existence check against staging this service owns). Bundle with 3b. |
+| **4. Capture source-derived game-date → promotion-evidence contract** | Threads the listing "Game date" cell into `candidate.discoveredAt` → `promotion_evidence.discoveredAt` and/or the `replay_timestamp` staging column, so `server-2` promotes a real source date and `web` can surface it — instead of falling back to filename-prefix-or-`fetchedAt`. | **MEDIUM** | **Cross-app contract dependency — see flag below.** Parse is local (`extractReplayRows` in `discovery/html.ts`), but *which field is canonical* (promotion_evidence vs `replay_timestamp`) must be agreed with `server-2` before the contract changes. The golden oracle currently **pins the absence** (`promotion_evidence.discoveredAt toBeUndefined` at `golden-e2e.integration.test.ts:216`) — that assertion must flip when discovery starts setting it. |
 
-| Feature | Why Requested | Why Problematic | Alternative |
-|---------|---------------|-----------------|-------------|
-| Vite / full Vite+ runtime or PM management | VoidZero branding includes Vite; teams may assume it | Vite is a frontend bundler entry point; the CLI is a backend scheduled job | Use tsdown (Rolldown-backed) for the bundle; Vitest for tests — the VoidZero subset appropriate for backends |
-| Porting `@stylistic` ESLint rules to Oxlint | Style rules provide familiar lint-as-formatter coverage | Oxfmt handles all formatting; porting `@stylistic` duplicates responsibility and couples the two tools | Accept `@stylistic` loss; Oxfmt is the sole formatting authority |
-| Keeping `eslint-plugin-import` / `import-x` as an ESLint residual | Provides import ordering and boundary enforcement | Spike 004 proved tsc + dependency-cruiser + knip covers the gap; keeping any ESLint residual undermines the migration goal | dependency-cruiser for boundaries/cycles; knip for unused deps; `simple-import-sort` only if ordering gap confirmed |
-| Any ingest behavior, staging schema, S3 key, source-identity, or cross-service contract change | Tempting to "fix while we're in there" | This is a toolchain-only milestone; behavior mutations risk breaking `server-2` compatibility and require adjacent app evidence | Freeze behavior; file a separate GSD plan for any discovered ingest improvements |
-| Migrating `server-2` or `web` in this milestone | Momentum after the pilot is established | Those repos follow the rollout order; piloting with two repos simultaneously defeats the pilot's purpose | Fetcher pilot first; `server-2` → `web` per `RELEASE-PLAN.md` Phase 0 Track 1 |
-| Monorepo / workspace restructuring | Shared config looks like a natural monorepo trigger | Polyrepo + git-dep was decided; restructuring is a separate high-effort project with no track C requirement | Stay polyrepo; `@solid-stats/ts-toolchain` as a pnpm git-dep |
-| Enabling alpha type-aware (tsgolint) as a blocking CI gate | Completeness | tsgolint is alpha; blocking on unvalidated alpha tooling breaks CI reliability | Re-validate per repo; keep non-blocking until clean on both fetcher and `server-2` |
+### Anti-Features (Over-engineering to explicitly NOT build for a single CLI binary)
 
-## Feature Dependencies
+| Anti-Feature | Why It Looks Appealing | Why Problematic Here | Do Instead |
+|---|---|---|---|
+| **A DI container / IoC framework** (tsyringe, InversifyJS, awilix) | "Proper" dependency injection; auto-wiring | Massive over-engineering for one binary with ~2 long-lived clients. Hides the composition root the conventions *want* explicit. The repo's `clients.ts` header literally documents the by-hand one-client rule. | Keep the **by-hand composition root** (`createX(deps)` factories), pass clients down explicitly. |
+| **A shared "common"/`@solid-stats/contracts` package** for the cross-band DTOs | Reuse across `server-2`/`web` | These DTOs are fetcher-internal ingest shapes; publishing them as a package invents a cross-repo contract surface and a versioning burden the milestone does not need. The staging *schema* contract with `server-2` is the only real cross-repo surface. | A **local leaf module** (`src/types/`) inside this repo only. |
+| **Generic deduplication / bloom-filter / cache layer** in front of staging | "Make dedup fast/scalable" | The dataset is ~30 page-1 rows per cycle; a single indexed `SELECT` on `(source_system, source_replay_id)` is already sub-millisecond. A cache adds a coherence bug surface (the exact "never drop a new replay" risk). | One cheap, indexed existence `SELECT`, no cache. |
+| **A full migration/ORM framework** to ship the `ON CONFLICT` change | "Schema is changing" | `ON CONFLICT DO NOTHING` is a query-shape change, **not** a schema change — the unique constraint already exists. Introducing an ORM hides staging writes from audit (explicitly forbidden by AGENTS). | Edit the raw SQL in `postgres-staging-repository.ts`; keep writes auditable. |
+| **A mutation-testing gate (Stryker) added to `verify`** as part of test-quality | "Prove the oracles are strong" | Mutation testing is a *mindset* per testing-standards §H, valuable to *think* with — but wiring Stryker into the 100%-coverage `verify` surface is a separate, heavyweight initiative, not in-scope for closing test-quality debt. | Apply mutation *thinking* by hand when closing branch gaps; do not add the tool to the gate this milestone. |
+| **Splitting god-files across band boundaries** | "Smaller files" | The four `max-lines`-suppressed files must be split **within their own band** (downward-only imports preserved). Splitting a capability file into the adapter band to shrink it would violate the five-band layering — trading one debt for a worse one. | Split each file into cohesive modules **inside its band** (TECH-DEBT seams for `run-once.ts` are pre-drawn); remove the `oxlint-disable max-lines`, never re-disable. |
+
+---
+
+## Vitest-Concrete Test-Quality Patterns (Capability 5 detail)
+
+These are the standardizations worth enforcing, expressed against this repo's actual Vitest setup (colocated `*.test.ts`, native `expect`, `vi`, `test.each`, `vi.useFakeTimers`):
+
+1. **AAA with no duplicated literals.** Per testing-standards §C Arrange/Assert DRY rule: if a value appears in both Arrange and Assert, bind it once (`const sourceReplayId = "1778269931"`) and reference it in both places. Today fixtures hardcode the same ISO timestamps and ids inline across Arrange and Assert (e.g. `"2026-05-09T00:32:44.000Z"` repeated in `payload.test.ts`). Lift logically-identical literals to a named binding; keep intentional duplicates with a one-line justifying comment.
+
+2. **RITE one-behavior-per-test (Explicit).** Split tests that assert several unrelated contracts into one-behavior tests. A run-once orchestration test asserting *both* skip-count *and* staged-count *and* an emitted log line is three behaviors — only group assertions that check the **same** contract.
+
+3. **Parameterized / table-driven tests (`test.each`).** The repo already uses this well (`sourceConcurrencyBoundaryCases` in config). Extend it to the conflict-classification matrix (3b) and the new-id-vs-known-id pre-fetch matrix (3a): a `readonly (readonly [label, input, expected])[]` table feeding one `test.each` beats N near-identical copy-pasted tests.
+
+4. **Deterministic time — no real sleeps.** Fetcher-specific hard rule (`solidstats-fetcher-ts-tests`): pacing/backoff/retry and the **watch loop** are tested with `vi.useFakeTimers()` + an injected `sleep`/`now` seam, never wall-clock waits. The watch loop already injects `sleep`/`now`/`shouldStop` for exactly this; the new pre-fetch path (3a) must be tested through those fakes (assert "known-id cycle issues zero byte-fetch calls" via a spy on the byte client, advancing fake timers — not by sleeping).
+
+5. **Closing untested-branch gaps.** The 100% reachable-source gate means new branches (pre-fetch skip taken / not-taken; `ON CONFLICT` zero-rows → re-`SELECT` → already-staged vs conflict; game-date present / absent / unparseable) each need a fixture-driven test, **not** a `/* v8 ignore */`. Inline ignores are only for structurally-unreachable branches (the existing non-`Error` catch fallbacks); a cluster of ≥3 in one file is itself a split signal, not a license for more.
+
+---
+
+## Capability Dependencies
 
 ```
-@solid-stats/ts-toolchain bootstrap (1)
-    └──must exist before──> Oxfmt migration (5, consumes preset)
-    └──must exist before──> Oxlint migration (4, consumes preset)
-    └──must exist before──> lefthook hooks (8, config sourced from preset)
+[1. Shared contracts home]
+    └──unblocks──> [mechanical type-over-interface / import-order cleanup]
+    └──unblocks──> [config.ts upward-import removal + no-leak.ts orphan resolution]
 
-Repository cleanup (2)
-    └──precedes──> Convention-skill refactor (3)
-         └──together produce clean baseline before──> Oxlint migration (4)
+[2. Composition root + teardown]  ── already mostly present; teardown gated on the watch daemon path
 
-Oxfmt migration (5) — isolated reformat commit
-    └──before──> Oxlint migration (4)
-         └──together with──> dependency-cruiser + knip (7)
-              └──before──> tsdown build (6)
-                   └──before──> lefthook hooks (8)
-                        └──before──> CI verify rewrite (9)
+[3a. Pre-fetch existence check] ──same-root-cause──> [3b. ON CONFLICT DO NOTHING]
+    (3a landing makes 3b's duplicate-INSERT noise disappear; fold into ONE change)
+    3a/3b both depend on ──> [staging repository contract preserved: conflict classification]
+
+[4. Game-date capture] ──BLOCKED-BY──> [server-2 canonical-date field decision]
+    └──forces──> [golden-e2e oracle assertion flip (currently pins absence)]
+
+[5. Test-quality] ──enhances──> every other capability (new branches need new tests, not ignores)
+
+[God-file decomposition] ──must-respect──> [five-band layering] (split within band only)
 ```
 
 ### Dependency Notes
 
-- **Bootstrap (1) before everything else:** The fetcher cannot reference `@solid-stats/ts-toolchain` preset paths until the repo and a consumable tag exist. All config references fail resolution until then.
-- **Cleanup (2) + refactor (3) before Oxlint (4):** Oxlint will report findings on the pre-migration code. If dead code, suppressions, and convention violations are not cleared first, genuine migration findings are indistinguishable from pre-existing noise.
-- **Oxfmt (5) as one isolated commit before Oxlint (4):** A format-only commit makes the Oxlint delta readable. If reformat and rule changes mix, the diff is unauditable.
-- **depcruise + knip (7) alongside Oxlint (4):** These fill the import-plugin gap. They should be wired into `verify` in the same phase so the gate is complete when ESLint is removed.
-- **tsdown (6) after linting/format stable:** Build smoke requires a settled codebase; Docker smoke validates the final artifact.
-- **lefthook (8) last among migration steps:** Hooks reference the full command surface (oxfmt, oxlint, tsc, vitest); all must exist before hooks can be installed and tested.
-- **CI verify rewrite (9) final:** The pipeline is the integration test of all prior steps; it must run green end-to-end from a clean checkout.
+- **1 unblocks the mechanical cleanup:** the `type-over-interface` / `import-order` bulk fix and the `config.ts` upward-import removal are downstream of having a leaf contracts home to import down into. Do 1 first within the architecture phase.
+- **3a and 3b share one root cause:** plan them as a single change. Splitting them risks patching `ON CONFLICT` separately and leaving the redundant byte-fetch (the bigger cost).
+- **4 is gated on a `server-2` decision:** do not change the promotion-evidence/`replay_timestamp` contract until the canonical date field is agreed. Plan the local parse independently of the contract write.
+- **5 wraps everything:** every new branch from 3a/3b/4 lands with a test under the 100% gate — budget test work into each of those phases, not only the dedicated test-quality phase.
 
-## MVP Definition
+---
 
-### Launch With (v3.0 — all table stakes)
+## MVP Definition (milestone scoping)
 
-- [ ] `@solid-stats/ts-toolchain` repo bootstrapped and consumable as pnpm git-dep — pilot cannot proceed without it
-- [ ] Repository cleanup complete — ensures Oxlint signal is clean
-- [ ] Convention-skill refactor done — ingest-boundary gate clean
-- [ ] Oxlint migration complete with rule-delta documented — primary Track C deliverable
-- [ ] Oxfmt migration as one isolated commit — Prettier fully removed
-- [ ] tsdown build with Docker smoke-run — `tsc` emit removed
-- [ ] dependency-cruiser + knip wired into `verify` — import-plugin gap covered
-- [ ] lefthook hooks installed from preset — developer-local gate in place
-- [ ] `pnpm verify` green at 100% V8 coverage on new command surface — milestone acceptance criterion
+### Land This Milestone (v3.1)
 
-### Add After Validation (v3.0.x)
+- [x] **1. Shared cross-band contracts home** — unblocks mechanical cleanup; low risk, depcruise-fenced. *Verify-gate impact: none new (depcruise already runs).*
+- [x] **2. Composition-root teardown for the watch daemon** — close `pg.Pool` / `S3Client` on stop; root already exists.
+- [x] **3a + 3b. Pre-fetch dedup + `ON CONFLICT DO NOTHING`** (one change) — the headline win; the only intentional behavior change; preserve conflict classification; new golden-watch oracle.
+- [x] **5. Test-quality pass** — applied continuously as the above land, plus the dedicated AAA/RITE/table/determinism/branch-gap sweep.
+- [x] **God-file decomposition** — split the four `max-lines`-suppressed files within their bands (pure refactor, behavior identical).
 
-- [ ] CI drift guard for `.oxlintrc.json` — DFT-01, add once `server-2` begins migration to measure real drift
-- [ ] `import/order` residual if gap confirmed — DFT-02, decide only after knip/depcruise gap assessment
+### Gated on Cross-App Agreement
 
-### Future Consideration (v3.1+ / `server-2` / `web`)
+- [ ] **4. Game-date capture** — local parse can be built now; the **promotion-evidence / `replay_timestamp` contract write and the oracle flip wait on the `server-2` canonical-date decision.**
 
-- [ ] Roll out `@solid-stats/ts-toolchain` to `server-2` — next in rollout order per RELEASE-PLAN Phase 0 Track 1
-- [ ] Roll out to `web` — third in rollout order
-- [ ] Promote tsgolint type-aware to blocking once validated clean on fetcher + `server-2`
+### Explicitly Out (anti-features above)
 
-## Feature Prioritization Matrix
+- [ ] DI container, shared contracts package, dedup cache/bloom filter, ORM, Stryker-in-`verify`, cross-band splits.
 
-| Feature | Dev Value | Implementation Cost | Priority |
-|---------|-----------|---------------------|----------|
-| Bootstrap `@solid-stats/ts-toolchain` | HIGH — unblocks everything | MEDIUM | P1 |
-| Repository cleanup | HIGH — noise reduction | LOW | P1 |
-| Convention-skill refactor | HIGH — clean baseline | MEDIUM | P1 |
-| Oxlint migration | HIGH — primary Track C item | MEDIUM-HIGH | P1 |
-| Oxfmt migration | HIGH — Prettier removed | LOW | P1 |
-| tsdown build + Docker smoke | HIGH — `tsc` emit removed | MEDIUM | P1 |
-| dependency-cruiser + knip gates | HIGH — import gap covered | MEDIUM | P1 |
-| lefthook hooks | MEDIUM — local gate convenience | LOW | P1 |
-| CI verify rewrite + 100% coverage | HIGH — milestone acceptance criterion | MEDIUM | P1 |
-| Type-aware re-validation (non-blocking) | MEDIUM — informs `server-2` decision | LOW | P1 |
-| CI drift guard | LOW — useful at scale | LOW | P2 |
-| `import/order` residual | LOW — only if gap confirmed | LOW | P2 |
+---
 
-**Priority key:**
-- P1: Must have for v3.0 closure
-- P2: Add after validation, before `server-2` rollout
-- P3: Nice to have, future consideration
+## Capability Prioritization Matrix
+
+| Capability | Operational Value | Implementation Cost | Risk | Priority |
+|---|---|---|---|---|
+| 3a+3b Pre-fetch dedup + ON CONFLICT | HIGH (latency + source load + log signal) | MEDIUM | MEDIUM (must never drop a new replay) | **P1** |
+| 1 Shared contracts home | MEDIUM (unblocks cleanup, kills upward import) | LOW | LOW | **P1** |
+| 2 Watch teardown | MEDIUM (clean redeploys, no leaks) | LOW | LOW | **P1** |
+| God-file decomposition | MEDIUM (maintainability, honest lint) | MEDIUM | LOW (behavior-preserving) | **P2** |
+| 5 Test-quality sweep | MEDIUM (regression safety) | LOW–MEDIUM | LOW | **P2** |
+| 4 Game-date capture | MEDIUM (UI/operator metadata completeness) | MEDIUM | MEDIUM (cross-app contract) | **P2 — gated on server-2** |
+
+**Priority key:** P1 = land early; P2 = land after P1 / once its gate clears.
+
+---
+
+## Cross-App & Architecture Dependency Flags (for the roadmapper)
+
+- **server-2 contract decision (BLOCKER for Capability 4):** which field is the canonical replay date — `promotion_evidence.discoveredAt` or the `replay_timestamp` staging column? The fetcher must not change the staging/promotion contract until this is agreed. Surfaces a downstream `web` date-display dependency. This is the only capability with a hard external dependency.
+- **Five-band layering (constrains god-file split + contracts home):** splits stay within-band, downward-only imports; the shared-contracts module must be a true leaf (no band imports up into it). Depcruise enforces this — keep it green.
+- **Verify gate (constrains every capability):** 100% reachable-source coverage + oxfmt/oxlint/tsc/unit/integration/depcruise/knip must stay green. New branches → new tests, not ignores. Behavior-preserving capabilities (1, 2, god-file split) must show **zero** golden-oracle delta; the two behavior-changing capabilities (3a/3b, 4) must **update** their oracles (the golden-watch dedup oracle; the `discoveredAt` absence pin must flip).
+- **Staging conflict-classification contract (constrains 3b):** `ON CONFLICT DO NOTHING` returns zero rows; the repository must still distinguish already-staged-identical from a real source/object conflict — preserve `classifyExistingStaging` semantics, do not collapse them into a silent no-op.
 
 ## Sources
 
-- `.planning/spikes/MANIFEST.md` — locked spike requirements (options-not-severities, import-plugin drop, no-await-in-loop off, type-aware per-repo)
-- `.planning/REQUIREMENTS.md` — CFG/CLN/LNT/FMT/BLD/IMP/HOK/VRF requirement IDs and traceability
-- `.planning/PROJECT.md` — v3.0 target features, key decisions, and rollout order
-- `plans/product/TS-TOOLCHAIN-CONVERGENCE.md` (referenced in MANIFEST; not present in repo — decisions absorbed into REQUIREMENTS.md and PROJECT.md)
+- `.planning/PROJECT.md` — milestone v3.1 scope and accepted ingest architecture [HIGH]
+- `replays-fetcher/TECH-DEBT.md` — TD1 (pre-fetch dedup), TD2 (god-file split), TD3 (game-date), TD4 (ON CONFLICT log noise) [HIGH]
+- Live source verified at HEAD: `src/commands/clients.ts` (composition root present), `src/staging/postgres-staging-repository.ts` (insert-and-catch confirmed, no `ON CONFLICT`), `src/run/watch-loop.ts` (injected sleep/now/shouldStop seams), `src/run/golden-e2e.integration.test.ts:216` (`discoveredAt` absence pinned), `src/discovery/html.ts` (game-date cell dropped), `src/types/run-summary.ts` (shared-contract home already exists) [HIGH]
+- `solidstats-fetcher-ts-tests` + `solidstats-shared-testing-standards` — RITE/AAA/determinism/coverage doctrine, fetcher no-real-sleep rule, 100% reachable-source gate, review-standards §F test-quality severity [HIGH]
 
 ---
-*Feature research for: v3.0 Track C Toolchain Convergence (replays-fetcher pilot)*
-*Researched: 2026-06-13*
+*Feature research for: replays-fetcher v3.1 convention-compliance & tech-debt closure*
+*Researched: 2026-06-20*
