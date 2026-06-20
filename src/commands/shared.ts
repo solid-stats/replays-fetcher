@@ -34,6 +34,8 @@ import { createPgPool, createS3Client } from "./clients.js";
 
 import type { SourceClient } from "../discovery/types.js";
 import type { RetryAttemptEvent } from "../source/retry.js";
+import type { S3Client } from "@aws-sdk/client-s3";
+import type { Pool } from "pg";
 import type { Logger } from "pino";
 
 export type SourceConfigResult =
@@ -86,6 +88,14 @@ export interface BuildCliDependencies {
 export interface StoreRawResources {
   readonly byteClient: ReplayByteClient;
   readonly checkpointStore: S3CheckpointStore;
+  /**
+   * Once-guarded teardown of the composition-root clients (ARCH-05): destroys
+   * the shared `S3Client` and ends the `pg.Pool` exactly once. Calling it again
+   * is a no-op (pg throws on a second `end()`). The composition root owns this
+   * teardown — no adapter tears down an injected client. Invoked by the watch
+   * command in its shutdown `finally`, AFTER the loop drains.
+   */
+  readonly dispose: () => Promise<void>;
   readonly evidenceStore: S3EvidenceStore;
   readonly sourceClient: SourceClient;
   readonly stagingRepository: StagingRepository | undefined;
@@ -192,21 +202,30 @@ export const loadStoreRawConfig = (
   }
 };
 
-const createStagingRepository = (
-  dependencies: Pick<
-    Required<BuildCliDependencies>,
-    "createPgPool" | "createPostgresStagingRepository"
-  >,
-  config: AppConfig,
-  shouldStage: boolean,
-): StagingRepository | undefined => {
-  if (!shouldStage) {
-    return undefined;
-  }
+/**
+ * Builds the once-guarded composition-root teardown (ARCH-05). A captured
+ * `disposed` flag makes the closure idempotent: the first call destroys the
+ * `S3Client` (sync, safe) and ends the `pg.Pool` exactly once; any later call
+ * returns immediately, so a double SIGTERM never triggers a second
+ * `pool.end()` (pg throws `Called end on pool more than once`). The pool may be
+ * `undefined` when staging is disabled — then only the S3 client is destroyed.
+ * No credentials/`databaseUrl` are interpolated into any path here [std: §AA].
+ */
+const createDispose = (
+  s3Client: S3Client,
+  pool: Pool | undefined,
+): (() => Promise<void>) => {
+  let disposed = false;
 
-  return dependencies.createPostgresStagingRepository(
-    dependencies.createPgPool(config.staging.databaseUrl),
-  );
+  return async (): Promise<void> => {
+    if (disposed) {
+      return;
+    }
+
+    disposed = true;
+    s3Client.destroy();
+    await pool?.end();
+  };
 };
 
 export const createStoreRawResources = (
@@ -217,6 +236,12 @@ export const createStoreRawResources = (
   // One S3 client per command, built once at the composition root and injected
   // into every store ([std: correctness] External adapters one-client rule).
   const s3Client = dependencies.createS3Client(config.s3);
+  // The pool handle is owned at the composition root so dispose() can drain it
+  // on shutdown (ARCH-05). Built once here when staging is enabled, then passed
+  // into the staging repository — never constructed per-adapter.
+  const pool = shouldStage
+    ? dependencies.createPgPool(config.staging.databaseUrl)
+    : undefined;
 
   return {
     byteClient: dependencies.createReplayByteClient(config),
@@ -226,17 +251,17 @@ export const createStoreRawResources = (
       prefix: config.s3.checkpointPrefix,
       sender: s3Client,
     }),
+    dispose: createDispose(s3Client, pool),
     evidenceStore: dependencies.createS3EvidenceStore({
       bucket: config.s3.bucket,
       prefix: config.s3.evidencePrefix,
       sender: s3Client,
     }),
     sourceClient: dependencies.createSourceClient(config),
-    stagingRepository: createStagingRepository(
-      dependencies,
-      config,
-      shouldStage,
-    ),
+    stagingRepository:
+      pool === undefined
+        ? undefined
+        : dependencies.createPostgresStagingRepository(pool),
     storage: dependencies.createS3RawReplayStorage({
       bucket: config.s3.bucket,
       sender: s3Client,
