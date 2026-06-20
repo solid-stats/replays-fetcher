@@ -12,7 +12,7 @@ export type { SourceTransport } from "../types/source-transport.js";
 
 export type DiscoveryMode = "dry-run";
 
-export interface DiscoveryReport {
+export type DiscoveryReport = {
   readonly candidates: readonly ReplayCandidate[];
   readonly counts: {
     readonly candidates: number;
@@ -25,9 +25,9 @@ export interface DiscoveryReport {
   readonly mode: DiscoveryMode;
   readonly ok: boolean;
   readonly sourceUrl: string;
-}
+};
 
-export interface SourceFetchOptions {
+export type SourceFetchOptions = {
   readonly attempts?: number;
   readonly now?: () => number;
   readonly onRetry?: (event: RetryAttemptEvent) => void;
@@ -36,8 +36,8 @@ export interface SourceFetchOptions {
   readonly random?: () => number;
   readonly signal?: AbortSignal;
   readonly sleep?: (milliseconds: number) => Promise<void>;
-}
+};
 
-export interface SourceClient {
+export type SourceClient = {
   fetchText: (url: URL, options?: SourceFetchOptions) => Promise<string>;
-}
+};

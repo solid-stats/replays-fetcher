@@ -21,16 +21,16 @@ import type { FailureClassification } from "./classify-failure.js";
 
 export type SourceReadPhase = "bytes" | "detail" | "list";
 
-export interface RetryAttemptEvent {
+export type RetryAttemptEvent = {
   readonly attempt: number;
   readonly causeCode?: string;
   readonly delayMs: number;
   readonly httpStatus?: number;
   readonly page?: number;
   readonly phase: SourceReadPhase;
-}
+};
 
-export interface RetrySourceReadOptions<TResult> {
+export type RetrySourceReadOptions<TResult> = {
   readonly attempts: number;
   readonly classify: (error: unknown) => FailureClassification;
   readonly now?: () => number;
@@ -46,7 +46,7 @@ export interface RetrySourceReadOptions<TResult> {
   readonly signal: AbortSignal;
   readonly sleep?: (milliseconds: number) => Promise<void>;
   readonly url: string;
-}
+};
 
 /* v8 ignore next 5 -- tested through injected sleep to avoid real timer delay. */
 const defaultSleep = async (milliseconds: number): Promise<void> => {
@@ -98,14 +98,14 @@ const abortableSleep = async (
   }
 };
 
-interface RetryRound<TResult> {
+type RetryRound<TResult> = {
   readonly classification: FailureClassification;
   readonly error: unknown;
   readonly now: () => number;
   readonly options: RetrySourceReadOptions<TResult>;
   readonly random: () => number;
   readonly round: number;
-}
+};
 
 const buildRetryEvent = <TResult>(
   context: RetryRound<TResult>,

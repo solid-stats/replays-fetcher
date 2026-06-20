@@ -18,7 +18,7 @@ import type {
 import type { IngestStagingResult } from "../staging/types.js";
 import type { StoreRawReplayResult } from "../storage/store-raw-replay.js";
 
-interface BuildRunSummaryInput {
+type BuildRunSummaryInput = {
   readonly candidateCount?: number;
   readonly discoveredLastPage?: number;
   readonly discoveredRange?: {
@@ -37,12 +37,12 @@ interface BuildRunSummaryInput {
   readonly startedAt: string;
   readonly status?: RunStatus;
   readonly upperBoundLastPage?: number;
-}
+};
 
-interface RunRate {
+type RunRate = {
   readonly candidatesPerMinute: number;
   readonly pagesPerMinute: number;
-}
+};
 
 const MS_PER_MINUTE = 60_000;
 const SECONDS_PER_MINUTE = 60;
@@ -50,20 +50,20 @@ const FIRST_TIMESTAMP_INDEX = 0;
 const LAST_TIMESTAMP_INDEX = -1;
 const NO_PAGES = 0;
 
-interface DeriveRunStatusInput {
+type DeriveRunStatusInput = {
   readonly discoveredLastPage: number;
   readonly lastCompletedPage: number;
   readonly ok: boolean;
   readonly reachedMaxPages?: boolean;
   readonly sourceFailure?: RunSourceFailure;
-}
+};
 
-interface BuildConfigInvalidRunSummaryInput {
+type BuildConfigInvalidRunSummaryInput = {
   readonly finishedAt: string;
   readonly issues: readonly string[];
   readonly runId: string;
   readonly startedAt: string;
-}
+};
 
 const emptyCounts: RunSummaryCounts = {
   conflict: 0,

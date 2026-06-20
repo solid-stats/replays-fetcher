@@ -13,28 +13,28 @@ import type { IngestStagingResult } from "../staging/types.js";
 import type { StoreRawReplayResult } from "../storage/store-raw-replay.js";
 import type { Command } from "commander";
 
-interface DiscoverOptions {
+type DiscoverOptions = {
   readonly dryRun?: boolean;
   readonly stage?: boolean;
   readonly storeRaw?: boolean;
-}
+};
 
-interface RawStorageCounts {
+type RawStorageCounts = {
   readonly candidates: number;
   readonly conflict: number;
   readonly diagnostics: number;
   readonly failed: number;
   readonly skipped: number;
   readonly stored: number;
-}
+};
 
-interface StagingCounts {
+type StagingCounts = {
   readonly alreadyStaged: number;
   readonly conflict: number;
   readonly failed: number;
   readonly skipped: number;
   readonly staged: number;
-}
+};
 
 const countRawStorage = (
   discoveryReport: DiscoveryReport,

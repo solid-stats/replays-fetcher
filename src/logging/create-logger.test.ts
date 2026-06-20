@@ -8,10 +8,10 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-interface CaptureSink {
+type CaptureSink = {
   readonly stream: Writable;
   readonly chunks: string[];
-}
+};
 
 const createCaptureSink = (): CaptureSink => {
   const chunks: string[] = [];

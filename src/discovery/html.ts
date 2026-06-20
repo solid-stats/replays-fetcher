@@ -1,4 +1,4 @@
-interface ReplayRowObservation {
+type ReplayRowObservation = {
   readonly metadata: {
     readonly missionText?: string;
     readonly serverId?: number;
@@ -9,18 +9,18 @@ interface ReplayRowObservation {
     readonly externalId?: string;
     readonly url?: string;
   };
-}
+};
 
-interface MutableReplayRowMetadata {
+type MutableReplayRowMetadata = {
   missionText?: string;
   serverId?: number;
   world?: string;
-}
+};
 
-interface MutableReplayRowSource {
+type MutableReplayRowSource = {
   externalId?: string;
   url?: string;
-}
+};
 
 /* v8 ignore next -- regexes using this helper always declare the group. */
 const getMatchGroup = (match: RegExpMatchArray, group: string): string =>

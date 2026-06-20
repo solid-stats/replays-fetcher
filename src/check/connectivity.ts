@@ -7,17 +7,17 @@ export type ConnectivityFailureCategory =
   | "source_unavailable"
   | "staging_unavailable";
 
-export interface ConnectivityCheck {
+export type ConnectivityCheck = {
   readonly failureCategory?: ConnectivityFailureCategory;
   readonly message?: string;
   readonly status: ConnectivityCheckStatus;
-}
+};
 
-export interface ConnectivityCheckResults {
+export type ConnectivityCheckResults = {
   readonly s3Connectivity: ConnectivityCheck;
   readonly sourceConnectivity: ConnectivityCheck;
   readonly stagingConnectivity: ConnectivityCheck;
-}
+};
 
 export const connectivityOk = (checks: ConnectivityCheckResults): boolean =>
   checks.s3Connectivity.status === "passed" &&

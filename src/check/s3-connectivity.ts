@@ -2,14 +2,14 @@ import { HeadBucketCommand } from "@aws-sdk/client-s3";
 
 import type { ConnectivityCheck } from "./connectivity.js";
 
-export interface S3ConnectivitySender {
+export type S3ConnectivitySender = {
   send: (command: HeadBucketCommand) => Promise<unknown>;
-}
+};
 
-interface CheckS3ConnectivityInput {
+type CheckS3ConnectivityInput = {
   readonly bucket: string;
   readonly sender: S3ConnectivitySender;
-}
+};
 
 export const checkS3Connectivity = async (
   input: CheckS3ConnectivityInput,

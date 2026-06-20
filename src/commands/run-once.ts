@@ -16,11 +16,11 @@ import type { BuildCliDependencies } from "./shared.js";
 import type { StagingRepository } from "../staging/stage-raw-replay.js";
 import type { Command } from "commander";
 
-interface RunOnceOptions {
+type RunOnceOptions = {
   readonly emitEvidence?: boolean;
   readonly evidenceFile?: string;
   readonly resume?: boolean;
-}
+};
 
 const evidenceFileOption = (
   evidenceFile: string | undefined,

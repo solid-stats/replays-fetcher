@@ -58,7 +58,7 @@ export type AppConfigResult =
       readonly ok: false;
     };
 
-export interface BuildCliDependencies {
+export type BuildCliDependencies = {
   readonly checkPostgresConnectivity?: typeof checkPostgresConnectivity;
   readonly checkS3Connectivity?: typeof checkS3Connectivity;
   readonly checkSourceConnectivity?: typeof checkSourceConnectivity;
@@ -83,9 +83,9 @@ export interface BuildCliDependencies {
   readonly storeRawReplay?: typeof storeRawReplay;
   readonly writeEvidenceFile?: (path: string, body: string) => Promise<void>;
   readonly writeHeartbeat?: (path: string, body: string) => Promise<void>;
-}
+};
 
-export interface StoreRawResources {
+export type StoreRawResources = {
   readonly byteClient: ReplayByteClient;
   readonly checkpointStore: S3CheckpointStore;
   /**
@@ -100,7 +100,7 @@ export interface StoreRawResources {
   readonly sourceClient: SourceClient;
   readonly stagingRepository: StagingRepository | undefined;
   readonly storage: S3RawReplayStorage;
-}
+};
 
 export const writeJson = (value: unknown): void => {
   process.stdout.write(`${JSON.stringify(value, undefined, 2)}\n`);

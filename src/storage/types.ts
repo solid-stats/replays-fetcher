@@ -6,13 +6,13 @@ export type {
   RawReplayStorageStatus,
 } from "../types/raw-replay.js";
 
-export interface RawReplaySourceEvidence {
+export type RawReplaySourceEvidence = {
   readonly candidate: ReplayCandidate;
   readonly fetchedAt: string;
-}
+};
 
-export interface RawReplayStorageInput extends RawReplaySourceEvidence {
+export type RawReplayStorageInput = {
   readonly bytes: Uint8Array;
   readonly checksum: string;
   readonly objectKey: string;
-}
+} & RawReplaySourceEvidence;

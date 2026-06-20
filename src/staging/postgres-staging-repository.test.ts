@@ -9,19 +9,19 @@ import type { StagingQueryClient } from "./postgres-staging-repository.js";
 
 import type { IngestStagingPayload } from "./types.js";
 
-interface QueryCall {
+type QueryCall = {
   readonly text: string;
   readonly values: readonly unknown[] | undefined;
-}
+};
 
-interface StagingRow {
+type StagingRow = {
   readonly checksum: string;
   readonly id: string;
   readonly object_key: string;
   readonly source_replay_id: string;
   readonly source_system: string;
   readonly status: string;
-}
+};
 
 const checksum =
   "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";

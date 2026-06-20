@@ -33,16 +33,16 @@ export type ContractCheckWarningCode =
   | "missing_external_id"
   | "missing_filename";
 
-export interface ContractCheckWarning {
+export type ContractCheckWarning = {
   readonly code: ContractCheckWarningCode;
   readonly message: string;
-}
+};
 
-export interface ContractCheckSample {
+export type ContractCheckSample = {
   readonly listPageUrl: string;
   readonly detailUrl?: string;
   readonly rawUrl?: string;
-}
+};
 
 export type ContractCheckResult =
   | {
@@ -58,10 +58,10 @@ export type ContractCheckResult =
       readonly warnings: readonly ContractCheckWarning[];
     };
 
-export interface RunContractCheckOptions {
+export type RunContractCheckOptions = {
   readonly sourceClient: SourceClient;
   readonly sourceUrl: URL;
-}
+};
 
 type FetchFailureResult = Extract<ContractCheckResult, { ok: false }>;
 
@@ -69,17 +69,17 @@ type FetchOutcome =
   | { readonly ok: true; readonly body: string }
   | { readonly ok: false; readonly result: FetchFailureResult };
 
-interface ProbeContext {
+type ProbeContext = {
   readonly sourceClient: SourceClient;
   readonly listPageUrl: string;
   readonly warnings: ContractCheckWarning[];
-}
+};
 
-interface DetailTarget {
+type DetailTarget = {
   readonly detailUrl: URL;
   readonly detailUrlString: string;
   readonly filename: string;
-}
+};
 
 // ---------------------------------------------------------------------------
 // Error classification helpers

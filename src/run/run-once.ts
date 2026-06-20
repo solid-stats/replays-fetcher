@@ -34,7 +34,7 @@ import type { S3RawReplayStorage } from "../storage/s3-raw-storage.js";
 import type { StoreRawReplayResult } from "../storage/store-raw-replay.js";
 import type { Logger } from "pino";
 
-interface RunOnceInput {
+type RunOnceInput = {
   readonly attempts?: number;
   readonly byteClient: ReplayByteClient;
   readonly checkpointStore: S3CheckpointStore;
@@ -83,14 +83,14 @@ interface RunOnceInput {
   readonly evidenceStore?: S3EvidenceStore;
   readonly evidenceFile?: string;
   readonly writeEvidenceFile?: (path: string, body: string) => Promise<void>;
-}
+};
 
-export interface RunOnceResult {
+export type RunOnceResult = {
   readonly exitCode: RunExitCode;
   readonly summary: RunSummary;
-}
+};
 
-interface MutableDiscoveryReport {
+type MutableDiscoveryReport = {
   candidates: ReplayCandidate[];
   counts: DiscoveryReport["counts"];
   diagnostics: DiscoveryDiagnostic[];
@@ -98,7 +98,7 @@ interface MutableDiscoveryReport {
   mode: "dry-run";
   ok: boolean;
   sourceUrl: string;
-}
+};
 
 const FIRST_PAGE = 1;
 const CONCURRENCY_FLOOR = 1;
@@ -147,12 +147,12 @@ const sanitizeSourceUrl = (sourceUrl: URL): string => {
 
 const defaultPacer = (spacingMs: number): Pacer => createPacer({ spacingMs });
 
-interface MutablePageCounts {
+type MutablePageCounts = {
   discovered: number;
   failed: number;
   staged: number;
   stored: number;
-}
+};
 
 /**
  * Pure rolling page rate: pages completed per minute over the elapsed window
@@ -330,11 +330,11 @@ const deriveCandidatesPerMinute = (
   return discovered / Math.max((last - first) / MS_PER_MINUTE, Number.EPSILON);
 };
 
-interface RunRuntime {
+type RunRuntime = {
   readonly limit: LimitFunction;
   readonly pacer: Pacer;
   readonly throttle: ThrottleController;
-}
+};
 
 /**
  * Builds the per-run rate-limiting runtime: the single shared limiter (RANGE-02),
@@ -355,11 +355,11 @@ const buildRunRuntime = (input: RunOnceInput): RunRuntime => {
   return { limit, pacer, throttle };
 };
 
-interface ResumeState {
+type ResumeState = {
   readonly etag?: string;
   readonly pages: Record<string, CheckpointPage>;
   readonly startPage: number;
-}
+};
 
 const resolveResumeState = async (
   input: RunOnceInput,
@@ -400,7 +400,7 @@ const resolveResumeState = async (
   return resumeFrom(read.etag, checkpoint);
 };
 
-interface LoopState {
+type LoopState = {
   discoveryReport: MutableDiscoveryReport;
   etag: string | undefined;
   lastCompletedPage: number;
@@ -409,7 +409,7 @@ interface LoopState {
   readonly rawStorage: StoreRawReplayResult[];
   reachedMaxPages: boolean;
   readonly staging: IngestStagingResult[];
-}
+};
 
 const buildLoopState = async (
   input: RunOnceInput,
@@ -429,14 +429,14 @@ const buildLoopState = async (
   };
 };
 
-interface BuildCheckpointInput {
+type BuildCheckpointInput = {
   readonly discoveredLastPage?: number;
   readonly lastCompletedPage: number;
   readonly pages: Record<string, CheckpointPage>;
   readonly slug: string;
   readonly startedAt: string;
   readonly status: Checkpoint["status"];
-}
+};
 
 const buildCheckpoint = (
   input: RunOnceInput,
@@ -460,13 +460,13 @@ const buildCheckpoint = (
   return checkpoint;
 };
 
-interface WritePageCheckpointInput {
+type WritePageCheckpointInput = {
   readonly etag: string | undefined;
   readonly lastCompletedPage: number;
   readonly pages: Record<string, CheckpointPage>;
   readonly slug: string;
   readonly startedAt: string;
-}
+};
 
 const writePageCheckpoint = async (
   input: RunOnceInput,
@@ -535,12 +535,12 @@ const writeFinalCheckpoint = async (
   }
 };
 
-interface ProcessPageInput {
+type ProcessPageInput = {
   readonly candidates: readonly ReplayCandidate[];
   readonly limit: LimitFunction;
   readonly rawStorage: StoreRawReplayResult[];
   readonly staging: IngestStagingResult[];
-}
+};
 
 /**
  * RANGE-02/06: delegate the per-candidate store→stage fan-out to the shared,
@@ -607,12 +607,12 @@ const derivePageFailureMessage = (
   return "page failed";
 };
 
-interface EmitPageRateLineInput {
+type EmitPageRateLineInput = {
   readonly input: RunOnceInput;
   readonly page: number;
   readonly pageTimestampsMs: readonly number[];
   readonly pageCounts: MutablePageCounts;
-}
+};
 
 /**
  * D-03/D-05: Emits ONE `page_complete` (info) per completed page carrying the
@@ -686,7 +686,7 @@ const applyRateLimitThrottle = (
   }
 };
 
-interface CompleteOkPageInput {
+type CompleteOkPageInput = {
   readonly candidates: readonly ReplayCandidate[];
   readonly etag: string | undefined;
   readonly limit: LimitFunction;
@@ -698,12 +698,12 @@ interface CompleteOkPageInput {
   readonly staging: IngestStagingResult[];
   readonly startedAt: string;
   readonly throttle: ThrottleController;
-}
+};
 
-interface CompleteOkPageResult {
+type CompleteOkPageResult = {
   readonly etag: string | undefined;
   readonly pageCounts: MutablePageCounts;
-}
+};
 
 /**
  * Completes a clean (`ok`, non-empty) list page: AIMD additive-increase grows the
@@ -759,13 +759,13 @@ const completeOkPage = async (
   return { etag, pageCounts };
 };
 
-interface PageLoopContext {
+type PageLoopContext = {
   readonly limit: LimitFunction;
   readonly pacer: Pacer;
   readonly slug: string;
   readonly startedAt: string;
   readonly throttle: ThrottleController;
-}
+};
 
 /**
  * RANGE-01..06: Drives the sequential page loop — each iteration awaits the
@@ -924,7 +924,7 @@ const writeEvidence = async (
   }
 };
 
-interface AssembleResultInput {
+type AssembleResultInput = {
   readonly discoveryReport: MutableDiscoveryReport;
   readonly etag: string | undefined;
   readonly lastCompletedPage: number;
@@ -938,7 +938,7 @@ interface AssembleResultInput {
   readonly slug: string;
   readonly staging: readonly IngestStagingResult[];
   readonly startedAt: string;
-}
+};
 
 const assembleResult = async (
   input: RunOnceInput,

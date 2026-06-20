@@ -28,17 +28,17 @@ const timestamp = "2026-06-09T00:00:00.000Z";
 
 export type SentCommand = GetObjectCommand | PutObjectCommand;
 
-export interface SenderResponse {
+export type SenderResponse = {
   readonly Body?: { transformToString: () => Promise<string> };
   readonly ETag?: string;
-}
+};
 
-export interface PutInput {
+export type PutInput = {
   readonly Body: string;
   readonly IfMatch?: string;
   readonly IfNoneMatch?: string;
   readonly Key: string;
-}
+};
 
 type Store = ReturnType<typeof createS3CheckpointStore>;
 

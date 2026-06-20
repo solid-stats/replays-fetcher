@@ -5,11 +5,11 @@ import { AppError } from "./app-error.js";
  * the source slug and optional page/attempt counters — never replay bytes,
  * secrets, or response bodies (threat T-09-01 / app-error.ts:13-16).
  */
-export interface CheckpointConflictDetails {
+export type CheckpointConflictDetails = {
   readonly attempts?: number;
   readonly page?: number;
   readonly slug: string;
-}
+};
 
 /**
  * Flatten the typed identifiers-only details into a plain record for the

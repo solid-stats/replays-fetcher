@@ -11,7 +11,7 @@ export type DiagnosticCode =
   | "source_transient"
   | "rate_limited";
 
-export interface DiscoveryDiagnostic {
+export type DiscoveryDiagnostic = {
   readonly attempts?: number;
   readonly candidateIndex?: number;
   readonly causeCode?: string;
@@ -25,4 +25,4 @@ export interface DiscoveryDiagnostic {
   readonly phase?: SourceReadPhase;
   readonly severity: DiagnosticSeverity;
   readonly sourceUrl?: string;
-}
+};

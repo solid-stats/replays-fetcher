@@ -6,20 +6,20 @@ import type { ReplayByteClient } from "../storage/replay-byte-client.js";
 import type { S3RawReplayStorage } from "../storage/s3-raw-storage.js";
 import type { StoreRawReplayResult } from "../storage/store-raw-replay.js";
 
-export interface IngestPageCounts {
+export type IngestPageCounts = {
   readonly discovered: number;
   readonly failed: number;
   readonly staged: number;
   readonly stored: number;
-}
+};
 
-export interface IngestPageResult {
+export type IngestPageResult = {
   readonly counts: IngestPageCounts;
   readonly rawStorage: readonly StoreRawReplayResult[];
   readonly staging: readonly IngestStagingResult[];
-}
+};
 
-export interface IngestPageInput {
+export type IngestPageInput = {
   readonly byteClient: ReplayByteClient;
   readonly candidates: readonly ReplayCandidate[];
   readonly limit: LimitFunction;
@@ -36,20 +36,20 @@ export interface IngestPageInput {
     readonly candidate: ReplayCandidate;
     readonly storage: S3RawReplayStorage;
   }) => Promise<StoreRawReplayResult>;
-}
+};
 
-interface MutablePageCounts {
+type MutablePageCounts = {
   discovered: number;
   failed: number;
   staged: number;
   stored: number;
-}
+};
 
-interface SettledCandidate {
+type SettledCandidate = {
   readonly index: number;
   readonly rawResult: StoreRawReplayResult;
   readonly stagingResult: IngestStagingResult;
-}
+};
 
 const newPageCounts = (discovered: number): MutablePageCounts => ({
   discovered,

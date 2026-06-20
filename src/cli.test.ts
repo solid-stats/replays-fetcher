@@ -29,7 +29,7 @@ const validEnvironment = {
 };
 const safetyValveMaxPages = Number("5");
 
-interface CheckOutput {
+type CheckOutput = {
   readonly checks: {
     readonly config: ConnectivityCheck;
     readonly s3Connectivity?: ConnectivityCheck;
@@ -39,9 +39,9 @@ interface CheckOutput {
   readonly config?: unknown;
   readonly issues?: readonly string[];
   readonly ok: boolean;
-}
+};
 
-interface CliOutput {
+type CliOutput = {
   readonly candidates?: readonly ReplayCandidate[];
   readonly counts?: {
     readonly candidates?: number;
@@ -77,7 +77,7 @@ interface CliOutput {
   readonly ok: boolean;
   readonly staging?: readonly IngestStagingResult[];
   readonly storage?: readonly StoreRawReplayResult[];
-}
+};
 
 const dryRunSourceFiles = [
   "src/cli.ts",
@@ -1468,7 +1468,7 @@ test("unit tests should remain colocated beside source files", async () => {
 
 // ─── Task 1 Plan 04: compact stdout + evidence flags + flush ordering (RED) ───
 
-interface CompactRunOutput {
+type CompactRunOutput = {
   readonly counts: {
     readonly conflict: number;
     readonly diagnostics: number;
@@ -1489,7 +1489,7 @@ interface CompactRunOutput {
   readonly status?: string;
   readonly sourceUrl?: string;
   readonly resumeInvocation?: string;
-}
+};
 
 const parseCompactOutput = (writes: readonly string[]): CompactRunOutput =>
   JSON.parse(writes.join("")) as CompactRunOutput;

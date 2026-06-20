@@ -7,7 +7,7 @@ export type StagingOutcomeStatus =
   | "not_stageable"
   | "staged";
 
-export interface IngestStagingPayload {
+export type IngestStagingPayload = {
   readonly checksum: string;
   readonly conflictDetails: Record<string, never>;
   readonly objectKey: string;
@@ -29,20 +29,20 @@ export interface IngestStagingPayload {
   readonly sourceReplayId: string;
   readonly sourceSystem: string;
   readonly status: IngestStagingStatus;
-}
+};
 
-export interface ExistingStagingEvidence {
+export type ExistingStagingEvidence = {
   readonly checksum: string;
   readonly objectKey: string;
   readonly sourceReplayId: string;
   readonly sourceSystem: string;
   readonly status: string;
-}
+};
 
-export interface IngestStagingResult {
+export type IngestStagingResult = {
   readonly existing?: ExistingStagingEvidence;
   readonly payload?: IngestStagingPayload;
   readonly reason?: string;
   readonly stagingId?: string;
   readonly status: StagingOutcomeStatus;
-}
+};

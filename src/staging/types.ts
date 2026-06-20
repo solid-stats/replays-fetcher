@@ -9,9 +9,9 @@ export type {
   StagingOutcomeStatus,
 } from "../types/staging.js";
 
-export interface StageableRawReplayEvidence extends RawReplayStorageEvidence {
+export type StageableRawReplayEvidence = {
   readonly status: "skipped" | "stored";
-}
+} & RawReplayStorageEvidence;
 
 export type StagingPayloadResult =
   | {

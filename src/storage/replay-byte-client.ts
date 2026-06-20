@@ -26,10 +26,10 @@ import type { SourceConfig } from "../config.js";
  * process, and a per-round `timeout` so a hung ssh is always bounded regardless
  * of whether `sourceSshCommand` carries its own time limit (WR-08-01).
  */
-interface ExecFileOptions {
+type ExecFileOptions = {
   readonly signal?: AbortSignal;
   readonly timeout?: number;
-}
+};
 
 type ExecFile = (
   file: string,
@@ -44,7 +44,7 @@ const defaultExecFile = promisify(execFileCallback) as ExecFile;
  * `SourceFetchOptions`; when omitted, `attempts` defaults to a single no-retry
  * try so existing callers (`store-raw-replay.ts`) keep their legacy behavior.
  */
-export interface ByteFetchOptions {
+export type ByteFetchOptions = {
   readonly attempts?: number;
   readonly now?: () => number;
   readonly onRetry?: (event: RetryAttemptEvent) => void;
@@ -52,11 +52,11 @@ export interface ByteFetchOptions {
   readonly random?: () => number;
   readonly signal?: AbortSignal;
   readonly sleep?: (milliseconds: number) => Promise<void>;
-}
+};
 
-export interface ReplayByteClient {
+export type ReplayByteClient = {
   fetchBytes: (url: URL, options?: ByteFetchOptions) => Promise<Uint8Array>;
-}
+};
 
 /**
  * Byte-fetch failure error. The code union is widened ADDITIVELY (Phase 7
@@ -82,9 +82,9 @@ export class ReplayByteFetchError extends AppError<
   }
 }
 
-interface CreateReplayByteClientOptions {
+type CreateReplayByteClientOptions = {
   readonly execFile?: ExecFile;
-}
+};
 
 const bytesPhase: SourceReadPhase = "bytes";
 const noRetryAttempts = 0;
@@ -112,7 +112,7 @@ const toByteCode = (kind: FailureKind): ReplayByteFetchError["code"] => {
   return "fetch_failed";
 };
 
-interface RetryWiring<TResult> {
+type RetryWiring<TResult> = {
   readonly classify: (error: unknown) => FailureClassification;
   readonly read: (signal: AbortSignal) => Promise<TResult>;
   readonly retryAfterMs?: (
@@ -120,7 +120,7 @@ interface RetryWiring<TResult> {
     now: () => number,
   ) => number | undefined;
   readonly url: URL;
-}
+};
 
 /**
  * Threads the per-call retry seam (attempts/page/onRetry/external signal) from
@@ -171,14 +171,14 @@ const runWithRetry = async <TResult>(
   return withRetry(retryOptions);
 };
 
-interface BuildErrorInput {
+type BuildErrorInput = {
   readonly attempts: number;
   readonly classification: FailureClassification;
   readonly fallbackMessage: string;
   readonly originalError?: unknown;
   readonly page?: number;
   readonly url: URL;
-}
+};
 
 /**
  * Builds the thrown `ReplayByteFetchError` with an identifiers-only `details`
@@ -231,10 +231,10 @@ const buildByteFetchError = (input: BuildErrorInput): ReplayByteFetchError => {
 
 const httpHeaderRetryAfter = "retry-after";
 
-interface DirectHttpErrorInput {
+type DirectHttpErrorInput = {
   readonly response: Response;
   readonly url: URL;
-}
+};
 
 /**
  * Wraps a non-ok direct HTTP byte response in a `ReplayByteFetchError` carrying
@@ -310,11 +310,11 @@ const classifyDirect = (error: unknown): FailureClassification => {
 const classifySsh = (error: unknown): FailureClassification =>
   classifyFailure({ error });
 
-interface DirectByteErrorInput {
+type DirectByteErrorInput = {
   readonly error: unknown;
   readonly options: ByteFetchOptions | undefined;
   readonly url: URL;
-}
+};
 
 const buildPageInput = (
   options: ByteFetchOptions | undefined,
@@ -400,11 +400,11 @@ const createDirectReplayByteClient = (
   },
 });
 
-interface SshByteErrorInput {
+type SshByteErrorInput = {
   readonly error: unknown;
   readonly options: ByteFetchOptions | undefined;
   readonly url: URL;
-}
+};
 
 const toSshByteError = (input: SshByteErrorInput): ReplayByteFetchError => {
   const { error, options, url } = input;

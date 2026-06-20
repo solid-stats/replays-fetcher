@@ -13,12 +13,12 @@ export type {
   StoreRawReplayResult,
 } from "../types/raw-replay.js";
 
-interface StoreRawReplayInput {
+type StoreRawReplayInput = {
   readonly byteClient: ReplayByteClient;
   readonly candidate: ReplayCandidate;
   readonly now?: () => Date;
   readonly storage: S3RawReplayStorage;
-}
+};
 
 export const storeRawReplay = async (
   input: StoreRawReplayInput,

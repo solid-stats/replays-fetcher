@@ -20,20 +20,20 @@ const here = dirname(fileURLToPath(import.meta.url));
 const fixtureRoot = join(here, "fixtures", "golden");
 const manifestPath = join(fixtureRoot, "manifest.json");
 
-interface GoldenManifest {
+type GoldenManifest = {
   readonly bytes: Record<string, string>;
   readonly details: Record<string, string>;
   readonly expectedExternalIds: readonly string[];
   readonly listPages: Record<string, string>;
   readonly sourceUrl: string;
-}
+};
 
-export interface GoldenFixtures {
+export type GoldenFixtures = {
   readonly bytesByUrl: Map<string, Uint8Array>;
   readonly expectedExternalIds: readonly string[];
   readonly htmlByUrl: Map<string, string>;
   readonly sourceUrl: URL;
-}
+};
 
 /**
  * True iff the committed fixture corpus exists. The golden tests guard on this

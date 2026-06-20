@@ -29,14 +29,14 @@ export type RunStatus =
   | "resumable"
   | "truncated";
 
-export interface RunSourceFailure {
+export type RunSourceFailure = {
   readonly attempts?: number;
   readonly classification: SourceFailureClassification;
   readonly code: DiagnosticCode;
   readonly phase?: SourceReadPhase;
-}
+};
 
-export interface RunSummaryCounts {
+export type RunSummaryCounts = {
   readonly conflict: number;
   readonly diagnostics: number;
   readonly discovered: number;
@@ -46,9 +46,9 @@ export interface RunSummaryCounts {
   readonly skipped: number;
   readonly staged: number;
   readonly stored: number;
-}
+};
 
-export interface RunSummary {
+export type RunSummary = {
   readonly candidates: readonly ReplayCandidate[];
   readonly candidatesPerMinute?: number;
   readonly counts: RunSummaryCounts;
@@ -71,7 +71,7 @@ export interface RunSummary {
   readonly staging: readonly IngestStagingResult[];
   readonly startedAt: string;
   readonly status?: RunStatus;
-}
+};
 
 /**
  * Compact projection of RunSummary for stdout logging (PROG-02). Strips the
@@ -80,7 +80,7 @@ export interface RunSummary {
  * failure taxonomy, and the five optional contextual fields. Absent optionals
  * are omitted entirely — never assigned undefined (exactOptionalPropertyTypes).
  */
-export interface CompactRunSummary {
+export type CompactRunSummary = {
   readonly counts: RunSummaryCounts;
   readonly failureCategories: readonly RunFailureCategory[];
   readonly finishedAt: string;
@@ -96,9 +96,9 @@ export interface CompactRunSummary {
   readonly sourceFailure?: RunSourceFailure;
   readonly sourceUrl?: string;
   readonly status?: RunStatus;
-}
+};
 
-export interface RunConfigFailureSummary {
+export type RunConfigFailureSummary = {
   readonly counts: RunSummaryCounts;
   readonly failureCategories: readonly ["config_invalid"];
   readonly finishedAt: string;
@@ -107,6 +107,6 @@ export interface RunConfigFailureSummary {
   readonly ok: false;
   readonly runId: string;
   readonly startedAt: string;
-}
+};
 
 export type RunExitCode = 0 | 2;

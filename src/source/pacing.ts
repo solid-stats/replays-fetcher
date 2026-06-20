@@ -11,15 +11,15 @@
  * the edge only.
  */
 
-export interface PacerOptions {
+export type PacerOptions = {
   readonly spacingMs: number;
   readonly now?: () => number;
   readonly sleep?: (ms: number) => Promise<void>;
-}
+};
 
-export interface Pacer {
+export type Pacer = {
   awaitFloor: () => Promise<void>;
-}
+};
 
 const noFloorRemaining = 0;
 

@@ -24,10 +24,10 @@ const deltaSecondsPattern = /^\d+$/u;
  */
 export const retryAfterCapMs = capDelayMs;
 
-export interface JitterBounds {
+export type JitterBounds = {
   readonly base?: number;
   readonly cap?: number;
-}
+};
 
 export const fullJitterDelay = (
   round: number,

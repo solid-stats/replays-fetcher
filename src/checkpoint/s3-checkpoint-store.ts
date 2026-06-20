@@ -48,18 +48,18 @@ const HTTP_CONDITIONAL_REQUEST_CONFLICT = 409;
 const MAX_CAS_ROUNDS = 5;
 const CREATE_IF_ABSENT_CONDITION = "*";
 
-interface S3CheckpointSenderOutput {
+type S3CheckpointSenderOutput = {
   readonly Body?: { transformToString: () => Promise<string> };
   readonly ETag?: string;
-}
+};
 
-interface S3CheckpointSender {
+type S3CheckpointSender = {
   send: (
     command: GetObjectCommand | PutObjectCommand,
   ) => Promise<S3CheckpointSenderOutput>;
-}
+};
 
-interface CreateS3CheckpointStoreOptions {
+type CreateS3CheckpointStoreOptions = {
   readonly bucket: string;
   // When false, checkpoint PUTs omit the If-Match / If-None-Match CAS headers —
   // a fallback for S3 backends that don't implement conditional writes (e.g.
@@ -69,27 +69,27 @@ interface CreateS3CheckpointStoreOptions {
   readonly prefix: string;
   readonly random?: () => number;
   readonly sender: S3CheckpointSender;
-}
+};
 
-export interface CheckpointReadResult {
+export type CheckpointReadResult = {
   readonly checkpoint?: Checkpoint;
   readonly etag?: string;
-}
+};
 
-export interface CheckpointWriteInput {
+export type CheckpointWriteInput = {
   readonly checkpoint: Checkpoint;
   readonly etag?: string;
   readonly slug: string;
-}
+};
 
-export interface CheckpointWriteResult {
+export type CheckpointWriteResult = {
   readonly etag?: string;
-}
+};
 
-export interface S3CheckpointStore {
+export type S3CheckpointStore = {
   read: (slug: string) => Promise<CheckpointReadResult>;
   write: (input: CheckpointWriteInput) => Promise<CheckpointWriteResult>;
-}
+};
 
 const isNotFound = (error: unknown): boolean =>
   error instanceof S3ServiceException &&
@@ -138,11 +138,11 @@ const delay = (milliseconds: number): Promise<void> =>
     setTimeout(resolve, milliseconds);
   });
 
-interface PutCheckpointInput {
+type PutCheckpointInput = {
   readonly checkpoint: Checkpoint;
   readonly etag: string | undefined;
   readonly slug: string;
-}
+};
 
 const putCheckpoint = async (
   options: CreateS3CheckpointStoreOptions,

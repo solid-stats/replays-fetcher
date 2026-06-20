@@ -10,13 +10,13 @@ import { applyStagingSchema } from "./staging-schema.fixtures.js";
 
 import type { RawReplayStorageEvidence } from "../storage/types.js";
 
-interface StagingEvidenceRow {
+type StagingEvidenceRow = {
   readonly promotion_evidence: {
     readonly discoveredAt?: string;
     readonly run_id?: string;
   };
   readonly replay_timestamp: Date | null;
-}
+};
 
 const checksum =
   "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";

@@ -10,23 +10,23 @@ import type {
 } from "./types.js";
 import type { ReplayCandidate } from "../discovery/types.js";
 
-interface S3Sender {
+type S3Sender = {
   send: (command: HeadObjectCommand | PutObjectCommand) => Promise<{
     readonly ContentLength?: number;
     readonly Metadata?: Record<string, string>;
   }>;
-}
+};
 
-interface CreateS3RawReplayStorageOptions {
+type CreateS3RawReplayStorageOptions = {
   readonly bucket: string;
   readonly sender: S3Sender;
-}
+};
 
-export interface S3RawReplayStorage {
+export type S3RawReplayStorage = {
   storeRawReplay: (
     input: RawReplayStorageInput,
   ) => Promise<RawReplayStorageEvidence>;
-}
+};
 
 const isNotFound = (error: unknown): boolean => {
   const notFoundStatus = 404;

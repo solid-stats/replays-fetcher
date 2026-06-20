@@ -26,10 +26,10 @@ import type { SourceClient, SourceFetchOptions } from "./types.js";
  * process, and a per-round `timeout` so a hung ssh is always bounded regardless
  * of whether `sourceSshCommand` carries its own time limit (WR-08-01).
  */
-interface ExecFileOptions {
+type ExecFileOptions = {
   readonly signal?: AbortSignal;
   readonly timeout?: number;
-}
+};
 
 type ExecFile = (
   file: string,
@@ -66,9 +66,9 @@ export class SourceFetchError extends AppError<SourceFetchCode> {
   }
 }
 
-interface CreateSourceClientOptions {
+type CreateSourceClientOptions = {
   readonly execFile?: ExecFile;
-}
+};
 
 /**
  * Maps the shared classifier's tri-state kind onto the narrow
@@ -87,7 +87,7 @@ const toFetchCode = (kind: FailureKind): SourceFetchCode => {
   return "source_unavailable";
 };
 
-interface BuildErrorInput {
+type BuildErrorInput = {
   readonly attempts: number;
   readonly classification: FailureClassification;
   readonly fallbackMessage: string;
@@ -95,7 +95,7 @@ interface BuildErrorInput {
   readonly page?: number;
   readonly phase: SourceReadPhase;
   readonly url: URL;
-}
+};
 
 /**
  * Builds the thrown `SourceFetchError` with an identifiers-only `details`
@@ -149,7 +149,7 @@ const buildSourceFetchError = (input: BuildErrorInput): SourceFetchError => {
 const resolvePhase = (options?: SourceFetchOptions): SourceReadPhase =>
   options?.phase ?? "list";
 
-interface RetryWiring<TResult> {
+type RetryWiring<TResult> = {
   readonly classify: (error: unknown) => FailureClassification;
   readonly phase: SourceReadPhase;
   readonly read: (signal: AbortSignal) => Promise<TResult>;
@@ -158,7 +158,7 @@ interface RetryWiring<TResult> {
     now: () => number,
   ) => number | undefined;
   readonly url: URL;
-}
+};
 
 /**
  * Threads the per-call retry seam (attempts/page/onRetry/external signal) from
@@ -232,9 +232,9 @@ const detectCloudflareChallenge = (
   return cfBodyMarkers.some((marker) => lower.includes(marker));
 };
 
-interface CloudflareChallengeError extends Error {
+type CloudflareChallengeError = {
   readonly isCloudflareChallenge: true;
-}
+} & Error;
 
 const isCloudflareChallengeError = (
   error: unknown,
@@ -268,11 +268,11 @@ const directRetryAfter = (
   return parseRetryAfter(retryAfter, now);
 };
 
-interface DirectHttpErrorInput {
+type DirectHttpErrorInput = {
   readonly phase: SourceReadPhase;
   readonly response: Response;
   readonly url: URL;
-}
+};
 
 /**
  * Wraps a non-ok direct HTTP response in a `SourceFetchError` carrying the
@@ -328,12 +328,12 @@ const classifyDirect = (error: unknown): FailureClassification => {
 const classifySsh = (error: unknown): FailureClassification =>
   classifyFailure({ error });
 
-interface DirectFetchErrorInput {
+type DirectFetchErrorInput = {
   readonly error: unknown;
   readonly options: SourceFetchOptions | undefined;
   readonly phase: SourceReadPhase;
   readonly url: URL;
-}
+};
 
 const buildPageInput = (
   options: SourceFetchOptions | undefined,
@@ -396,12 +396,12 @@ const getSshHost = (config: SourceConfig): string => {
   return config.sourceSshHost;
 };
 
-interface SshFetchErrorInput {
+type SshFetchErrorInput = {
   readonly error: unknown;
   readonly options: SourceFetchOptions | undefined;
   readonly phase: SourceReadPhase;
   readonly url: URL;
-}
+};
 
 const toSshFetchError = (input: SshFetchErrorInput): SourceFetchError => {
   const { error, options, phase, url } = input;

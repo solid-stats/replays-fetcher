@@ -2,7 +2,7 @@ import { pino } from "pino";
 
 import type { Logger, LoggerOptions } from "pino";
 
-export interface CreateLoggerOptions {
+export type CreateLoggerOptions = {
   readonly level?: string;
   /**
    * Synchronous log sink. Intended for tests (a capturing `Writable`) or a
@@ -15,7 +15,7 @@ export interface CreateLoggerOptions {
    * buffering/async stream — it breaks the synchronous-flush guarantee.
    */
   readonly destination?: NodeJS.WritableStream;
-}
+};
 
 /**
  * Secret-path redaction for the known logged shapes

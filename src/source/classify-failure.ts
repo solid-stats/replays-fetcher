@@ -18,20 +18,20 @@
 
 export type FailureKind = "permanent" | "rate_limited" | "transient";
 
-export interface ClassifyInput {
+export type ClassifyInput = {
   readonly cfChallenge?: boolean;
   readonly error?: unknown;
   readonly httpStatus?: number;
   readonly malformedBody?: boolean;
-}
+};
 
-export interface FailureClassification {
+export type FailureClassification = {
   readonly causeCode?: string;
   readonly causeMessage?: string;
   readonly cfChallenge: boolean;
   readonly httpStatus?: number;
   readonly kind: FailureKind;
-}
+};
 
 const httpTooManyRequestsStatus = 429;
 const httpClientErrorFloor = 400;
@@ -82,11 +82,11 @@ const undiciCodePrefix = "UND_ERR_";
 const tlsCodePrefix = "ERR_TLS_";
 const certCodePrefix = "CERT_";
 
-interface UnwrappedCause {
+type UnwrappedCause = {
   readonly code?: string;
   readonly message?: string;
   readonly name?: string;
-}
+};
 
 const readErrorCode = (error: Error): string | undefined => {
   if (!("code" in error)) {
@@ -175,12 +175,12 @@ const classifyByStatus = (status: number): FailureKind | undefined => {
   return undefined;
 };
 
-interface ClassificationParts {
+type ClassificationParts = {
   readonly cause: UnwrappedCause;
   readonly cfChallenge: boolean;
   readonly input: ClassifyInput;
   readonly kind: FailureKind;
-}
+};
 
 const buildClassification = (
   parts: ClassificationParts,

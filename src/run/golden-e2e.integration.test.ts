@@ -28,7 +28,7 @@ import { runOnce } from "./run-once.js";
 import type { SourceClient } from "../discovery/types.js";
 import type { ReplayByteClient } from "../storage/replay-byte-client.js";
 
-interface StagingRow {
+type StagingRow = {
   readonly checksum: string;
   readonly object_key: string;
   readonly promotion_evidence: {
@@ -47,7 +47,7 @@ interface StagingRow {
   readonly size_bytes: string;
   readonly source_replay_id: string;
   readonly source_system: string;
-}
+};
 
 const bucket = "solid-stats-replays";
 const runId = "run-2026-06-17T00:00:00.000Z-golden";

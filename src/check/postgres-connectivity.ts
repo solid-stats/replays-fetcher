@@ -1,19 +1,19 @@
 import type { ConnectivityCheck } from "./connectivity.js";
 
-interface QueryResult<Row> {
+type QueryResult<Row> = {
   readonly rows: readonly Row[];
-}
+};
 
-export interface PostgresConnectivityQueryClient {
+export type PostgresConnectivityQueryClient = {
   query: <Row>(
     text: string,
     values?: readonly unknown[],
   ) => Promise<QueryResult<Row>>;
-}
+};
 
-interface CheckPostgresConnectivityInput {
+type CheckPostgresConnectivityInput = {
   readonly client: PostgresConnectivityQueryClient;
-}
+};
 
 const basicReadSql = "select 1";
 const stagingReadSql = "select 1 from ingest_staging_records limit 1";

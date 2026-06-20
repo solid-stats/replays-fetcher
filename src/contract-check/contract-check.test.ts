@@ -169,12 +169,12 @@ describe("toRawReplayUrl / runContractCheck — GUARD-02 invariant", () => {
   });
 });
 
-interface ListFetchFailureCase {
+type ListFetchFailureCase = {
   readonly error: unknown;
   readonly expectedHttpStatus?: number;
   readonly name: string;
   readonly reason: ContractCheckReason;
-}
+};
 
 const listFetchFailureCases: readonly ListFetchFailureCase[] = [
   {

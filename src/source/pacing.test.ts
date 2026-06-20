@@ -10,10 +10,10 @@ const elapsedAtFloor = Number("300");
 const startEpoch = Number("1000000000000");
 const lastIndex = Number("-1");
 
-interface SleepSpy {
+type SleepSpy = {
   readonly sleep: (ms: number) => Promise<void>;
   readonly calls: number[];
-}
+};
 
 const createSleepSpy = (): SleepSpy => {
   const calls: number[] = [];

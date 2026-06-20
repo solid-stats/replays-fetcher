@@ -9,10 +9,10 @@ import type { RawReplayStorageEvidence } from "../storage/types.js";
 
 const defaultSourceSystem = "sg-zone";
 
-interface ToIngestStagingPayloadOptions {
+type ToIngestStagingPayloadOptions = {
   readonly runId?: string;
   readonly sourceSystem?: string;
-}
+};
 
 const isStageable = (
   evidence: RawReplayStorageEvidence,

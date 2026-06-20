@@ -33,17 +33,17 @@ const timestamp = "2026-06-11T13:27:38.774Z";
 
 export type SentCommand = PutObjectCommand;
 
-export interface SenderResponse {
+export type SenderResponse = {
   readonly ETag?: string;
-}
+};
 
-export interface PutInput {
+export type PutInput = {
   readonly Body: string;
   readonly ContentType?: string;
   readonly IfMatch?: string;
   readonly IfNoneMatch?: string;
   readonly Key: string;
-}
+};
 
 type Store = ReturnType<typeof createS3EvidenceStore>;
 

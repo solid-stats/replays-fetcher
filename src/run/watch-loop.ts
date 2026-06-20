@@ -38,7 +38,7 @@ const defaultSleep = async (ms: number): Promise<void> => {
  * are all injectable seams so the loop is unit-testable with fake timers and
  * fakes (no network, no real sleeps).
  */
-export interface WatchLoopInput {
+export type WatchLoopInput = {
   readonly attempts?: number;
   readonly byteClient: ReplayByteClient;
   readonly concurrency: number;
@@ -80,11 +80,11 @@ export interface WatchLoopInput {
     readonly storage: S3RawReplayStorage;
   }) => Promise<StoreRawReplayResult>;
   readonly writeHeartbeat: (path: string, body: string) => Promise<void>;
-}
+};
 
-export interface WatchLoopResult {
+export type WatchLoopResult = {
   readonly exitCode: 0;
-}
+};
 
 const defaultPacer = (spacingMs: number): Pacer => createPacer({ spacingMs });
 

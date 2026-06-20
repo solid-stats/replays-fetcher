@@ -39,9 +39,9 @@ const candidate: ReplayCandidate = {
   },
 };
 
-interface FakeCheckpointStore extends S3CheckpointStore {
+type FakeCheckpointStore = {
   readonly writes: CheckpointWriteInput[];
-}
+} & S3CheckpointStore;
 
 const fakeCheckpointStore = (
   initial?: Checkpoint,
@@ -977,11 +977,11 @@ test("runOnce persists only identifiers in the checkpoint and summary (no leak)"
   expect(JSON.stringify(result.summary)).not.toContain(secret);
 });
 
-interface InspectableLimiter {
+type InspectableLimiter = {
   readonly assignments: number[];
   readonly limit: LimitFunction;
   readonly maxInFlight: () => number;
-}
+};
 
 /**
  * A `p-limit`-compatible limiter stub that honors the concurrency cap, records
@@ -1036,10 +1036,10 @@ const inspectableLimiter = (initial: number): InspectableLimiter => {
   return { assignments, limit, maxInFlight: () => maxInFlight };
 };
 
-interface SpyPacer {
+type SpyPacer = {
   readonly awaited: () => number;
   readonly pacer: Pacer;
-}
+};
 
 const spyPacer = (): SpyPacer => {
   let awaited = 0;
@@ -1056,15 +1056,15 @@ const spyPacer = (): SpyPacer => {
   };
 };
 
-interface ThrottleEvent {
+type ThrottleEvent = {
   readonly kind: "clean" | "rate_limited";
   readonly nowMs: number;
-}
+};
 
-interface SpyThrottle {
+type SpyThrottle = {
   readonly events: ThrottleEvent[];
   readonly throttle: ThrottleController;
-}
+};
 
 /**
  * A throttle stub whose `effectiveConcurrency` returns each scripted value in

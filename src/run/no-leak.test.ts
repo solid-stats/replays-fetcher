@@ -71,10 +71,10 @@ const testConcurrency = 1;
 const testChecksum =
   "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 
-interface CaptureSink {
+type CaptureSink = {
   readonly chunks: string[];
   readonly stream: Writable;
-}
+};
 
 const createCaptureSink = (): CaptureSink => {
   const chunks: string[] = [];

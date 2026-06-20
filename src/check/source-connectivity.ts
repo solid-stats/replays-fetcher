@@ -3,10 +3,10 @@ import { SourceFetchError } from "../discovery/source-client.js";
 import type { ConnectivityCheck } from "./connectivity.js";
 import type { SourceClient } from "../discovery/types.js";
 
-interface CheckSourceConnectivityInput {
+type CheckSourceConnectivityInput = {
   readonly sourceClient: SourceClient;
   readonly sourceUrl: URL;
-}
+};
 
 export const checkSourceConnectivity = async (
   input: CheckSourceConnectivityInput,

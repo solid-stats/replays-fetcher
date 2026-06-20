@@ -4,15 +4,15 @@ import type { IngestStagingPayload, IngestStagingResult } from "./types.js";
 import type { StoreRawReplayResult } from "../storage/store-raw-replay.js";
 import type { RawReplayStorageEvidence } from "../storage/types.js";
 
-export interface StagingRepository {
+export type StagingRepository = {
   stage: (payload: IngestStagingPayload) => Promise<IngestStagingResult>;
-}
+};
 
-interface StageRawReplayInput {
+type StageRawReplayInput = {
   readonly rawResult: StoreRawReplayResult;
   readonly repository: StagingRepository;
   readonly runId?: string;
-}
+};
 
 const isRawStorageEvidence = (
   result: StoreRawReplayResult,

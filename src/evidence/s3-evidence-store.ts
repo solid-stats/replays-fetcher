@@ -23,24 +23,24 @@ import { toEvidenceObjectKey } from "./object-key.js";
 
 import type { RunSummary } from "../types/run-summary.js";
 
-export interface S3EvidenceSender {
+export type S3EvidenceSender = {
   send: (command: PutObjectCommand) => Promise<{ readonly ETag?: string }>;
-}
+};
 
-export interface EvidenceWriteInput {
+export type EvidenceWriteInput = {
   readonly runId: string;
   readonly summary: RunSummary;
-}
+};
 
-interface CreateS3EvidenceStoreOptions {
+type CreateS3EvidenceStoreOptions = {
   readonly bucket: string;
   readonly prefix: string;
   readonly sender: S3EvidenceSender;
-}
+};
 
-export interface S3EvidenceStore {
+export type S3EvidenceStore = {
   write: (input: EvidenceWriteInput) => Promise<void>;
-}
+};
 
 const putEvidence = async (
   options: CreateS3EvidenceStoreOptions,

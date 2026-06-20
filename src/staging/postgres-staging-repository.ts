@@ -4,33 +4,33 @@ import type {
   IngestStagingResult,
 } from "./types.js";
 
-interface QueryResult<Row> {
+type QueryResult<Row> = {
   readonly rows: readonly Row[];
-}
+};
 
-export interface StagingQueryClient {
+export type StagingQueryClient = {
   query: <Row>(
     text: string,
     values?: readonly unknown[],
   ) => Promise<QueryResult<Row>>;
-}
+};
 
-interface StagingRow {
+type StagingRow = {
   readonly checksum: string;
   readonly id: string;
   readonly object_key: string;
   readonly source_replay_id: string;
   readonly source_system: string;
   readonly status: string;
-}
+};
 
-interface DatabaseError {
+type DatabaseError = {
   readonly code?: string;
-}
+};
 
-export interface PostgresStagingRepository {
+export type PostgresStagingRepository = {
   stage: (payload: IngestStagingPayload) => Promise<IngestStagingResult>;
-}
+};
 
 const uniqueViolationCode = "23505";
 

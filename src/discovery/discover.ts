@@ -10,7 +10,7 @@ import type {
 } from "./types.js";
 import type { RetryAttemptEvent } from "../source/retry.js";
 
-interface DiscoverReplaysDryRunOptions {
+type DiscoverReplaysDryRunOptions = {
   readonly attempts?: number;
   readonly generatedAt?: string;
   readonly maxPages?: number;
@@ -19,16 +19,16 @@ interface DiscoverReplaysDryRunOptions {
   readonly sleep?: (milliseconds: number) => Promise<void>;
   readonly sourceClient: SourceClient;
   readonly sourceUrl: URL;
-}
+};
 
-interface ReadOptions {
+type ReadOptions = {
   readonly attempts?: number;
   readonly onRetry?: (event: RetryAttemptEvent) => void;
   readonly page: number;
   readonly phase: "detail" | "list";
-}
+};
 
-interface SourceCandidateFixture {
+type SourceCandidateFixture = {
   readonly discoveredAt?: string;
   readonly externalId?: string;
   readonly filename: string;
@@ -38,37 +38,37 @@ interface SourceCandidateFixture {
   readonly serverId?: number;
   readonly url: string;
   readonly world?: string;
-}
+};
 
-interface SourceFixture {
+type SourceFixture = {
   readonly candidates: readonly SourceCandidateFixture[];
-}
+};
 
-interface MutableReplayMetadata {
+type MutableReplayMetadata = {
   discoveredAt?: string;
   missionText?: string;
   serverId?: number;
   world?: string;
-}
+};
 
-interface MutableReplaySource {
+type MutableReplaySource = {
   externalId?: string;
   page?: number;
   rawUrl?: string;
   url: string;
-}
+};
 
-interface BuildReportOptions {
+type BuildReportOptions = {
   readonly candidates: readonly ReplayCandidate[];
   readonly diagnostics: readonly DiscoveryDiagnostic[];
   readonly ok: boolean;
   readonly options: DiscoverReplaysDryRunOptions;
-}
+};
 
-interface DiscoverPageCandidatesResult {
+type DiscoverPageCandidatesResult = {
   readonly candidates: readonly ReplayCandidate[];
   readonly diagnostics: readonly DiscoveryDiagnostic[];
-}
+};
 
 type CandidateFixtureResult =
   | {
@@ -80,10 +80,10 @@ type CandidateFixtureResult =
       readonly diagnostic: DiscoveryDiagnostic;
     };
 
-interface CandidateRegistryEntry {
+type CandidateRegistryEntry = {
   readonly candidate: ReplayCandidate;
   readonly serialized: string;
-}
+};
 
 // The blanket per-request delay is retired as the NORMAL pacing source: the
 // run-once `createPacer` floor (RANGE-04) is now the single pacing knob. A

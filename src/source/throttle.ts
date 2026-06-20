@@ -33,20 +33,20 @@ const CLEAN_WINDOW = 3;
 const PACING_FLOOR_STEP_MS = 100;
 const COUNTER_RESET = 0;
 
-export interface ThrottleControllerOptions {
+export type ThrottleControllerOptions = {
   readonly baseConcurrency: number;
   readonly min: number;
   readonly max: number;
   readonly baseSpacingMs: number;
-}
+};
 
-export interface ThrottleController {
+export type ThrottleController = {
   readonly effectiveConcurrency: number;
   readonly pacingFloorMs: number;
   readonly lastSignalAtMs: number;
   onRateLimited: (nowMs: number) => void;
   onCleanWindow: (nowMs: number) => void;
-}
+};
 
 export const createThrottleController = (
   options: ThrottleControllerOptions,

@@ -83,7 +83,7 @@ const rawSkipped = (filename: string): StoreRawReplayResult => ({
   status: "skipped",
 });
 
-interface BuildInputOptions {
+type BuildInputOptions = {
   readonly attempts?: number;
   readonly createPacer?: WatchLoopInput["createPacer"];
   readonly discoverReplays?: WatchLoopInput["discoverReplays"];
@@ -95,7 +95,7 @@ interface BuildInputOptions {
   readonly stageRawReplay?: WatchLoopInput["stageRawReplay"];
   readonly storeRawReplay?: WatchLoopInput["storeRawReplay"];
   readonly writeHeartbeat?: WatchLoopInput["writeHeartbeat"];
-}
+};
 
 const defaultDiscover = async (): Promise<DiscoveryReport> =>
   report([candidate("100")]);

@@ -1,4 +1,4 @@
-export interface ReplayCandidate {
+export type ReplayCandidate = {
   readonly identity: {
     readonly filename: string;
   };
@@ -14,4 +14,4 @@ export interface ReplayCandidate {
     readonly rawUrl?: string;
     readonly url: string;
   };
-}
+};

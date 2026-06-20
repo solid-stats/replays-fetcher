@@ -25,10 +25,10 @@ const buildConfig = (): AppConfig =>
     staging: { databaseUrl: "postgres://ignored" },
   }) as unknown as AppConfig;
 
-interface DisposeFakes {
+type DisposeFakes = {
   readonly destroy: ReturnType<typeof vi.fn>;
   readonly end: ReturnType<typeof vi.fn>;
-}
+};
 
 const buildDependencies = (
   fakes: DisposeFakes,

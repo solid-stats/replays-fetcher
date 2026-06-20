@@ -4,10 +4,10 @@ import { checkPostgresConnectivity } from "./postgres-connectivity.js";
 
 import type { PostgresConnectivityQueryClient } from "./postgres-connectivity.js";
 
-interface QueryCall {
+type QueryCall = {
   readonly text: string;
   readonly values: readonly unknown[] | undefined;
-}
+};
 
 test("checkPostgresConnectivity should run read-only probe SQL", async () => {
   const calls: QueryCall[] = [];
