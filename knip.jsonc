@@ -9,11 +9,6 @@
   //                Declared as entry so knip treats it as an intentional public surface.
   "entry": ["src/index.ts"],
   "project": ["src/**/*.ts"],
-  // PROG-04 no-leak contract module — companion to no-leak.test.ts.
-  // NoLeakSurface documents the three output surfaces the cross-surface
-  // no-leak test (T-11-09) guards. The file is intentionally kept; the
-  // export encodes the cross-surface contract and must not be removed.
-  "ignore": ["src/run/no-leak.ts"],
   // All 17 unused exported types and toSourceSlug are used within their own
   // defining files (internal narrowing / local type composition). They are not
   // imported by other modules but are kept exported because:
