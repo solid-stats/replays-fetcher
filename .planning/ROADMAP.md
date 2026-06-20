@@ -118,7 +118,11 @@ Behavior-preserving migration onto the shared `@solid-stats/ts-toolchain` preset
 
 **Implementation note**: spike `oxlint --fix` first; only if it cannot convert all 138 sites with `tsc` green, add `ts-morph` as a dev-only one-shot dep, run the codemod, commit, then `pnpm remove ts-morph`. Only the mechanical lane is in scope here — no semantic audit findings (Pitfall 5).
 **Behavior-preservation gate**: golden oracle + 100% V8 coverage + depcruise + knip green.
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 21-01-PLAN.md — interface→type conversion (oxlint --fix, 156 sites) + consistent-type-definitions lock-in (MECH-01)
+- [ ] 21-02-PLAN.md — import-order normalization (oxfmt sortImports, local) + format:check lock-in (MECH-02)
 
 ### Phase 22: God-File Decomposition
 
