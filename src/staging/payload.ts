@@ -82,7 +82,9 @@ const basePayload = (
     sourceSystem,
     status: "pending",
   };
-  const replayTimestamp = replayTimestampFromFilename(evidence.sourceFilename);
+  const replayTimestamp =
+    replayTimestampFromFilename(evidence.sourceFilename) ??
+    evidence.discoveredAt;
 
   if (replayTimestamp !== undefined) {
     return {

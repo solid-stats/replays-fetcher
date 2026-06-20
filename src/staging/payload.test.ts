@@ -176,9 +176,11 @@ test("toIngestStagingPayload should allow overriding source system", () => {
   });
 });
 
-test("toIngestStagingPayload should omit replay timestamps for unknown filename formats", () => {
+test("toIngestStagingPayload should omit replay timestamps for unknown filename formats with no listing game-date", () => {
+  const { discoveredAt: _discoveredAt, ...withoutDiscoveredAt } =
+    storedEvidence;
   const result = toIngestStagingPayload({
-    ...storedEvidence,
+    ...withoutDiscoveredAt,
     sourceFilename: "custom-replay-name.ocap",
   });
 
