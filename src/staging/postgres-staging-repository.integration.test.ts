@@ -97,3 +97,82 @@ test("PostgreSQL staging repository should insert idempotent discovered timestam
   expect(rows.rows[0]?.promotion_evidence.run_id).toBe(runId);
   expect(second).toMatchObject({ status: "already_staged" });
 });
+
+const startStagingDatabase = async (): Promise<Pool> => {
+  const container = await new PostgreSqlContainer("postgres:17-alpine")
+    .withDatabase("solid_stats")
+    .withUsername("solid")
+    .withPassword("solid")
+    .start();
+  stopContainer = async (): Promise<void> => {
+    await container.stop();
+  };
+  const pool = new Pool({ connectionString: container.getConnectionUri() });
+  stopPool = async (): Promise<void> => {
+    await pool.end();
+  };
+  await applyStagingSchema(pool);
+
+  return pool;
+};
+
+const countStagingRows = async (pool: Pool): Promise<number> => {
+  const result = await pool.query<{ readonly count: string }>(
+    "select count(*)::text as count from ingest_staging_records",
+  );
+
+  return Number(result.rows[0]?.count ?? "0");
+};
+
+test("PostgreSQL staging repository should stay quiet on a benign exact re-stage", async () => {
+  const pool = await startStagingDatabase();
+  const repository = createPostgresStagingRepository(pool);
+
+  const first = await repository.stage(payload);
+  const second = await repository.stage(payload);
+  const rowCount = await countStagingRows(pool);
+
+  expect(first).toMatchObject({ status: "staged" });
+  expect(second.status).toBe("already_staged");
+  expect(second.stagingId).toBeDefined();
+  expect(rowCount).toBe(1);
+});
+
+test("PostgreSQL staging repository should NOT swallow a same-source/different-checksum conflict", async () => {
+  const pool = await startStagingDatabase();
+  const repository = createPostgresStagingRepository(pool);
+  const conflictingChecksum =
+    "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+  const conflictingPayload = {
+    ...payload,
+    checksum: conflictingChecksum,
+    objectKey: `raw/sha256/${conflictingChecksum}.ocap`,
+  };
+
+  const first = await repository.stage(payload);
+  const conflict = await repository.stage(conflictingPayload);
+
+  expect(first).toMatchObject({ status: "staged" });
+  expect(conflict).toMatchObject({
+    reason: "source_identity_conflict",
+    status: "conflict",
+  });
+});
+
+test("PostgreSQL staging repository existsBySourceIdentity should reflect row presence", async () => {
+  const pool = await startStagingDatabase();
+  const repository = createPostgresStagingRepository(pool);
+
+  const before = await repository.existsBySourceIdentity(
+    payload.sourceSystem,
+    payload.sourceReplayId,
+  );
+  await repository.stage(payload);
+  const after = await repository.existsBySourceIdentity(
+    payload.sourceSystem,
+    payload.sourceReplayId,
+  );
+
+  expect(before).toBe(false);
+  expect(after).toBe(true);
+});

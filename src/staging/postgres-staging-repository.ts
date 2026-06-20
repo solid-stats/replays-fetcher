@@ -29,6 +29,10 @@ type DatabaseError = {
 };
 
 export type PostgresStagingRepository = {
+  existsBySourceIdentity: (
+    sourceSystem: string,
+    sourceReplayId: string,
+  ) => Promise<boolean>;
   stage: (payload: IngestStagingPayload) => Promise<IngestStagingResult>;
 };
 
@@ -167,6 +171,18 @@ const classifyExistingStaging = async (
 export const createPostgresStagingRepository = (
   client: StagingQueryClient,
 ): PostgresStagingRepository => ({
+  async existsBySourceIdentity(sourceSystem, sourceReplayId): Promise<boolean> {
+    const result = await client.query(
+      `
+        select 1 from ingest_staging_records
+        where source_system = $1 and source_replay_id = $2
+        limit 1
+      `,
+      [sourceSystem, sourceReplayId],
+    );
+
+    return result.rows.length > 0;
+  },
   async stage(payload): Promise<IngestStagingResult> {
     try {
       const result = await insertStaging(client, payload);

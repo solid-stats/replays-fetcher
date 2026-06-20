@@ -1,6 +1,4 @@
 /* oxlint-disable camelcase -- PostgreSQL row fixtures intentionally use database column names. */
-import { readFile } from "node:fs/promises";
-
 import { expect, test } from "vitest";
 
 import { createPostgresStagingRepository } from "./postgres-staging-repository.js";
@@ -46,6 +44,26 @@ const payload: IngestStagingPayload = {
   status: "pending",
 };
 const insertedStagingId = "00000000-0000-4000-8000-000000000001";
+const matchingStagingRow: StagingRow = {
+  checksum,
+  id: insertedStagingId,
+  object_key: objectKey,
+  source_replay_id: payload.sourceReplayId,
+  source_system: payload.sourceSystem,
+  status: "pending",
+};
+const alreadyStagedResult = {
+  existing: {
+    checksum,
+    objectKey,
+    sourceReplayId: payload.sourceReplayId,
+    sourceSystem: payload.sourceSystem,
+    status: "pending",
+  },
+  payload,
+  stagingId: insertedStagingId,
+  status: "already_staged",
+} as const;
 
 class UniqueViolationError extends Error {
   public readonly code = "23505";
@@ -130,37 +148,16 @@ test("PostgresStagingRepository should insert pending ingest staging records", a
     JSON.stringify(payload.promotionEvidence),
     JSON.stringify(payload.conflictDetails),
   ]);
-  expect(String(calls[0]?.values?.[7])).toContain(
-    '"discoveredAt":"2026-05-09T00:32:44.000Z"',
-  );
 });
 
 test("PostgresStagingRepository should return already_staged via empty RETURNING rows for a benign exact duplicate", async () => {
   const repository = createPostgresStagingRepository(
-    createBenignConflictClient([
-      {
-        checksum,
-        id: insertedStagingId,
-        object_key: objectKey,
-        source_replay_id: payload.sourceReplayId,
-        source_system: payload.sourceSystem,
-        status: "pending",
-      },
-    ]),
+    createBenignConflictClient([matchingStagingRow]),
   );
 
-  await expect(repository.stage(payload)).resolves.toStrictEqual({
-    existing: {
-      checksum,
-      objectKey,
-      sourceReplayId: payload.sourceReplayId,
-      sourceSystem: payload.sourceSystem,
-      status: "pending",
-    },
-    payload,
-    stagingId: insertedStagingId,
-    status: "already_staged",
-  });
+  await expect(repository.stage(payload)).resolves.toStrictEqual(
+    alreadyStagedResult,
+  );
 });
 
 test("PostgresStagingRepository should fall through to classify when benign empty rows resolve no existing row", async () => {
@@ -173,6 +170,16 @@ test("PostgresStagingRepository should fall through to classify when benign empt
     reason: "unique_violation_without_existing_staging",
     status: "failed",
   });
+});
+
+test("PostgresStagingRepository should classify a 23505 with a matching source row as already_staged", async () => {
+  const repository = createPostgresStagingRepository(
+    createUniqueViolationClient([matchingStagingRow]),
+  );
+
+  await expect(repository.stage(payload)).resolves.toStrictEqual(
+    alreadyStagedResult,
+  );
 });
 
 test("PostgresStagingRepository should return conflict for changed source identity evidence", async () => {
@@ -253,26 +260,39 @@ test("PostgresStagingRepository should return structured failure for database er
   });
 });
 
-test("PostgresStagingRepository source should not mutate forbidden server-2 business tables", async () => {
-  const source = await readFile(
-    new URL("postgres-staging-repository.ts", import.meta.url),
-    "utf8",
-  );
-  const forbiddenMutationPatterns = [
-    /insert\s+into\s+replays/iu,
-    /insert\s+into\s+parse_jobs/iu,
-    /insert\s+into\s+parser_results/iu,
-    /insert\s+into\s+parser_events/iu,
-    /insert\s+into\s+player_stats/iu,
-    /insert\s+into\s+squad_stats/iu,
-    /insert\s+into\s+users/iu,
-    /insert\s+into\s+roles/iu,
-    /insert\s+into\s+requests/iu,
-    /insert\s+into\s+moderation_actions/iu,
-  ];
+test("PostgresStagingRepository existsBySourceIdentity should issue a lean existence query and return true when a row exists", async () => {
+  const calls: QueryCall[] = [];
+  const client = {
+    async query(text: string, values?: readonly unknown[]) {
+      calls.push({ text, values });
 
-  for (const pattern of forbiddenMutationPatterns) {
-    expect(source).not.toMatch(pattern);
-  }
-  expect(source).toMatch(/insert\s+into\s+ingest_staging_records/iu);
+      return { rows: [{ exists: 1 }] };
+    },
+  } as StagingQueryClient;
+  const repository = createPostgresStagingRepository(client);
+
+  const result = await repository.existsBySourceIdentity(
+    "sg-zone",
+    "1778269931",
+  );
+
+  expect(result).toBe(true);
+  expect(calls).toHaveLength(1);
+  expect(normalizeSql(calls[0]?.text ?? "")).toContain(
+    "select 1 from ingest_staging_records",
+  );
+  expect(calls[0]?.values).toStrictEqual(["sg-zone", "1778269931"]);
+});
+
+test("PostgresStagingRepository existsBySourceIdentity should return false when no row exists", async () => {
+  const client = {
+    async query() {
+      return { rows: [] };
+    },
+  } as StagingQueryClient;
+  const repository = createPostgresStagingRepository(client);
+
+  await expect(
+    repository.existsBySourceIdentity("sg-zone", "absent"),
+  ).resolves.toBe(false);
 });
