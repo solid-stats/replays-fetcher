@@ -76,39 +76,50 @@ Over-engineering traps for THIS refactor — the tempting wrong turn inside a v3
 
 ## Traceability
 
-Populated by the roadmapper. Each requirement maps to exactly one phase.
+Each requirement maps to exactly one phase. v3.1 continues the project phase numbering: v3.0 ended at Phase 18, so v3.1 spans Phases 19-26.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ARCH-01 | TBD | Pending |
-| ARCH-02 | TBD | Pending |
-| ARCH-03 | TBD | Pending |
-| ARCH-04 | TBD | Pending |
-| ARCH-05 | TBD | Pending |
-| ARCH-06 | TBD | Pending |
-| SPLIT-01 | TBD | Pending |
-| SPLIT-02 | TBD | Pending |
-| SPLIT-03 | TBD | Pending |
-| SPLIT-04 | TBD | Pending |
-| MECH-01 | TBD | Pending |
-| MECH-02 | TBD | Pending |
-| DEDUP-01 | TBD | Pending |
-| DEDUP-02 | TBD | Pending |
-| DEDUP-03 | TBD | Pending |
-| DISC-01 | TBD | Pending |
-| DISC-02 | TBD | Blocked (server-2) |
-| CORR-01 | TBD | Pending |
-| TEST-01 | TBD | Pending |
-| TEST-02 | TBD | Pending |
-| TEST-03 | TBD | Pending |
-| TEST-04 | TBD | Pending |
-| TEST-05 | TBD | Pending |
+| ARCH-01 | Phase 19 | Pending |
+| ARCH-02 | Phase 19 | Pending |
+| ARCH-03 | Phase 19 | Pending |
+| ARCH-04 | Phase 20 | Pending |
+| ARCH-05 | Phase 20 | Pending |
+| ARCH-06 | Phase 23 | Pending |
+| SPLIT-01 | Phase 22 | Pending |
+| SPLIT-02 | Phase 22 | Pending |
+| SPLIT-03 | Phase 22 | Pending |
+| SPLIT-04 | Phase 22 | Pending |
+| MECH-01 | Phase 21 | Pending |
+| MECH-02 | Phase 21 | Pending |
+| DEDUP-01 | Phase 24 | Pending |
+| DEDUP-02 | Phase 24 | Pending |
+| DEDUP-03 | Phase 24 | Pending |
+| DISC-01 | Phase 25 | Pending |
+| DISC-02 | Phase 25 | Blocked (server-2) |
+| CORR-01 | Phase 26 | Pending |
+| TEST-01 | Phase 26 | Pending |
+| TEST-02 | Phase 26 | Pending |
+| TEST-03 | Phase 26 | Pending |
+| TEST-04 | Phase 26 | Pending |
+| TEST-05 | Phase 26 | Pending |
 
 **Coverage:**
 - v3.1 requirements: 23 total
-- Mapped to phases: 0 (roadmapper to assign)
-- Unmapped: 23 ⚠️ (resolved on roadmap creation)
+- Mapped to phases: 23 ✓ (every requirement maps to exactly one phase; no orphans, no duplicates)
+- Unmapped: 0
+- Note: DISC-02 is mapped to Phase 25 but its contract-write/oracle-flip portion is **Blocked** on a server-2 canonical-date-field decision and may slip to v3.2; DISC-01 (local parse) ships independently within Phase 25.
+
+**Phase → requirement summary:**
+- Phase 19 (Contracts Home + Config Fix + Orphan): ARCH-01, ARCH-02, ARCH-03
+- Phase 20 (Composition-Root Clients + Watch Teardown): ARCH-04, ARCH-05
+- Phase 21 (Mechanical Convention Cleanup): MECH-01, MECH-02
+- Phase 22 (God-File Decomposition): SPLIT-01, SPLIT-02, SPLIT-03, SPLIT-04
+- Phase 23 (Depcruise Band-Fence Lock-In): ARCH-06
+- Phase 24 (Watch Pre-Fetch Dedup + ON CONFLICT): DEDUP-01, DEDUP-02, DEDUP-03
+- Phase 25 (Discovery Game-Date Capture, cross-app gated): DISC-01, DISC-02
+- Phase 26 (Test-Quality + Correctness Hygiene): CORR-01, TEST-01, TEST-02, TEST-03, TEST-04, TEST-05
 
 ---
 *Requirements defined: 2026-06-20*
-*Last updated: 2026-06-20 after initial v3.1 definition*
+*Last updated: 2026-06-20 — traceability populated by roadmapper; 23/23 mapped to Phases 19-26.*

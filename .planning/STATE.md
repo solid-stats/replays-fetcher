@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v3.1
 milestone_name: Convention Compliance & Tech-Debt Closure
 status: planning
-last_updated: "2026-06-20T05:52:07.096Z"
+last_updated: "2026-06-20T06:30:00.000Z"
 last_activity: 2026-06-20
 progress:
-  total_phases: 0
+  total_phases: 8
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,26 +17,70 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-06-07)
+See: .planning/PROJECT.md (updated 2026-06-20)
 
 **Core value:** Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
-**Current focus:** v3.0 Track C milestone lifecycle (audit → complete → cleanup) — all 6 phases (13-18) verified
+**Current focus:** v3.1 Convention Compliance & Tech-Debt Closure — roadmapped (Phases 19-26). Next: plan Phase 19.
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-06-20 — Milestone v3.1 started
+Phase: 19 of 26 (Contracts Home + Config Import Fix + Orphan Cleanup) — first v3.1 phase
+Plan: — of — (not yet planned)
+Status: Ready to plan
+Last activity: 2026-06-20 — v3.1 roadmap created (8 phases, 19-26), 23/23 requirements mapped
 
-## Cross-repo preset follow-ups — both RESOLVED 2026-06-14
+Progress: [░░░░░░░░░░] 0%
 
-- **CFG-04 vitest leg — RESOLVED:** ts-toolchain `v0.1.2` ships the vitest preset as `base.js`+`base.d.ts` (raw `.ts` was unimportable under Node type-stripping); fetcher re-pinned `#v0.1.2` and `vitest.config.ts` now `mergeConfig`s the shared preset (commit `5d5a23f`).
-- **oxfmt pre-commit papercut — RESOLVED:** ts-toolchain `v0.1.3` adds `--no-error-on-unmatched-pattern` to the lefthook pre-commit `format` command, so a staged set that is entirely oxfmt-ignored (`package.json`/lockfile-only commits) no longer exits 2 / false-blocks. Fetcher re-pinned `#v0.1.3` (commit `557cba6`); proven live — that re-pin commit (package.json + lockfile only) passed the pre-commit hook without `--no-verify`. No remaining deferred items.
+## v3.1 Roadmap Summary (Phases 19-26)
+
+Behavior-preserving compliance + tech-debt milestone on the shipped, fully-tested ingest CLI.
+Load-bearing build order (non-negotiable): contracts home (19) → composition-root clients +
+watch teardown (20) → mechanical cleanup (21) → god-file splits (22) → depcruise band-fences
+LAST (23, lock-in) → watch pre-fetch dedup + `ON CONFLICT` (24) → discovery game-date, cross-app
+gated (25) → test-quality + correctness-hygiene sweep (26).
+
+**Behavior-preservation gate (Phases 19-23 + hygiene in 26):** coverage alone is NOT the oracle.
+Gate = Docker golden run-once oracle (`src/run/golden-e2e.integration.test.ts`) + 100% V8
+coverage + depcruise + knip, kept green after each move. The golden oracle is updated (not
+loosened) only for the two intentional behavior changes (Phases 24 and 25).
+
+| Phase | Goal | Requirements |
+|-------|------|--------------|
+| 19. Contracts Home + Config Fix + Orphan | Cross-band DTOs in one leaf module; no upward imports; orphan gone | ARCH-01, ARCH-02, ARCH-03 |
+| 20. Composition-Root Clients + Watch Teardown | One S3Client + one pg.Pool injected; watch drains on SIGTERM/SIGINT | ARCH-04, ARCH-05 |
+| 21. Mechanical Convention Cleanup | interface→type (~138) + import-order (~17), lint/formatter-enforced | MECH-01, MECH-02 |
+| 22. God-File Decomposition | Split 4 max-lines god-files within band; remove suppressions | SPLIT-01..04 |
+| 23. Depcruise Band-Fence Lock-In | Turn on 8 fences LAST; planted-violation test proves they fire | ARCH-06 |
+| 24. Watch Pre-Fetch Dedup + ON CONFLICT | Skip already-staged before byte-fetch; ON CONFLICT DO NOTHING | DEDUP-01, DEDUP-02, DEDUP-03 |
+| 25. Discovery Game-Date Capture (gated) | Parse "Game date" → ISO; populate canonical field per server-2 | DISC-01, DISC-02 |
+| 26. Test-Quality + Correctness Hygiene | AAA/RITE/test.each/fake-timers/branches + live-verified CORR | CORR-01, TEST-01..05 |
+
+## v3.1 Open Gates / Risks (carry into discuss/plan — surfaced, not silently assumed)
+
+- **Pre-plan decision (Phase 19):** contracts home naming — `contracts/` (research rec) vs the
+  already-encoded `types/`. Settle and encode in the depcruise preset + conventions skill in the
+  same plan.
+- **Pre-plan tuning (Phase 23):** depcruise `forbidden` path regexes must be tuned against the
+  real `ls src/` tree (adapter files live inside capability dirs).
+- **Cross-app — server-2 (Phase 24, DEDUP-03):** confirm `ON CONFLICT` benign-vs-conflicting
+  semantics match the server-2 poller's expectations before the phase is planned.
+- **Human-in-the-loop (Phase 24, DEDUP-01):** pre-fetch `source_replay_id` dedup is
+  data-loss-capable; TECH-DEBT-explicit human review required before shipping to staging.
+- **Cross-app HARD BLOCKER — server-2 (Phase 25, DISC-02):** canonical replay-date field, format,
+  timezone, and `web` read-path must be agreed with server-2 before the DISC-02 contract write +
+  golden-oracle flip land. DISC-01 (local parse) ships independently; **DISC-02 may slip to v3.2**
+  if the decision does not land before milestone close.
+- **Audit trust (Phase 26, CORR-01):** convention-audit semantic tier is ~50% false-positive
+  (Haiku-verified). Re-verify every correctness-hygiene finding live (file:line) against current
+  source before it becomes a commit; only the mechanical lane (Phase 21) is bulk-safe.
 
 ## Verify Gate: GREEN ✅
 
-`pnpm run verify` exits 0 and is now the **fast, Docker-free gate**: format → lint → typecheck → unit (495 tests) → coverage (100% statements/branches/functions/lines) → build → depcruise → knip. As of quick `260617-tvn` (2026-06-17) the Docker-backed integration suite was **moved out of `verify`** into a separate `pnpm run test:integration` **pre-deploy gate** (runs on master before deploy; may take minutes; includes the golden end-to-end regression tests, which skip cleanly until the fixture corpus is captured). The pre-existing phase-11 lint/format/coverage debt in `src/run/*`, `cli.ts`, and `pnpm-lock.yaml` (blamed to `f5a6450c`) was cleared during Phase 12 close (commits `2a03f75`, `7aa54b0`, `78775b3`) at the user's request.
+`pnpm run verify` exits 0: format → lint → typecheck → unit (495 tests) → coverage (100%
+statements/branches/functions/lines) → build → depcruise → knip. The Docker-backed integration
+suite (incl. the golden end-to-end regression test) is a separate `pnpm run test:integration`
+pre-deploy gate (runs on master before deploy). The golden oracle is the v3.1 behavior-preservation
+oracle — coverage alone is NOT.
 
 ## Accumulated Context
 
@@ -44,208 +88,46 @@ Last activity: 2026-06-20 — Milestone v3.1 started
 
 Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecting current work:
 
-- `replays-fetcher` is a separate ingest service.
-- v1 runtime is TypeScript.
-- v1 runtime shape is scheduled job, not always-on crawler.
-- Fetcher writes S3 raw objects and staging/outbox records only.
-- `server-2` owns canonical replay records, parse jobs, retry policy, RabbitMQ parse request publication, duplicate conflict handling, and admin visibility.
+- `replays-fetcher` is a separate ingest service; v1 runtime is TypeScript; v1 runtime shape is a scheduled job.
+- Fetcher writes S3 raw objects and staging/outbox records only. `server-2` owns canonical replay records, parse jobs, retry policy, RabbitMQ publication, duplicate conflict handling, and admin visibility.
 - `replay-parser-2` owns parsing and parser artifact/failure production.
-- `replays-fetcher` `.planning/config.json` must keep workflow-critical settings aligned with `replay-parser-2/.planning/config.json`, while `agent_skills` stay stack-aware for the fetcher's TypeScript/Node stack.
-- Raw replay identity uses checksum plus source identity where available.
-- Ambiguous duplicate conflicts go to manual review.
-- Production historical import from `~/sg_stats` is out of scope for v1.
-- v1 replay submission sources are admin/ingest only.
-- Phase 1 established strict TypeScript, Vitest, ESLint, Prettier, config validation, the `check` command, and integration-contract docs.
-- [Phase 02]: Discovery core accepts a SourceClient seam so dry-run behavior stays independent from direct HTTP or future SSH transport.
-- [Phase 02]: The discover command remains non-mutating and rejects non-dry-run execution until Phase 3.
-- [Phase 02]: SSH source access uses an operator-managed OpenSSH fetch command, not a relay/tunnel/daemon.
-- [Phase 02]: Detail filename identity preserves #filename precedence over body[data-ocap].
-- [Phase 02]: Source-level dry-run failures are reported as diagnostics and exit non-zero in the CLI.
-- [Phase 02]: Dry-run item diagnostics remain warnings with ok=true; source-level unavailable/rate-limit diagnostics fail the report and CLI exit.
-- [Phase 02]: Discovery source requests are sequentially paced by default with a 2000 ms delay and injectable sleep for tests.
-- [Phase 02]: Dry-run remains read-only with test and docs guards against S3, PostgreSQL, parser artifact, local replay-list, and run-once mutation surfaces.
-- [Phase 02]: README documents the Phase 2 operator dry-run command and SSH source transport as operator-managed, not the old relay service.
-- [Phase 02]: Live direct-source dry-run validation against `https://sg.zone/replays` returned `ok: true`, 30 candidates, and 0 diagnostics without S3/staging configuration.
-- [Phase 03]: Raw replay object keys use `raw/sha256/<sha256>.ocap`.
-- [Phase 03]: Checksum and object key are computed before the S3 storage adapter call.
-- [Phase 03]: S3 raw storage performs HEAD-before-PUT, skips matching existing objects, and reports conflict on mismatched evidence without overwrite.
-- [Phase 03]: `discover --store-raw` is the operator command for raw storage; it emits structured per-candidate evidence and stored/skipped/conflict/failed counts.
-- [Phase 03]: Raw storage remains boundary-safe: no parsing, no parser artifacts, no staging/outbox rows, no `server-2` business-table writes, and no scheduled `run-once`.
-- [Phase 04]: Use `server-2`'s existing `ingest_staging_records` table for staging handoff; do not invent a new staging table.
-- [Phase 04]: No separate outbox table exists in current `server-2`; parser publish lifecycle is backed by durable `parse_jobs` after server promotion.
-- [Phase 04]: Fetcher writes only pending staging evidence. `server-2` owns promotion into canonical `replays`, `parse_jobs`, RabbitMQ publishing, duplicate handling, and operator APIs.
-- [Phase 04]: `discover --store-raw --stage` is the operator command for raw storage plus pending staging writes.
-- [Phase 04]: Staging repository classifies matching source/object evidence as `already_staged`, source evidence mismatch as `conflict`, and raw object identity under another source as `conflict`.
-- [Phase 05]: `run-once` should wrap existing discovery -> raw storage -> staging behavior into one bounded scheduled cycle.
-- [Phase 05]: Expected operational failures use exit code 2; unexpected programmer errors still throw.
-- [Phase 05]: Run summaries must include run ID, timestamps, source URL, counts, diagnostics, raw storage evidence, staging evidence, and failure categories without secrets/raw bytes.
-- [Phase 05]: `run-once` is implemented as the scheduled v1 entrypoint and emits one structured JSON summary.
-- [Phase 05]: Unit tests remain colocated beside source files under `src/`.
-- [Phase 06]: `replays-fetcher check` now performs real source, S3-compatible bucket, and PostgreSQL staging connectivity probes.
-- [Phase 06]: Source-discovered timestamps flow through raw storage evidence and `promotionEvidence.discoveredAt` only; `replay_timestamp` remains reserved for trusted replay time.
-- [Phase 06]: `pnpm run test:integration` uses Docker-backed MinIO and PostgreSQL Testcontainers and is part of `pnpm run verify`.
-- [Phase 06]: Validation backfills exist for phases 1, 3, 4, and 5, and Phase 6 verification passed.
-- [v2.0 Roadmap]: CORE is a standalone Phase 7 (not folded into DIAG or PROG). CORE-01 (AppError base) must exist before DIAG builds a typed classifier; CORE-02 (pino) must exist before RETRY/RESUME emit warn/info events, well before PROG is built. At fine granularity, 2 cross-cutting prerequisites with different downstream consumers justify their own phase.
-- [v2.0 Roadmap]: Checkpoint uses a single rolling `checkpoints/<source>/latest.json` S3 object with conditional writes (IfMatch) — no new tables, no server-2 schema change. RESUME-04 uses the existing `promotion_evidence` jsonb for `run_id` visibility.
-- [v2.0 Roadmap]: RANGE-06 explicitly depends on DIAG-02 classifier to prevent silent corpus truncation on transient failures; this drives DIAG before RANGE in the phase order.
-- [v2.0 Roadmap]: GUARD-03 (`contract-check`) reuses DIAG classification; GUARD is the final phase (Phase 12), after DIAG is established.
-- [Phase 07]: AppError base intentionally omits httpStatus (CLI exit-code-2 semantics, Phase 05), unlike the Fastify canonical AppError; do not restore it.
-- [Phase 07]: AppError is generic over Code extends string = string so subclasses keep narrow literal-union codes without widening to string.
-- [Phase 07]: SourceFetchError and ReplayByteFetchError are re-parented onto AppError with their exact narrow code unions; throw sites and instanceof guards are unchanged. Subclasses keep a public constructor (eslint-disable no-useless-constructor) because AppError's constructor is protected and the subclass narrows options to omit isOperational.
-- [Phase 07]: createLogger is injected through the CLI DI map (before the ...dependencies spread) and a child({ runId }) logger is created in run-once. The run-once logger logs only at debug (below default info) so the JSON summary stdout contract stays byte-for-byte unchanged; cli.test.ts passes with zero summary-assertion edits.
-- [Phase 07]: pnpm run verify is green for every phase-7 stage individually (typecheck, 157 unit, 2 integration, 100% coverage, build) but the aggregate gate stops at a pre-existing pnpm-lock.yaml format failure and pre-existing .agents/** tooling lint; both are out of scope and logged in 07-v2-foundations/deferred-items.md.
-- [Phase 08]: 08-01: withRetry takes an injectable retryAfterMs extractor; classifier is transport-agnostic (no Response reads); fullJitterDelay uses a JitterBounds object for ESLint max-params
-- [Phase ?]: 08-02: One shared classifier + withRetry drives both direct HTTP and SSH list/detail reads; SSH yields transient/permanent only (no httpStatus for rate_limited)
-- [Phase ?]: 08-02: fetchText read-options seam defaults attempts to 0 (single try) so legacy callers are unchanged until Plan 04 drives retries
-- [Phase 08-03]: ReplayByteFetchError union widened additively (kept fetch_failed, added rate_limited) closing Phase 7 WR-03; byte reads routed through shared classifyFailure + withRetry
-- [Phase ?]: Surfaced final source-read attempts + classification via a derived RunSummary.sourceFailure field
-- [Phase ?]: Phase 9: lastSourceFailure typed via shared RunSourceFailure (import type); Zod mirrors structurally
-- [Phase ?]: Phase 9: parseCheckpoint degrades to undefined (never throws) on corrupt JSON or Zod mismatch (RESUME-03)
-- [Phase ?]: Phase 9: CheckpointConflictError is first concrete AppError subclass; identifiers-only details, no httpStatus
-- [Phase ?]: Phase 9: mergeCheckpoints is pure — max(lastCompletedPage/discoveredLastPage) + union of pages; counts/status/updatedAt/lastSourceFailure from the higher-progress side (ties to remote); 412 re-read+retry lands in Plan 04
-- [Phase ?]: Phase 9: Checkpoint type derived from checkpointSchema via z.infer (single source of truth); details flattened via toDetailsRecord to keep an interface without an as cast
-- [Phase 09-02]: RESUME-04 run identity is the snake_case `run_id` key stamped additively into the existing `promotion_evidence` jsonb (no new column/table/SQL); TS option stays camelCase `runId`. camelcase eslint disable only on value writes, not interface members. server-2 currently merges promotion_evidence as opaque jsonb (no run_id reader yet).
-- [Phase 09-02]: Checkpoint S3 prefix is operator-configurable via `s3.checkpointPrefix` (env `S3_CHECKPOINT_PREFIX`, Zod min(1) default "checkpoints"); non-secret, visible in redactConfig, shares the existing bucket.
-- [Phase ?]: RunStatus taxonomy: resumable absorbs any recoverable (transient/rate_limited) stop; partial = non-recoverable with >=1 page done; failed = no page + non-recoverable
-- [Phase ?]: 09-04: S3 checkpoint store conditional CAS (IfNoneMatch:* / IfMatch:<etag>); 412/409 -> bounded re-read+merge keeping max(lastCompletedPage); exhaustion -> CheckpointConflictError
-- [Phase ?]: 09-04: store read/write return the ETag for the caller to thread as next IfMatch; non-precondition write errors propagate for log-and-continue (09-05)
-- [Phase ?]: 09-05: run-once resumes at lastCompletedPage+1; complete checkpoint + --resume -> clean page-1; runId stamped into promotion_evidence.run_id; status/exit-2 via deriveRunStatus
-- [Phase ?]: Phase 10-01: dropped sourceMaxPages default(1); unset now means unbounded (stop-on-empty governs in Wave-2)
-- [Phase ?]: Phase 10-01: all Zod numeric bounds hoisted as named constants incl. MIN_SPACING_MS=0 (.min/.max args are not no-magic-numbers exempt)
-- [Phase ?]: 10-02: createPacer is a pure remaining-floor seam (sleeps spacingMs - elapsed, never spacingMs + backoff); now/sleep injected, lastRequestAt NaN-seeded so the first call never sleeps.
-- [Phase ?]: 10-03: createLimiter is a thin p-limit seam (default import, no .js) returning a limiter with a runtime-settable .concurrency — the AIMD lever (RANGE-02).
-- [Phase ?]: 10-03: createThrottleController is a pure AIMD machine over page-count windows (RATE_LIMITED_WINDOW=2, CLEAN_WINDOW=3): MD halve floor-1 + pacing-floor bump, AI +1 cap-max; reduces concurrency + pacing floor ONLY, no backoff (Pitfall 2). nowMs is a method parameter recorded as lastSignalAtMs evidence, never the decision boundary (RANGE-03).
-- [Phase 11]: Evidence is write-once per runId: plain unconditional PutObject, no read/CAS/merge (D-10)
-- [Phase 11]: Evidence store serializes the RunSummary as handed; no-leak guarantee owned by summary assembly (D-08/D-12)
-- [Phase ?]: Добавлены @types/node и vitest в devDependencies shared repo для typecheck vitest/base.ts в CI
-- [Phase ?]: CI shared repo использует actions @v4 (stable), не @v6 как в fetcher
-- [Phase ?]: 13-02: Тег v0.1.0 срезан на SHA 7563551 (CI conclusion=success); annotated tag
-- [Phase ?]: Pin @solid-stats/ts-toolchain git-dep тегом #v0.1.0 → lockfile SHA для --frozen-lockfile
-- [Phase ?]: tsconfig extends bare specifier; include/types явные в fetcher (Pitfall P13-5)
-- [Phase ?]: CLN-01: pnpm.onlyBuiltDependencies удалён из package.json; allowBuilds в pnpm-workspace.yaml единственный авторитетный источник для pnpm 11+
-- [Phase ?]: CLN-02: 0 TODO/FIXME/XXX/HACK в src/ и конфигах подтверждено repo-wide grep
-- [Phase ?]: CLN-03: все 14 no-await-in-loop suppress несут -- reason; 9 bare дополнены без удалений
-- [Phase ?]: ConfigValidationError carries public issues field so cli.ts call sites work without change
-- [Phase ?]: toDetailsRecord helper avoids unnecessary-type-assertion (checkpoint-conflict-error.ts pattern)
-- [Phase ?]: Named .max() bound constants — no magic numbers (Phase 10-01 ESLint decision)
-- [Phase ?]: CLN-04c: RunSummary (9 типов) перенесён в src/types/run-summary.ts; run/types.ts — barrel; fence #1 закрыт в evidence-адаптере
-- [Phase 15]: oxfmt@0.54.0 pinned без ^ (FMT-01 supply-chain); package.json в .prettierignore (oxfmt 0.54 false-positive workaround); format/format:check разделены (write vs check gate)
-- [Phase ?]: func-style: все top-level function-декларации переведены на const-arrow во всём src/
-- [Phase ?]: knip 6.16.1 conservative + verify chain finalized
-- [Phase ?]: verify chain: format:check→lint→typecheck→test→test:integration→test:coverage→depcruise→knip→build; lint:types вне verify (LNT-04 non-blocking)
-- [Phase ?]: tsdown CLI-флаги в npm script (без tsdown.config.ts) — один entry, один format, меньше файлов
-- [Phase ?]: Prod Docker stage сохраняет pnpm install --prod --frozen-lockfile — externalized deps резолвятся из node_modules в runtime
-- [Phase ?]: Phase 18: lefthook 2.1.9 exact-pinned via shared preset extends; SUS seam flag cleared as false positive (approve-and-proceed)
-- [Phase ?]: Phase 18: .lefthookrc PATH shim so preset oxfmt/oxlint resolve under git minimal hook PATH (Rule 1 fix)
+- Raw replay identity uses checksum plus source identity where available; ambiguous duplicate conflicts go to manual review.
+- [v3.0]: Shared `@solid-stats/ts-toolchain` preset consumed as a tag-pinned pnpm git-dep; Oxlint/Oxfmt/tsdown/Vitest/lefthook are single source of truth across the TS repos.
+- [v3.0]: `eslint-plugin-import` dropped; band fences + write-scope + dead-code covered by `tsc` + dependency-cruiser + knip inside `verify`.
+- [v3.1 Roadmap]: 8 phases (19-26). Build order is load-bearing — depcruise fences enforced LAST (Phase 23) as a no-op lock-in, never a blocker that wedges `verify`. Behavior-preserving except DEDUP (Phase 24) and DISC game-date (Phase 25).
+- [v3.1 Roadmap]: The golden run-once oracle (`src/run/golden-e2e.integration.test.ts`) + 100% V8 coverage + depcruise + knip are the behavior-preservation gate for every architecture/split/mechanical phase; coverage alone is NOT the oracle.
+- [v3.1 Roadmap]: DISC-01 (local game-date parse) ships independently; DISC-02 (canonical-field write + oracle flip) is hard-gated on a server-2 decision and may slip to v3.2.
+
+> Older per-phase decision log (Phases 1-18) is retained in PROJECT.md Key Decisions and the v1.0/v2.0/v3.0 milestone archives. Trimmed here per the STATE.md digest size constraint at the v3.1 boundary.
 
 ### Roadmap Evolution
 
-- Phase 6 added: Close v1 audit gaps: connectivity checks and discovered timestamp staging evidence
-- v2.0 Phases 7–12 added: 2026-06-07
-
-### Execution Metrics
-
-| Phase | Plan | Duration | Tasks | Files |
-|-------|------|----------|-------|-------|
-| 02 | 03 | 4min | 2 | 5 |
-| 03 | 01 | complete | 2 | 6 |
-| 03 | 02 | complete | 2 | 4 |
-| 03 | 03 | complete | 2 | 8 |
-| 03 | 04 | complete | 3 | 4 |
-| 04 | 01 | complete | 2 | 4 |
-| 04 | 02 | complete | 2 | 6 |
-| 04 | 03 | complete | 2 | 5 |
-| 04 | 04 | complete | 2 | 5 |
-| 05 | 01 | complete | 2 | 3 |
-| 05 | 02 | complete | 2 | 3 |
-| 05 | 03 | complete | 2 | 3 |
-| 05 | 04 | complete | 2 | 5 |
-| 06 | 01 | complete | 2 | 9 |
-| 06 | 02 | complete | 2 | 5 |
-| 06 | 03 | complete | 2 | 6 |
-| 06 | 04 | complete | 2 | 9 |
-| 06 | 05 | complete | 3 | 8 |
-| 06 | 06 | complete | 2 | 10 |
-| 07 | 01 | 5min | 2 | 2 |
-| 07 | 02 | 6min | 2 | 4 |
-| 07 | 03 | 11min | 3 | 5 |
-| 10 | 03 | ~8min | 3 | 6 |
+- Phase 6 added: Close v1 audit gaps (connectivity checks + discovered-timestamp staging evidence).
+- v2.0 Phases 7–12 added: 2026-06-07.
+- v3.0 Phases 13–18 added: 2026-06-13 (Track C toolchain convergence pilot).
+- v3.1 Phases 19–26 added: 2026-06-20 (Convention Compliance & Tech-Debt Closure).
 
 ### Pending Todos
 
 None.
 
-### Quick Tasks Completed
-
-| Date | Quick Task | Status |
-|------|------------|--------|
-| 2026-05-10 | clean-phase-02-validation-metadata | complete |
-| 2026-05-10 | fix-milestone-close-audit-false-positive | complete |
-| 2026-06-15 | shared-clients-config-deltas | complete |
-| 2026-06-15 | sentry-errors-only | complete |
-| 2026-06-16 | fix-unbounded-clamp-crawl-and-silent-cap | complete |
-| 2026-06-16 | add-always-on-watch-daemon-page-1-poll | complete |
-| 2026-06-17 | golden-end-to-end-integration-test-run-o | complete |
-| 2026-06-18 | trim-golden-fixture-corpus-to-3-pages-an | complete |
-| 2026-06-18 | add-integration-test-pre-deploy-gate-to- | complete |
-
-### Parity-baseline fixes (F1/F2) — folded into Track C (2026-06-13)
-
-Behavioral fixes from the live parity-baseline run (registry `plans/product/PARITY-BASELINE-FINDINGS.md` §A, coordinated via `plans/product/PARITY-COORDINATION.md`), landed on the v3.0 Track C branch though they are NOT toolchain (CFG/CLN/FMT/LNT/BLD/HOK) requirements:
-
-- **F1 (resolved):** merged `fix/fetcher-checkpoint-resume` (`7e5ca97`) via merge `d980aa8`. Adds `S3_CHECKPOINT_CONDITIONAL_WRITES` (Zod, default true; `false` → unconditional PUT for S3 backends like Timeweb that reject `If-Match`/`If-None-Match`) + logs the previously-swallowed checkpoint-write error in run-once. Was: every checkpoint write threw → resume silently restarted from page 1.
-- **F2 (resolved, `3bea3dc`):** `src/source/classify-failure.ts` maps `AbortError`/`TimeoutError` (per-request fetch timeout, internal AbortController) → `transient`, so a timed-out detail page retries instead of killing the run. Was: timeouts classified `permanent` (never retried). sg.zone detail pages degrade to 20-35s under concurrency.
-- `pnpm verify` green at 100% coverage after both; branch pushed.
-
 ### Blockers/Concerns
 
-- **Subagent reliability (2026-06-13):** During v3.0 setup the 4 parallel `gsd-project-researcher` agents and the `gsd-roadmapper` agent returned fabricated output with `tool_uses: 0` — they hallucinated file reads/writes (inventing wrong spike names and decisions) and wrote nothing to disk. Research SUMMARY/STACK/FEATURES/ARCHITECTURE/PITFALLS and the ROADMAP/REQUIREMENTS traceability were therefore authored inline by the orchestrator from the real authoritative sources (`.planning/spikes/MANIFEST.md`, `.planning/spikes/CONVENTIONS.md`, `plans/product/TS-TOOLCHAIN-CONVERGENCE.md`). Watch for the same failure mode on later phases; verify subagent disk writes before trusting their summaries.
+- **Subagent reliability (2026-06-13):** During v3.0 setup, parallel research/roadmapper subagents
+  returned fabricated output with `tool_uses: 0` (hallucinated reads/writes, wrote nothing to
+  disk). Verify subagent disk writes before trusting their summaries on later phases.
+- **DISC-02 server-2 dependency (v3.1):** see Open Gates above — hard blocker, may slip DISC-02 to v3.2.
 
 ## Next Step
 
-1. **Re-run `/gsd-map-codebase` BEFORE planning Phase 13** — the existing `.planning/codebase/` map is dated 2026-06-08 (pre-v2.0-close, pre-Track-C); refresh it so the planner works against current reality. (User-requested gate, 2026-06-13.)
-2. Then plan Phase 13 (Shared `@solid-stats/ts-toolchain` Bootstrap) with `/gsd-plan-phase 13`.
-
-## Operator Next Steps
-
-- Start the next milestone with /gsd-new-milestone
-
-## Performance Metrics
-
-| Phase | Plan | Duration | Notes |
-|-------|------|----------|-------|
-| Phase 07 P01 | 5min | 2 tasks | 2 files |
-| Phase 07 P02 | 6min | 2 tasks | 4 files |
-| Phase 07 P03 | 11min | 3 tasks | 5 files |
-| Phase 08 P01 | 13min | 3 tasks | 9 files |
-| Phase 08 P02 | 50min | 2 tasks | 5 files |
-| Phase 08 P03 | ~25min | 1 tasks | 2 files |
-| Phase 08 P04 | 17min | 3 tasks | 9 files |
-| Phase 09 P01 | 35min | 2 tasks | 4 files |
-| Phase 09 P01 | 13 | 2 tasks | 4 files |
-| Phase 09 P02 | 7min | 3 tasks | 9 files |
-| Phase 09 P03 | 13min | 2 tasks | 3 files |
-| Phase 09 P04 | 35min | 3 tasks | 5 files |
-| Phase 9 P05 | 16min | 3 tasks | 7 files |
-| Phase 10-dynamic-source-range-and-rate-limiting P10-01 | 9min | 2 tasks | 6 files |
-| Phase 10-dynamic-source-range-and-rate-limiting P02 | 6min | 2 tasks | 2 files |
-| Phase 10-dynamic-source-range-and-rate-limiting P03 | ~8min | 3 tasks | 6 files |
-| Phase 11 P01 | 18min | 3 tasks | 13 files |
-| Phase 13 P01 | 21 | 2 tasks | 11 files |
-| Phase 13 P02 | 3min | 2 tasks | 0 files |
-| Phase 13 P13-03 | 33 | 2 tasks | 4 files |
-| Phase 14 P01 | 10min | 3 tasks | 5 files |
-| Phase 14 P02 | 15 | 2 tasks | 5 files |
-| Phase 14 P03 | 120 | 2 tasks | 3 files |
-| Phase 15 P01 | 10min | 3 tasks | 4 files |
-| Phase 16-oxlint-migration-import-hygiene P02 | 180 | 2 tasks | 57 files |
-| Phase 16-oxlint-migration-import-hygiene P03 | 120min | 2 tasks | 62 files |
-| Phase 16 P06 | 35min | - tasks | - files |
-| Phase 17-tsdown-build-docker-smoke P17-01 | 3min | 3 tasks | 4 files |
-| Phase 18 P01 | 10m | 2 tasks | 7 files |
+1. **Re-run `/gsd-map-codebase` BEFORE planning Phase 19** — the `.planning/codebase/` map is stale
+   relative to the current tree (v3.0 close); refresh it so the planner works against current
+   reality (the v3.1 architecture phases depend on an accurate `src/` map).
+2. Resolve the Phase 19 pre-plan decision (`contracts/` vs `types/` naming).
+3. Then plan Phase 19 (Contracts Home + Config Import Fix + Orphan Cleanup) with `/gsd-plan-phase 19`.
 
 ## Session
 
-**Last session:** 2026-06-14T01:56:14.003Z
-**Stopped at:** Completed 18-01-PLAN.md
+**Last session:** 2026-06-20
+**Stopped at:** v3.1 roadmap created (ROADMAP.md + REQUIREMENTS.md traceability); Phases 19-26 defined.
 **Resume file:** None
