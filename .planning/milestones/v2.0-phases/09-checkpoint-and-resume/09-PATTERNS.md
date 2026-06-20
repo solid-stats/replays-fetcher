@@ -209,7 +209,7 @@ Bounded retry с injectable `random` для детерминизма тесто�
 - MinIO Testcontainers integration-тест и colocated unit-тест копируют `s3-raw-storage.*test.ts` структуру; corrupt-checkpoint degrade-to-page-1 (safeParse fail → warn, не abort) в отличие от `loadConfig` abort.
 
 ### File Created
-`/home/afgan0r/Projects/SolidGames/replays-fetcher/.planning/phases/09-checkpoint-and-resume/09-PATTERNS.md`
+`.planning/phases/09-checkpoint-and-resume/09-PATTERNS.md`
 
 ### Ready for Planning
 Pattern mapping complete. Planner can now reference analog patterns in PLAN.md files.

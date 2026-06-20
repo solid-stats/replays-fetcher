@@ -461,6 +461,6 @@ For oxlint preset: planner should read `.planning/spikes/` for spike 001 rule ou
 
 ## Metadata
 
-**Analog search scope:** `/home/afgan0r/Projects/SolidGames/replays-fetcher/` (package.json, tsconfig.json, tsconfig.build.json, Dockerfile, .github/workflows/cd.yml)
+**Analog search scope:** `` (package.json, tsconfig.json, tsconfig.build.json, Dockerfile, .github/workflows/cd.yml)
 **Files scanned:** 5 in-repo config/CI files
 **Pattern extraction date:** 2026-06-13

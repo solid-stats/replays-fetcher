@@ -89,11 +89,11 @@ _(Task 2 verify-chain update был в пакете Task 1 commit — package.js
 
 ## Files Created/Modified
 
-- `/home/afgan0r/Projects/SolidGames/replays-fetcher/knip.jsonc` — knip config (entry, project, ignore, ignoreExportsUsedInFile)
-- `/home/afgan0r/Projects/SolidGames/replays-fetcher/package.json` — knip devDep + knip script + verify chain с depcruise+knip
-- `/home/afgan0r/Projects/SolidGames/replays-fetcher/pnpm-lock.yaml` — knip 6.16.1 lockfile
-- `/home/afgan0r/Projects/SolidGames/replays-fetcher/src/checkpoint/checkpoint.ts` — удалён CheckpointPageCounts
-- `/home/afgan0r/Projects/SolidGames/replays-fetcher/src/errors/config-validation-error.ts` — удалён ConfigValidationDetails
+- `knip.jsonc` — knip config (entry, project, ignore, ignoreExportsUsedInFile)
+- `package.json` — knip devDep + knip script + verify chain с depcruise+knip
+- `pnpm-lock.yaml` — knip 6.16.1 lockfile
+- `src/checkpoint/checkpoint.ts` — удалён CheckpointPageCounts
+- `src/errors/config-validation-error.ts` — удалён ConfigValidationDetails
 - 42 src файла + .dependency-cruiser.cjs + RULE-DELTA.md — oxfmt style sweep
 
 ## Decisions Made

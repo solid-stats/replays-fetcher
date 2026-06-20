@@ -109,8 +109,8 @@ after the user runs the capture script. [src: CONTEXT.md#decisions — "Fixture 
 </objective>
 
 <execution_context>
-@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/workflows/execute-plan.md
-@/home/afgan0r/Projects/SolidGames/replays-fetcher/.claude/gsd-core/templates/summary.md
+@.claude/gsd-core/workflows/execute-plan.md
+@.claude/gsd-core/templates/summary.md
 </execution_context>
 
 <context>

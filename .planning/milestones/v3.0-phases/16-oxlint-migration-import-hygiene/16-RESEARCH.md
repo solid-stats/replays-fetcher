@@ -337,7 +337,7 @@ ln -sf ../oxlint-tsgolint/bin/tsgolint.js /path/to/replays-fetcher/node_modules/
 ### Инициализация
 
 ```bash
-cd /home/afgan0r/Projects/SolidGames/replays-fetcher
+cd .
 npx dependency-cruiser@latest --init
 # Интерактивно: выбрать TypeScript, NodeNext, src/
 # Результат: .dependency-cruiser.cjs

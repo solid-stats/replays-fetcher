@@ -153,7 +153,7 @@ ETag); Task 2 threads it up so the loop can make the stop decision.
     assertion.
   </action>
   <verify>
-    <automated>cd /home/afgan0r/Projects/SolidGames/replays-fetcher && pnpm exec vitest run src/run/summary.test.ts && pnpm exec tsc --noEmit</automated>
+    <automated>cd . && pnpm exec vitest run src/run/summary.test.ts && pnpm exec tsc --noEmit</automated>
   </verify>
   <done>RunStatus includes "truncated"; deriveRunStatus returns "truncated" only on an ok+finished+cap-hit run and "complete" otherwise; recoverable failures still return "resumable"; runExitCode("truncated")===2; summary.test.ts passes and typecheck is clean.</done>
 </task>
@@ -240,7 +240,7 @@ ETag); Task 2 threads it up so the loop can make the stop decision.
       assert discovery is called for the NEXT page.
   </action>
   <verify>
-    <automated>cd /home/afgan0r/Projects/SolidGames/replays-fetcher && pnpm exec vitest run src/run/run-once.test.ts && pnpm exec tsc --noEmit</automated>
+    <automated>cd . && pnpm exec vitest run src/run/run-once.test.ts && pnpm exec tsc --noEmit</automated>
   </verify>
   <done>A clamping all-duplicate source terminates via the zero-new break with status "complete" and a small bounded discovery-call count (never unbounded); a maxPages-bounded longer corpus yields status "truncated" (exitCode 2); a genuine empty page stays "complete"; a new+duplicate-mix page never stops the loop; run-once.test.ts passes and typecheck is clean.</done>
 </task>
@@ -268,7 +268,7 @@ ETag); Task 2 threads it up so the loop can make the stop decision.
     `truncated` member is additive and safe; no `server-2`/`web` schema change is implied.
   </action>
   <verify>
-    <automated>cd /home/afgan0r/Projects/SolidGames/replays-fetcher && pnpm verify</automated>
+    <automated>cd . && pnpm verify</automated>
   </verify>
   <done>`pnpm verify` exits 0: format:check, lint, typecheck, test, test:integration, test:coverage (100% reachable-source), build, depcruise, and knip all pass.</done>
 </task>

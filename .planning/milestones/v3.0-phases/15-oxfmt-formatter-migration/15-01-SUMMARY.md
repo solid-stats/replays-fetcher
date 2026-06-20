@@ -128,7 +128,7 @@ metrics:
 
 ## Self-Check: PASSED
 
-- [x] `.oxfmtrc.json` существует: `/home/afgan0r/Projects/SolidGames/replays-fetcher/.oxfmtrc.json`
+- [x] `.oxfmtrc.json` существует: `.oxfmtrc.json`
 - [x] `prettier` отсутствует в package.json
 - [x] `oxfmt: "0.54.0"` (точный пин) присутствует в devDependencies
 - [x] `format:check` script = `oxfmt --check .`
