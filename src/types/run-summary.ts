@@ -44,6 +44,7 @@ export type RunSummaryCounts = {
   readonly failed: number;
   readonly fetched: number;
   readonly skipped: number;
+  readonly skippedBySourceId: number;
   readonly staged: number;
   readonly stored: number;
 };

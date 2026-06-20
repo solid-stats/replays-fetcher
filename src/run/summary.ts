@@ -33,6 +33,7 @@ type BuildRunSummaryInput = {
   readonly rawStorage: readonly StoreRawReplayResult[];
   readonly resumeInvocation?: string;
   readonly runId: string;
+  readonly skippedBySourceId?: number;
   readonly staging: readonly IngestStagingResult[];
   readonly startedAt: string;
   readonly status?: RunStatus;
@@ -73,6 +74,7 @@ const emptyCounts: RunSummaryCounts = {
   failed: 0,
   fetched: 0,
   skipped: 0,
+  skippedBySourceId: 0,
   staged: 0,
   stored: 0,
 };
@@ -155,22 +157,37 @@ const collectFailureCategories = (
     ...stagingFailureCategories(staging),
   ]);
 
-const countRun = (
-  discoveryReport: DiscoveryReport,
-  rawStorage: readonly StoreRawReplayResult[],
-  staging: readonly IngestStagingResult[],
-): RunSummaryCounts => ({
-  conflict: countRawConflicts(rawStorage) + countStatus(staging, "conflict"),
-  diagnostics: discoveryReport.diagnostics.length,
-  discovered: discoveryReport.candidates.length,
-  duplicate: countStatus(staging, "already_staged"),
-  failed: countRawFailures(rawStorage) + countStatus(staging, "failed"),
-  fetched: rawStorage.length,
+// `skippedBySourceId` is the watch pre-fetch skip (DEDUP-01): a candidate
+// dropped before any fetch because its source identity already exists. It
+// never reaches rawStorage or staging, so unlike every other count it cannot
+// be derived from the arrays — orchestration threads the total in via the
+// fourth field of the threaded counts input (default 0, so a run with no skips
+// stays byte-identical). It is deliberately distinct from `skipped` (raw
+// skipped + not_stageable) and `duplicate` (already_staged): folding it into
+// either would hide a data-loss-capable skip from operators (T-24-03).
+type CountRunInput = {
+  readonly discoveryReport: DiscoveryReport;
+  readonly rawStorage: readonly StoreRawReplayResult[];
+  readonly skippedBySourceId: number;
+  readonly staging: readonly IngestStagingResult[];
+};
+
+const countRun = (input: CountRunInput): RunSummaryCounts => ({
+  conflict:
+    countRawConflicts(input.rawStorage) +
+    countStatus(input.staging, "conflict"),
+  diagnostics: input.discoveryReport.diagnostics.length,
+  discovered: input.discoveryReport.candidates.length,
+  duplicate: countStatus(input.staging, "already_staged"),
+  failed:
+    countRawFailures(input.rawStorage) + countStatus(input.staging, "failed"),
+  fetched: input.rawStorage.length,
   skipped:
-    countRawStatus(rawStorage, "skipped") +
-    countStatus(staging, "not_stageable"),
-  staged: countStatus(staging, "staged"),
-  stored: countRawStatus(rawStorage, "stored"),
+    countRawStatus(input.rawStorage, "skipped") +
+    countStatus(input.staging, "not_stageable"),
+  skippedBySourceId: input.skippedBySourceId,
+  staged: countStatus(input.staging, "staged"),
+  stored: countRawStatus(input.rawStorage, "stored"),
 });
 
 const sourceFailureClassification = (
@@ -395,7 +412,12 @@ export const buildRunSummary = (input: BuildRunSummaryInput): RunSummary => {
 
   const summary: RunSummary = {
     candidates: input.discoveryReport.candidates,
-    counts: countRun(input.discoveryReport, input.rawStorage, input.staging),
+    counts: countRun({
+      discoveryReport: input.discoveryReport,
+      rawStorage: input.rawStorage,
+      skippedBySourceId: input.skippedBySourceId ?? 0,
+      staging: input.staging,
+    }),
     diagnostics: input.discoveryReport.diagnostics,
     failureCategories,
     finishedAt: input.finishedAt,
