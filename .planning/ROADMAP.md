@@ -99,7 +99,10 @@ Behavior-preserving migration onto the shared `@solid-stats/ts-toolchain` preset
   4. A multi-cycle `watch` integration test plus a SIGTERM-drain test pass; golden oracle and 100% V8 coverage stay green.
 
 **Behavior-preservation gate**: golden oracle + 100% V8 coverage + depcruise + knip green; the single-constructor migration is done in one phase so no hidden second client/pool is left behind.
-**Plans**: TBD
+**Plans**: 2 plans
+
+- [ ] 20-01-PLAN.md — ARCH-04: lock the single-constructor invariant (one S3Client + one Pool already in clients.ts; zero *FromConfig factories) with a new clients.ts source-read guard test + knip green
+- [ ] 20-02-PLAN.md — ARCH-05: expose a once-guarded dispose() from createStoreRawResources; wire it into watch.ts's finally after drain (s3.destroy + pool.end, idempotent, no listener leak); fake-client SIGTERM unit tests + multi-cycle watch teardown integration test
 
 ### Phase 21: Mechanical Convention Cleanup
 
@@ -211,7 +214,7 @@ Phases execute in numeric order: 19 → 20 → 21 → 22 → 23 → 24 → 25 �
 | 7-12 | v2.0 | 24/24 | Complete | 2026-06-12 |
 | 13-18 | v3.0 | 16/16 | Complete | 2026-06-14 |
 | 19. Contracts Home + Config Fix + Orphan | v3.1 | 3/3 | Complete    | 2026-06-20 |
-| 20. Composition-Root Clients + Watch Teardown | v3.1 | 0/TBD | Not started | - |
+| 20. Composition-Root Clients + Watch Teardown | v3.1 | 0/2 | Not started | - |
 | 21. Mechanical Convention Cleanup | v3.1 | 0/TBD | Not started | - |
 | 22. God-File Decomposition | v3.1 | 0/TBD | Not started | - |
 | 23. Depcruise Band-Fence Lock-In | v3.1 | 0/TBD | Not started | - |
