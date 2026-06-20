@@ -1443,12 +1443,19 @@ test("run-once orchestrator should only touch checkpoint, raw storage, and stagi
   expect(sourceText).toContain("storeRawReplay");
 });
 
+// Cross-surface contract tests deliberately have no single 1:1 source sibling:
+// they assert a behavior spanning several modules. `no-leak.test.ts` (T-11-09)
+// guards the redaction contract across create-logger.ts + summary.ts + run-once.ts;
+// its former doc-only companion `no-leak.ts` was removed as a dead orphan (ARCH-03).
+const crossSurfaceTestFiles = new Set(["src/run/no-leak.test.ts"]);
+
 test("unit tests should remain colocated beside source files", async () => {
   const projectFiles = await listProjectFiles(new URL("../", import.meta.url));
   const testFiles = projectFiles.filter(
     (filePath) =>
       filePath.endsWith(".test.ts") &&
-      !filePath.endsWith(".integration.test.ts"),
+      !filePath.endsWith(".integration.test.ts") &&
+      !crossSurfaceTestFiles.has(filePath),
   );
 
   expect(testFiles.length).toBeGreaterThan(0);
