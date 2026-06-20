@@ -1,14 +1,48 @@
 # Phase 21 — Deferred Items
 
+> Corrected post-execution. An earlier draft of this file (written mid-execution) claimed
+> `scripts/capture-golden-fixtures.ts` was reverted and still held two `interface` declarations.
+> That is STALE: commit `6da1ed1` converted them — the file now has ZERO interfaces (verified
+> `grep -nE "interface " scripts/capture-golden-fixtures.ts` → none). The items below are the real
+> residuals.
+
 ## Out-of-scope discoveries (logged, NOT fixed this phase)
 
-- **`scripts/capture-golden-fixtures.ts` retains two `interface` declarations**
-  (lines 48 `ManifestFile`, 87 `RowCaptureInput`). These violate the
-  `consistent-type-definitions` rule that Plan 21-01 enabled, but `scripts/` was
-  outside 21-01's `src/**` conversion scope and outside 21-02's `src/**/*.ts`
-  import-sort scope. The lefthook `lint` gate flags this file whenever it is staged.
-  Discovered during 21-02 because `oxfmt --write .` touched the file's import block.
-  The scripts file was reverted to HEAD (its import block was already sorted —
-  `format:check` stays green without it). Fix is a one-line-per-interface
-  `interface` → `type` conversion; belongs to a follow-up convention sweep that
-  declares `scripts/**` in its `files_modified`.
+### LINT-SCOPE — `consistent-type-definitions` is enforced for `src/` only (optional follow-up)
+
+`pnpm run lint` is `oxlint --config .oxlintrc.json src` — it does NOT lint `scripts/`. So a NEW
+`interface` added under `scripts/` would NOT fail the lint gate (format:check, which runs on `.`,
+still covers formatting but not the type-definition rule). `scripts/capture-golden-fixtures.ts`
+was converted by hand in 6da1ed1, but the enforcement does not police `scripts/` going forward.
+
+- **Out of scope for Phase 21:** MECH-01 targets the codebase (`src/`) conventions; `scripts/` is
+  dev-only tooling (golden-fixture capture), not production ingest code.
+- **Optional follow-up:** widen the lint glob to `oxlint ... src scripts` (or add a `scripts/`
+  lint step) if `scripts/` convention enforcement is wanted. Low priority.
+
+## Quick code-review findings (deferred)
+
+### WR-01 — `oxlint-disable max-lines` comment displaced in run-once.ts (deferred → Phase 22)
+
+`src/run/run-once.ts:12` — the `/* oxlint-disable max-lines */` file-disable comment moved from
+line 1 into the import block when `sortImports` reordered the file. Oxlint honours a file-disable
+in ANY position, so suppression still works (verified: `verify` green). The comment will keep
+"floating" on future sorter runs.
+
+- **Routed to Phase 22, not fixed now:** `run-once.ts` is one of the FOUR `max-lines`-suppressed
+  god-files Phase 22 splits — Phase 22 REMOVES this suppression entirely. Moving the comment back
+  now is churn Phase 22 deletes, and the sorter could re-displace it before then. Resolving it as
+  part of the Phase 22 split is the correct, stable fix.
+
+### IN-01 — split JSDoc header in capture-golden-fixtures.ts (deferred → Phase 26, readability)
+
+`scripts/capture-golden-fixtures.ts:1` — the JSDoc header is interleaved with `node:` imports
+after sorting. Readability only, not a bug. Bundle with the Phase 26 hygiene sweep if worth it.
+
+---
+
+## ✅ Behavior-preservation confirmed (not a deferral)
+
+Verifier confirmed zero logic change: tsc green, 502 unit tests unchanged, 100% V8 coverage,
+golden run-once + watch oracles 7/7, both enforcement lock-ins proven. The 5 `extends`→intersection
+conversions are correct; the Sentry side-effect import in `src/cli.ts` stays first/unsorted-across.
