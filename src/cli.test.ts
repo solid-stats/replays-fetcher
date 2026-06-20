@@ -1437,6 +1437,7 @@ test("staging path source should not write forbidden business tables or parser a
 const runOnceBoundaryFiles = [
   "src/run/run-once.ts",
   "src/run/run-once-checkpoint.ts",
+  "src/run/run-once-summary.ts",
   "src/run/run-once-types.ts",
 ] as const;
 

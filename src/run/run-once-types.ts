@@ -18,6 +18,12 @@ import type { IngestStagingResult } from "../staging/types.js";
 import type { ReplayByteClient } from "../storage/replay-byte-client.js";
 import type { S3RawReplayStorage } from "../storage/s3-raw-storage.js";
 import type { StoreRawReplayResult } from "../storage/store-raw-replay.js";
+import type { RunExitCode, RunSummary } from "./types.js";
+
+export type RunOnceResult = {
+  readonly exitCode: RunExitCode;
+  readonly summary: RunSummary;
+};
 
 export type RunOnceInput = {
   readonly attempts?: number;
