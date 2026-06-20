@@ -1,4 +1,7 @@
 import type { RetryAttemptEvent, SourceReadPhase } from "../source/retry.js";
+import type { ReplayCandidate } from "../types/replay-candidate.js";
+
+export type { ReplayCandidate } from "../types/replay-candidate.js";
 
 export type DiscoveryMode = "dry-run";
 
@@ -14,24 +17,6 @@ export type DiagnosticCode =
   | "rate_limited";
 
 export type SourceTransport = "direct" | "ssh";
-
-export interface ReplayCandidate {
-  readonly identity: {
-    readonly filename: string;
-  };
-  readonly metadata?: {
-    readonly discoveredAt?: string;
-    readonly missionText?: string;
-    readonly serverId?: number;
-    readonly world?: string;
-  };
-  readonly source: {
-    readonly externalId?: string;
-    readonly page?: number;
-    readonly rawUrl?: string;
-    readonly url: string;
-  };
-}
 
 export interface DiscoveryDiagnostic {
   readonly attempts?: number;
