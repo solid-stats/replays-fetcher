@@ -2,22 +2,20 @@
 import { execFile as execFileCallback } from "node:child_process";
 import { promisify } from "node:util";
 
+import type { SourceConfig } from "../config.js";
 import { AppError } from "../errors/app-error.js";
 import { parseRetryAfter } from "../source/backoff.js";
 import { classifyFailure } from "../source/classify-failure.js";
-import { withRetry } from "../source/retry.js";
-
 import type {
   ClassifyInput,
   FailureClassification,
   FailureKind,
 } from "../source/classify-failure.js";
+import { withRetry } from "../source/retry.js";
 import type {
   RetrySourceReadOptions,
   SourceReadPhase,
 } from "../source/retry.js";
-
-import type { SourceConfig } from "../config.js";
 import type { SourceClient, SourceFetchOptions } from "./types.js";
 
 /**

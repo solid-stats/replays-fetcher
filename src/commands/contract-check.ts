@@ -1,8 +1,7 @@
-import { loadDryRunSourceConfig, writeJson } from "./shared.js";
-
-import type { BuildCliDependencies } from "./shared.js";
-
 import type { Command } from "commander";
+
+import { loadDryRunSourceConfig, writeJson } from "./shared.js";
+import type { BuildCliDependencies } from "./shared.js";
 
 export const registerContractCheckCommand = (
   program: Command,

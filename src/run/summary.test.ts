@@ -1,6 +1,8 @@
 /* eslint-disable max-lines -- run summary scenarios are kept together for summary-contract readability. */
 import { expect, test } from "vitest";
 
+import type { DiscoveryReport, ReplayCandidate } from "../discovery/types.js";
+import type { StoreRawReplayResult } from "../storage/store-raw-replay.js";
 import {
   buildConfigInvalidRunSummary,
   buildRunSummary,
@@ -8,10 +10,7 @@ import {
   runExitCode,
   toCompactSummary,
 } from "./summary.js";
-
 import type { RunStatus, RunSummary, CompactRunSummary } from "./types.js";
-import type { DiscoveryReport, ReplayCandidate } from "../discovery/types.js";
-import type { StoreRawReplayResult } from "../storage/store-raw-replay.js";
 
 const resumeInvocation = "replays-fetcher run-once --resume";
 

@@ -14,9 +14,8 @@ import {
   S3ServiceException,
 } from "@aws-sdk/client-s3";
 
-import { createS3CheckpointStore } from "./s3-checkpoint-store.js";
-
 import type { Checkpoint } from "./checkpoint.js";
+import { createS3CheckpointStore } from "./s3-checkpoint-store.js";
 
 export const checkpointSourceUrl = "https://sg.zone/replays";
 export const checkpointBucket = "solid-stats-replays";

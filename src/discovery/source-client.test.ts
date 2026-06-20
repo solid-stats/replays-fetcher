@@ -2,10 +2,8 @@
 import { afterEach, expect, test, vi } from "vitest";
 
 import { loadConfig } from "../config.js";
-
 import type { AppConfig } from "../config.js";
 import { AppError } from "../errors/app-error.js";
-
 import { createSourceClient, SourceFetchError } from "./source-client.js";
 
 const validEnvironment = {

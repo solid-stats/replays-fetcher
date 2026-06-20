@@ -1,8 +1,7 @@
-import { toIngestStagingPayload } from "./payload.js";
-
-import type { IngestStagingPayload, IngestStagingResult } from "./types.js";
 import type { StoreRawReplayResult } from "../storage/store-raw-replay.js";
 import type { RawReplayStorageEvidence } from "../storage/types.js";
+import { toIngestStagingPayload } from "./payload.js";
+import type { IngestStagingPayload, IngestStagingResult } from "./types.js";
 
 export type StagingRepository = {
   stage: (payload: IngestStagingPayload) => Promise<IngestStagingResult>;

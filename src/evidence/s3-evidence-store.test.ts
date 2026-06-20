@@ -11,7 +11,6 @@ import {
   putInput,
   rejectingStore,
 } from "./s3-evidence-store.fixtures.js";
-
 import type { SentCommand } from "./s3-evidence-store.fixtures.js";
 
 const onlyCommand = (commands: SentCommand[]): SentCommand => {

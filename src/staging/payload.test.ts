@@ -1,10 +1,8 @@
 import { expect, test } from "vitest";
 
 import { calculateSha256 } from "../storage/checksum.js";
-
-import { toIngestStagingPayload } from "./payload.js";
-
 import type { RawReplayStorageEvidence } from "../storage/types.js";
+import { toIngestStagingPayload } from "./payload.js";
 
 const checksum =
   "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";

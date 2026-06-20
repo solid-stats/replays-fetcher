@@ -1,22 +1,5 @@
-/* oxlint-disable max-lines -- the run-once orchestrator keeps the page loop, resume/checkpoint wiring, and the per-page checkpoint builders co-located so the ingest cycle reads as one unit. */
-import { createLimiter } from "../source/concurrency.js";
-import { createPacer } from "../source/pacing.js";
-import { createThrottleController } from "../source/throttle.js";
+import type { Logger } from "pino";
 
-import { ingestPage } from "./ingest-page.js";
-
-import type { LimitFunction } from "../source/concurrency.js";
-import type { Pacer } from "../source/pacing.js";
-import type { ThrottleController } from "../source/throttle.js";
-
-import {
-  buildRunSummary,
-  deriveRunStatus,
-  deriveSourceFailure,
-  runExitCode,
-} from "./summary.js";
-
-import type { RunExitCode, RunSourceFailure, RunSummary } from "./types.js";
 import type { Checkpoint, CheckpointPage } from "../checkpoint/checkpoint.js";
 import type { S3CheckpointStore } from "../checkpoint/s3-checkpoint-store.js";
 import type {
@@ -26,13 +9,27 @@ import type {
   SourceClient,
 } from "../discovery/types.js";
 import type { S3EvidenceStore } from "../evidence/s3-evidence-store.js";
+/* oxlint-disable max-lines -- the run-once orchestrator keeps the page loop, resume/checkpoint wiring, and the per-page checkpoint builders co-located so the ingest cycle reads as one unit. */
+import { createLimiter } from "../source/concurrency.js";
+import type { LimitFunction } from "../source/concurrency.js";
+import { createPacer } from "../source/pacing.js";
+import type { Pacer } from "../source/pacing.js";
 import type { RetryAttemptEvent } from "../source/retry.js";
+import { createThrottleController } from "../source/throttle.js";
+import type { ThrottleController } from "../source/throttle.js";
 import type { StagingRepository } from "../staging/stage-raw-replay.js";
 import type { IngestStagingResult } from "../staging/types.js";
 import type { ReplayByteClient } from "../storage/replay-byte-client.js";
 import type { S3RawReplayStorage } from "../storage/s3-raw-storage.js";
 import type { StoreRawReplayResult } from "../storage/store-raw-replay.js";
-import type { Logger } from "pino";
+import { ingestPage } from "./ingest-page.js";
+import {
+  buildRunSummary,
+  deriveRunStatus,
+  deriveSourceFailure,
+  runExitCode,
+} from "./summary.js";
+import type { RunExitCode, RunSourceFailure, RunSummary } from "./types.js";
 
 type RunOnceInput = {
   readonly attempts?: number;

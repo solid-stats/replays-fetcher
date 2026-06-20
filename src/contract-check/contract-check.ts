@@ -20,11 +20,9 @@ import {
   extractReplayRows,
 } from "../discovery/html.js";
 import { SourceFetchError } from "../discovery/source-client.js";
-import { classifyFailure } from "../source/classify-failure.js";
-
-import type { ClassifyInput } from "../source/classify-failure.js";
-
 import type { SourceClient } from "../discovery/types.js";
+import { classifyFailure } from "../source/classify-failure.js";
+import type { ClassifyInput } from "../source/classify-failure.js";
 
 export type ContractCheckReason = "contract_broken" | "source_unreachable";
 

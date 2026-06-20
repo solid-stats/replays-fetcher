@@ -1,11 +1,10 @@
-import { describe, expect, test, vi } from "vitest";
-
-import { createStoreRawResources, resolveDependencies } from "./shared.js";
-
-import type { BuildCliDependencies } from "./shared.js";
-import type { AppConfig } from "../config.js";
 import type { S3Client } from "@aws-sdk/client-s3";
 import type { Pool } from "pg";
+import { describe, expect, test, vi } from "vitest";
+
+import type { AppConfig } from "../config.js";
+import { createStoreRawResources, resolveDependencies } from "./shared.js";
+import type { BuildCliDependencies } from "./shared.js";
 
 // Minimal AppConfig stub — createStoreRawResources only reads `s3` and
 // `staging.databaseUrl`; the rest is structurally required but unused here.

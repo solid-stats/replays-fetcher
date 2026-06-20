@@ -1,3 +1,9 @@
+import type { Command } from "commander";
+
+import type { AppConfig } from "../config.js";
+import type { DiscoveryReport, SourceClient } from "../discovery/types.js";
+import type { IngestStagingResult } from "../staging/types.js";
+import type { StoreRawReplayResult } from "../storage/store-raw-replay.js";
 import {
   buildRetryWarnEmitter,
   createStoreRawResources,
@@ -5,13 +11,7 @@ import {
   loadStoreRawConfig,
   writeJson,
 } from "./shared.js";
-
 import type { BuildCliDependencies, StoreRawResources } from "./shared.js";
-import type { AppConfig } from "../config.js";
-import type { DiscoveryReport, SourceClient } from "../discovery/types.js";
-import type { IngestStagingResult } from "../staging/types.js";
-import type { StoreRawReplayResult } from "../storage/store-raw-replay.js";
-import type { Command } from "commander";
 
 type DiscoverOptions = {
   readonly dryRun?: boolean;

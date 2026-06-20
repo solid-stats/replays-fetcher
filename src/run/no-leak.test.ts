@@ -18,20 +18,18 @@
  */
 import { Writable } from "node:stream";
 
+import type { PutObjectCommand } from "@aws-sdk/client-s3";
 import { expect, test } from "vitest";
-
-import { capturingStore } from "../evidence/s3-evidence-store.fixtures.js";
-import { createLogger } from "../logging/create-logger.js";
-
-import { runOnce } from "./run-once.js";
-import { toCompactSummary } from "./summary.js";
 
 import type { CheckpointWriteInput } from "../checkpoint/s3-checkpoint-store.js";
 import type { DiscoveryReport } from "../discovery/types.js";
+import { capturingStore } from "../evidence/s3-evidence-store.fixtures.js";
+import { createLogger } from "../logging/create-logger.js";
 import type { IngestStagingResult } from "../staging/types.js";
 import type { StoreRawReplayResult } from "../storage/store-raw-replay.js";
 import type { RawReplayStorageEvidence } from "../storage/types.js";
-import type { PutObjectCommand } from "@aws-sdk/client-s3";
+import { runOnce } from "./run-once.js";
+import { toCompactSummary } from "./summary.js";
 
 // ---------------------------------------------------------------------------
 // Forbidden markers — every literal that must NEVER appear in any surface

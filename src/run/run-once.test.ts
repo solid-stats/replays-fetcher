@@ -1,8 +1,6 @@
 /* eslint-disable max-lines -- run-once cycle scenarios are kept together for orchestration readability. */
 import { expect, test, vi } from "vitest";
 
-import { derivePagesPerMinute, runOnce } from "./run-once.js";
-
 import type { Checkpoint } from "../checkpoint/checkpoint.js";
 import type {
   CheckpointReadResult,
@@ -20,6 +18,7 @@ import type { Pacer } from "../source/pacing.js";
 import type { ThrottleController } from "../source/throttle.js";
 import type { IngestStagingResult } from "../staging/types.js";
 import type { StoreRawReplayResult } from "../storage/store-raw-replay.js";
+import { derivePagesPerMinute, runOnce } from "./run-once.js";
 
 const checksum =
   "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";

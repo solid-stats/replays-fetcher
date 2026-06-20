@@ -3,12 +3,10 @@ import { Pool } from "pg";
 import { afterEach, expect, test } from "vitest";
 
 import { checkPostgresConnectivity } from "../check/postgres-connectivity.js";
-
+import type { RawReplayStorageEvidence } from "../storage/types.js";
 import { toIngestStagingPayload } from "./payload.js";
 import { createPostgresStagingRepository } from "./postgres-staging-repository.js";
 import { applyStagingSchema } from "./staging-schema.fixtures.js";
-
-import type { RawReplayStorageEvidence } from "../storage/types.js";
 
 type StagingEvidenceRow = {
   readonly promotion_evidence: {

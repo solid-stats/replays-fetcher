@@ -1,7 +1,6 @@
 import { expect, test, vi } from "vitest";
 
 import { SourceFetchError } from "../discovery/source-client.js";
-
 import { checkSourceConnectivity } from "./source-connectivity.js";
 
 test("checkSourceConnectivity should fetch source text and discard the body", async () => {

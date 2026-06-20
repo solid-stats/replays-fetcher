@@ -1,3 +1,10 @@
+import type {
+  DiagnosticCode,
+  DiscoveryDiagnostic,
+  DiscoveryReport,
+} from "../discovery/types.js";
+import type { IngestStagingResult } from "../staging/types.js";
+import type { StoreRawReplayResult } from "../storage/store-raw-replay.js";
 /* eslint-disable max-lines -- run summary keeps the builders, status derivation, exit-code mapping, and counting helpers co-located so the stdout summary contract reads as one unit. */
 import type {
   CompactRunSummary,
@@ -10,13 +17,6 @@ import type {
   RunSummaryCounts,
   SourceFailureClassification,
 } from "./types.js";
-import type {
-  DiagnosticCode,
-  DiscoveryDiagnostic,
-  DiscoveryReport,
-} from "../discovery/types.js";
-import type { IngestStagingResult } from "../staging/types.js";
-import type { StoreRawReplayResult } from "../storage/store-raw-replay.js";
 
 type BuildRunSummaryInput = {
   readonly candidateCount?: number;

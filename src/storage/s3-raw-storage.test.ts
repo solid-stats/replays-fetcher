@@ -5,10 +5,9 @@ import {
 } from "@aws-sdk/client-s3";
 import { expect, test } from "vitest";
 
+import type { ReplayCandidate } from "../discovery/types.js";
 import { calculateSha256 } from "./checksum.js";
 import { createS3RawReplayStorage } from "./s3-raw-storage.js";
-
-import type { ReplayCandidate } from "../discovery/types.js";
 
 const bucket = "solid-stats-replays";
 const bytes = new TextEncoder().encode("raw replay bytes");

@@ -5,7 +5,6 @@
 // SENTRY_DSN leaves the SDK disabled (a no-op), so this is safe unconditionally.
 // oxlint-disable-next-line import/no-unassigned-import -- Sentry must init before sibling import side effects; ESM hoists imports, so a bare side-effect import is the only ordering guarantee.
 import "./observability/instrument.js";
-
 import { Command } from "commander";
 
 import { registerCheckCommand } from "./commands/check.js";
@@ -13,11 +12,9 @@ import { registerContractCheckCommand } from "./commands/contract-check.js";
 import { registerDiscoverCommand } from "./commands/discover.js";
 import { registerRunOnceCommand } from "./commands/run-once.js";
 import { resolveDependencies } from "./commands/shared.js";
-import { registerWatchCommand } from "./commands/watch.js";
-
-import { captureFatal, flushSentry } from "./observability/sentry.js";
-
 import type { BuildCliDependencies } from "./commands/shared.js";
+import { registerWatchCommand } from "./commands/watch.js";
+import { captureFatal, flushSentry } from "./observability/sentry.js";
 
 export const buildCli = (dependencies: BuildCliDependencies = {}): Command => {
   const cliDependencies = resolveDependencies(dependencies);

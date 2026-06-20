@@ -1,7 +1,6 @@
 import { expect, test } from "vitest";
 
 import { checkPostgresConnectivity } from "./postgres-connectivity.js";
-
 import type { PostgresConnectivityQueryClient } from "./postgres-connectivity.js";
 
 type QueryCall = {

@@ -5,6 +5,7 @@ import {
 } from "@aws-sdk/client-s3";
 import { expect, test } from "vitest";
 
+import type { Checkpoint } from "./checkpoint.js";
 import {
   bodyOf,
   capturingStore,
@@ -17,10 +18,7 @@ import {
   s3Error,
   throwingStore,
 } from "./s3-checkpoint-store.fixtures.js";
-
 import type { PutInput, SentCommand } from "./s3-checkpoint-store.fixtures.js";
-
-import type { Checkpoint } from "./checkpoint.js";
 
 const slug = checkpointSourceUrl;
 const expectedKey = "checkpoints/sg.zone-replays/latest.json";

@@ -4,11 +4,11 @@ import {
   S3ServiceException,
 } from "@aws-sdk/client-s3";
 
+import type { ReplayCandidate } from "../discovery/types.js";
 import type {
   RawReplayStorageEvidence,
   RawReplayStorageInput,
 } from "./types.js";
-import type { ReplayCandidate } from "../discovery/types.js";
 
 type S3Sender = {
   send: (command: HeadObjectCommand | PutObjectCommand) => Promise<{

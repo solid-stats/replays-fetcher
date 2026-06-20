@@ -7,12 +7,10 @@ import { MinioContainer } from "@testcontainers/minio";
 import { afterEach, expect, test } from "vitest";
 
 import { createS3Client } from "../commands/clients.js";
-
+import type { RunSummary } from "../run/types.js";
 import { toEvidenceObjectKey } from "./object-key.js";
 import { evidenceRunId, makeRunSummary } from "./s3-evidence-store.fixtures.js";
 import { createS3EvidenceStore } from "./s3-evidence-store.js";
-
-import type { RunSummary } from "../run/types.js";
 
 const bucket = "solid-stats-replays";
 const prefix = "runs";

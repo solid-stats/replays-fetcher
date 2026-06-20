@@ -19,9 +19,8 @@
 
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 
-import { toEvidenceObjectKey } from "./object-key.js";
-
 import type { RunSummary } from "../types/run-summary.js";
+import { toEvidenceObjectKey } from "./object-key.js";
 
 export type S3EvidenceSender = {
   send: (command: PutObjectCommand) => Promise<{ readonly ETag?: string }>;

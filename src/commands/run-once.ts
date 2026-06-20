@@ -1,9 +1,11 @@
+import type { Command } from "commander";
+
 import {
   buildConfigInvalidRunSummary,
   runExitCode,
   toCompactSummary,
 } from "../run/summary.js";
-
+import type { StagingRepository } from "../staging/stage-raw-replay.js";
 import {
   buildRetryWarnEmitter,
   createStoreRawResources,
@@ -11,10 +13,7 @@ import {
   loadStoreRawConfig,
   writeJson,
 } from "./shared.js";
-
 import type { BuildCliDependencies } from "./shared.js";
-import type { StagingRepository } from "../staging/stage-raw-replay.js";
-import type { Command } from "commander";
 
 type RunOnceOptions = {
   readonly emitEvidence?: boolean;

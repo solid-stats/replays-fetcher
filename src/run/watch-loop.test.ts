@@ -1,23 +1,21 @@
 /* eslint-disable max-lines -- watch-loop cycle/shutdown/heartbeat/interval scenarios are kept together for watch-contract readability. */
 import { Writable } from "node:stream";
 
+import type { Logger } from "pino";
 import { expect, test, vi } from "vitest";
 
-import { createLogger } from "../logging/create-logger.js";
-import { createPacer } from "../source/pacing.js";
-
-import { runWatchLoop } from "./watch-loop.js";
-
-import type { WatchLoopInput } from "./watch-loop.js";
-import type { Pacer } from "../source/pacing.js";
 import type {
   DiscoveryReport,
   ReplayCandidate,
   SourceClient,
 } from "../discovery/types.js";
+import { createLogger } from "../logging/create-logger.js";
+import { createPacer } from "../source/pacing.js";
+import type { Pacer } from "../source/pacing.js";
 import type { IngestStagingResult } from "../staging/types.js";
 import type { StoreRawReplayResult } from "../storage/store-raw-replay.js";
-import type { Logger } from "pino";
+import { runWatchLoop } from "./watch-loop.js";
+import type { WatchLoopInput } from "./watch-loop.js";
 
 const checksum =
   "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";

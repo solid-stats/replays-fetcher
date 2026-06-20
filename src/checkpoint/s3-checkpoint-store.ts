@@ -36,9 +36,7 @@ import {
 
 import { CheckpointConflictError } from "../errors/checkpoint-conflict-error.js";
 import { fullJitterDelay } from "../source/backoff.js";
-
 import { mergeCheckpoints, parseCheckpoint } from "./checkpoint.js";
-
 import type { Checkpoint } from "./checkpoint.js";
 import { toCheckpointObjectKey } from "./object-key.js";
 

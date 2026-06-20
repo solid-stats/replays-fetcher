@@ -2,11 +2,9 @@
 import { expect, test, vi } from "vitest";
 
 import { retryAfterCapMs } from "./backoff.js";
-import { withRetry } from "./retry.js";
-
-import type { RetryAttemptEvent } from "./retry.js";
-
 import type { FailureClassification } from "./classify-failure.js";
+import { withRetry } from "./retry.js";
+import type { RetryAttemptEvent } from "./retry.js";
 
 const transient: FailureClassification = {
   cfChallenge: false,

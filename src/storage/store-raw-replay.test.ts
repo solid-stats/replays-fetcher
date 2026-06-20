@@ -1,15 +1,13 @@
 import { expect, test } from "vitest";
 
+import type { ReplayCandidate } from "../discovery/types.js";
 import { calculateSha256 } from "./checksum.js";
 import { toRawReplayObjectKey } from "./object-key.js";
 import { ReplayByteFetchError } from "./replay-byte-client.js";
-
 import type { ReplayByteClient } from "./replay-byte-client.js";
-import { storeRawReplay } from "./store-raw-replay.js";
-
 import type { S3RawReplayStorage } from "./s3-raw-storage.js";
+import { storeRawReplay } from "./store-raw-replay.js";
 import type { RawReplayStorageEvidence } from "./types.js";
-import type { ReplayCandidate } from "../discovery/types.js";
 
 const bytes = new TextEncoder().encode("stored replay bytes");
 const checksum = calculateSha256(bytes);

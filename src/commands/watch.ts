@@ -1,15 +1,14 @@
-import { buildConfigInvalidRunSummary, runExitCode } from "../run/summary.js";
+import type { Command } from "commander";
 
+import { buildConfigInvalidRunSummary, runExitCode } from "../run/summary.js";
+import type { StagingRepository } from "../staging/stage-raw-replay.js";
 import {
   createStoreRawResources,
   flushLogger,
   loadStoreRawConfig,
   writeJson,
 } from "./shared.js";
-
 import type { BuildCliDependencies } from "./shared.js";
-import type { StagingRepository } from "../staging/stage-raw-replay.js";
-import type { Command } from "commander";
 
 const requireStagingRepository = (
   repository: StagingRepository | undefined,

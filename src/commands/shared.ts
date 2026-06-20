@@ -1,42 +1,38 @@
 import { randomUUID } from "node:crypto";
 import { rename, writeFile } from "node:fs/promises";
 
+import type { S3Client } from "@aws-sdk/client-s3";
+import type { Pool } from "pg";
+import type { Logger } from "pino";
+
 import { checkPostgresConnectivity } from "../check/postgres-connectivity.js";
 import { checkS3Connectivity } from "../check/s3-connectivity.js";
 import { checkSourceConnectivity } from "../check/source-connectivity.js";
 import { createS3CheckpointStore } from "../checkpoint/s3-checkpoint-store.js";
-import { loadConfig, loadSourceConfig } from "../config.js";
-
 import type { S3CheckpointStore } from "../checkpoint/s3-checkpoint-store.js";
+import { loadConfig, loadSourceConfig } from "../config.js";
 import type { AppConfig, SourceConfig } from "../config.js";
 import { runContractCheck } from "../contract-check/contract-check.js";
 import { discoverReplaysDryRun } from "../discovery/discover.js";
 import { createSourceClient } from "../discovery/source-client.js";
+import type { SourceClient } from "../discovery/types.js";
 import { ConfigValidationError } from "../errors/config-validation-error.js";
 import { createS3EvidenceStore } from "../evidence/s3-evidence-store.js";
-import { createLogger } from "../logging/create-logger.js";
-
 import type { S3EvidenceStore } from "../evidence/s3-evidence-store.js";
+import { createLogger } from "../logging/create-logger.js";
 import type { CreateLoggerOptions } from "../logging/create-logger.js";
 import { runOnce } from "../run/run-once.js";
 import { runWatchLoop } from "../run/watch-loop.js";
+import type { RetryAttemptEvent } from "../source/retry.js";
 import { createPostgresStagingRepository } from "../staging/postgres-staging-repository.js";
 import { stageRawReplay } from "../staging/stage-raw-replay.js";
-import { createReplayByteClient } from "../storage/replay-byte-client.js";
-import { createS3RawReplayStorage } from "../storage/s3-raw-storage.js";
-
 import type { StagingRepository } from "../staging/stage-raw-replay.js";
+import { createReplayByteClient } from "../storage/replay-byte-client.js";
 import type { ReplayByteClient } from "../storage/replay-byte-client.js";
+import { createS3RawReplayStorage } from "../storage/s3-raw-storage.js";
 import type { S3RawReplayStorage } from "../storage/s3-raw-storage.js";
 import { storeRawReplay } from "../storage/store-raw-replay.js";
-
 import { createPgPool, createS3Client } from "./clients.js";
-
-import type { SourceClient } from "../discovery/types.js";
-import type { RetryAttemptEvent } from "../source/retry.js";
-import type { S3Client } from "@aws-sdk/client-s3";
-import type { Pool } from "pg";
-import type { Logger } from "pino";
 
 export type SourceConfigResult =
   | {

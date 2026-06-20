@@ -2,16 +2,13 @@
 import { afterEach, expect, test, vi } from "vitest";
 
 import { loadSourceConfig } from "../config.js";
-
 import type { SourceConfig } from "../config.js";
 import { AppError } from "../errors/app-error.js";
-
+import type { RetryAttemptEvent } from "../source/retry.js";
 import {
   createReplayByteClient,
   ReplayByteFetchError,
 } from "./replay-byte-client.js";
-
-import type { RetryAttemptEvent } from "../source/retry.js";
 
 const validSourceEnvironment = {
   REPLAY_SOURCE_URL: "https://sg.zone/replays",

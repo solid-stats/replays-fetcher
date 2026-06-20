@@ -1,5 +1,4 @@
 import { pino } from "pino";
-
 import type { Logger, LoggerOptions } from "pino";
 
 export type CreateLoggerOptions = {

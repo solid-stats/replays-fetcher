@@ -2,17 +2,16 @@
 import { readdir, readFile } from "node:fs/promises";
 import { Writable } from "node:stream";
 
+import type { S3Client } from "@aws-sdk/client-s3";
+import type { Pool } from "pg";
 import { afterEach, expect, test, vi } from "vitest";
 
+import type { ConnectivityCheck } from "./check/connectivity.js";
 import { buildCli } from "./cli.js";
 import * as configModule from "./config.js";
-import { createLogger } from "./logging/create-logger.js";
-
-import type { S3Client } from "@aws-sdk/client-s3";
-import type { ConnectivityCheck } from "./check/connectivity.js";
-import type { Pool } from "pg";
 import type { SourceConfig } from "./config.js";
 import type { DiscoveryReport, ReplayCandidate } from "./discovery/types.js";
+import { createLogger } from "./logging/create-logger.js";
 import type { RunSummary } from "./run/types.js";
 import type { IngestStagingResult } from "./staging/types.js";
 import type { ReplayByteClient } from "./storage/replay-byte-client.js";

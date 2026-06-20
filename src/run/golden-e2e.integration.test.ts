@@ -11,22 +11,20 @@ import { afterEach, expect, test } from "vitest";
 import { createS3CheckpointStore } from "../checkpoint/s3-checkpoint-store.js";
 import { createS3Client } from "../commands/clients.js";
 import { discoverReplaysDryRun } from "../discovery/discover.js";
+import type { SourceClient } from "../discovery/types.js";
 import { createS3EvidenceStore } from "../evidence/s3-evidence-store.js";
 import { createLogger } from "../logging/create-logger.js";
 import { createPostgresStagingRepository } from "../staging/postgres-staging-repository.js";
-import { applyStagingSchema } from "../staging/staging-schema.fixtures.js";
-import { createS3RawReplayStorage } from "../storage/s3-raw-storage.js";
 import { stageRawReplay } from "../staging/stage-raw-replay.js";
+import { applyStagingSchema } from "../staging/staging-schema.fixtures.js";
+import type { ReplayByteClient } from "../storage/replay-byte-client.js";
+import { createS3RawReplayStorage } from "../storage/s3-raw-storage.js";
 import { storeRawReplay } from "../storage/store-raw-replay.js";
-
 import {
   goldenFixturesPresent,
   loadGoldenFixtures,
 } from "./golden-fixtures.js";
 import { runOnce } from "./run-once.js";
-
-import type { SourceClient } from "../discovery/types.js";
-import type { ReplayByteClient } from "../storage/replay-byte-client.js";
 
 type StagingRow = {
   readonly checksum: string;

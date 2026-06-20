@@ -4,9 +4,7 @@ import { readFile } from "node:fs/promises";
 import { expect, test } from "vitest";
 
 import { createPostgresStagingRepository } from "./postgres-staging-repository.js";
-
 import type { StagingQueryClient } from "./postgres-staging-repository.js";
-
 import type { IngestStagingPayload } from "./types.js";
 
 type QueryCall = {

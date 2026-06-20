@@ -8,21 +8,19 @@ import {
   createStoreRawResources,
   resolveDependencies,
 } from "../commands/shared.js";
+import type { AppConfig } from "../config.js";
 import { discoverReplaysDryRun } from "../discovery/discover.js";
+import type { SourceClient } from "../discovery/types.js";
 import { createLogger } from "../logging/create-logger.js";
-import { applyStagingSchema } from "../staging/staging-schema.fixtures.js";
 import { stageRawReplay } from "../staging/stage-raw-replay.js";
+import { applyStagingSchema } from "../staging/staging-schema.fixtures.js";
+import type { ReplayByteClient } from "../storage/replay-byte-client.js";
 import { storeRawReplay } from "../storage/store-raw-replay.js";
-
 import {
   goldenFixturesPresent,
   loadGoldenFixtures,
 } from "./golden-fixtures.js";
 import { runWatchLoop } from "./watch-loop.js";
-
-import type { AppConfig } from "../config.js";
-import type { SourceClient } from "../discovery/types.js";
-import type { ReplayByteClient } from "../storage/replay-byte-client.js";
 
 const bucket = "solid-stats-replays";
 const cycleCount = 3;

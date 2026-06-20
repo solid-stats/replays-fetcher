@@ -1,10 +1,9 @@
 import { expect, test } from "vitest";
 
-import { stageRawReplay } from "./stage-raw-replay.js";
-
-import type { IngestStagingPayload, IngestStagingResult } from "./types.js";
 import type { StoreRawReplayResult } from "../storage/store-raw-replay.js";
 import type { RawReplayStorageEvidence } from "../storage/types.js";
+import { stageRawReplay } from "./stage-raw-replay.js";
+import type { IngestStagingPayload, IngestStagingResult } from "./types.js";
 
 const checksum =
   "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";

@@ -5,12 +5,9 @@ import { describe, expect, test } from "vitest";
 import { toRawReplayUrl } from "../discovery/discover.js";
 import { extractReplayRows } from "../discovery/html.js";
 import { SourceFetchError } from "../discovery/source-client.js";
-
-import { runContractCheck } from "./contract-check.js";
-
-import type { ContractCheckReason } from "./contract-check.js";
-
 import type { SourceClient } from "../discovery/types.js";
+import { runContractCheck } from "./contract-check.js";
+import type { ContractCheckReason } from "./contract-check.js";
 
 // Deterministic fixtures — no live source (GUARD-01).
 const SOURCE_URL = new URL("https://example.test/replays");

@@ -1,14 +1,13 @@
+import type { RetryAttemptEvent } from "../source/retry.js";
 /* oxlint-disable max-lines -- Discovery orchestration is split once storage/staging phases add separate modules. */
 import { extractFilenameFromDetailHtml, extractReplayRows } from "./html.js";
 import { SourceFetchError } from "./source-client.js";
-
 import type {
   DiscoveryDiagnostic,
   DiscoveryReport,
   ReplayCandidate,
   SourceClient,
 } from "./types.js";
-import type { RetryAttemptEvent } from "../source/retry.js";
 
 type DiscoverReplaysDryRunOptions = {
   readonly attempts?: number;

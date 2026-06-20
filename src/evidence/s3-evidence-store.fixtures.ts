@@ -10,9 +10,8 @@
 
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 
-import { createS3EvidenceStore } from "./s3-evidence-store.js";
-
 import type { RunSummary } from "../run/types.js";
+import { createS3EvidenceStore } from "./s3-evidence-store.js";
 
 export const evidenceRunId = "run-2026-06-11T13:27:38.774Z-abc123";
 export const evidenceBucket = "solid-stats-replays";

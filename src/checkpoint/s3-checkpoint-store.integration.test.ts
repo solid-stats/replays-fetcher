@@ -3,7 +3,6 @@ import { MinioContainer } from "@testcontainers/minio";
 import { afterEach, expect, test } from "vitest";
 
 import { createS3Client } from "../commands/clients.js";
-
 import {
   checkpointSourceUrl,
   makeCheckpoint,

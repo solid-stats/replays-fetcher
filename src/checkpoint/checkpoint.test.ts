@@ -1,15 +1,13 @@
 import { expect, test } from "vitest";
 
+import type { RunSourceFailure } from "../run/types.js";
 import {
   checkpointSchema,
   mergeCheckpoints,
   parseCheckpoint,
   resumeStartPage,
 } from "./checkpoint.js";
-
 import type { Checkpoint, CheckpointSourceFailure } from "./checkpoint.js";
-
-import type { RunSourceFailure } from "../run/types.js";
 
 const validCheckpoint: Checkpoint = {
   runId: "run-2026-06-09T00-00-00-000Z",

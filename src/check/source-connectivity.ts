@@ -1,7 +1,6 @@
 import { SourceFetchError } from "../discovery/source-client.js";
-
-import type { ConnectivityCheck } from "./connectivity.js";
 import type { SourceClient } from "../discovery/types.js";
+import type { ConnectivityCheck } from "./connectivity.js";
 
 type CheckSourceConnectivityInput = {
   readonly sourceClient: SourceClient;

@@ -1,11 +1,10 @@
 import { calculateSha256 } from "../storage/checksum.js";
-
+import type { RawReplayStorageEvidence } from "../storage/types.js";
 import type {
   IngestStagingPayload,
   StagingPayloadResult,
   StageableRawReplayEvidence,
 } from "./types.js";
-import type { RawReplayStorageEvidence } from "../storage/types.js";
 
 const defaultSourceSystem = "sg-zone";
 

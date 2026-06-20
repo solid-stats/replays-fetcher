@@ -1,5 +1,5 @@
-import type { LimitFunction } from "../source/concurrency.js";
 import type { ReplayCandidate } from "../discovery/types.js";
+import type { LimitFunction } from "../source/concurrency.js";
 import type { StagingRepository } from "../staging/stage-raw-replay.js";
 import type { IngestStagingResult } from "../staging/types.js";
 import type { ReplayByteClient } from "../storage/replay-byte-client.js";

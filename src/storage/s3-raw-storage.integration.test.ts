@@ -4,12 +4,10 @@ import { afterEach, expect, test } from "vitest";
 
 import { checkS3Connectivity } from "../check/s3-connectivity.js";
 import { createS3Client } from "../commands/clients.js";
-
+import type { ReplayCandidate } from "../discovery/types.js";
 import { calculateSha256 } from "./checksum.js";
 import { toRawReplayObjectKey } from "./object-key.js";
 import { createS3RawReplayStorage } from "./s3-raw-storage.js";
-
-import type { ReplayCandidate } from "../discovery/types.js";
 
 const bucket = "solid-stats-replays";
 const bytes = new TextEncoder().encode("integration raw replay bytes");

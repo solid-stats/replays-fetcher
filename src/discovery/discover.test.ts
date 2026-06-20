@@ -1,11 +1,10 @@
 /* eslint-disable max-lines -- Phase 2 dry-run discovery scenarios are kept together for report-contract readability. */
 import { expect, test } from "vitest";
 
+import type { RetryAttemptEvent } from "../source/retry.js";
 import { discoverReplaysDryRun } from "./discover.js";
 import { SourceFetchError } from "./source-client.js";
-
 import type { SourceClient, SourceFetchOptions } from "./types.js";
-import type { RetryAttemptEvent } from "../source/retry.js";
 
 test("discoverReplaysDryRun should map a source fixture into a dry-run report", async () => {
   const sourceClient: SourceClient = {

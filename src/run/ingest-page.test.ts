@@ -1,13 +1,11 @@
 import { expect, test, vi } from "vitest";
 
-import { createLimiter } from "../source/concurrency.js";
-
-import { ingestPage } from "./ingest-page.js";
-
-import type { LimitFunction } from "../source/concurrency.js";
 import type { ReplayCandidate } from "../discovery/types.js";
+import { createLimiter } from "../source/concurrency.js";
+import type { LimitFunction } from "../source/concurrency.js";
 import type { IngestStagingResult } from "../staging/types.js";
 import type { StoreRawReplayResult } from "../storage/store-raw-replay.js";
+import { ingestPage } from "./ingest-page.js";
 
 const checksum =
   "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";

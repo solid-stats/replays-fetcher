@@ -1,14 +1,12 @@
-import { connectivityOk } from "../check/connectivity.js";
-import { redactConfig } from "../config.js";
-import { ConfigValidationError } from "../errors/config-validation-error.js";
-
-import { writeJson } from "./shared.js";
-
-import type { ConnectivityCheck } from "../check/connectivity.js";
-import type { BuildCliDependencies } from "./shared.js";
-
 import type { Command } from "commander";
 import type { Pool } from "pg";
+
+import { connectivityOk } from "../check/connectivity.js";
+import type { ConnectivityCheck } from "../check/connectivity.js";
+import { redactConfig } from "../config.js";
+import { ConfigValidationError } from "../errors/config-validation-error.js";
+import { writeJson } from "./shared.js";
+import type { BuildCliDependencies } from "./shared.js";
 
 /**
  * Runs the read-only staging probe against the injected, composition-root pool

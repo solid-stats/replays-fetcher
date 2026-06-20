@@ -1,15 +1,13 @@
-import { createLimiter } from "../source/concurrency.js";
-import { createPacer } from "../source/pacing.js";
+import type { Logger } from "pino";
 
-import { ingestPage } from "./ingest-page.js";
-import { buildRunSummary, toCompactSummary } from "./summary.js";
-
-import type { LimitFunction } from "../source/concurrency.js";
 import type {
   DiscoveryReport,
   ReplayCandidate,
   SourceClient,
 } from "../discovery/types.js";
+import { createLimiter } from "../source/concurrency.js";
+import type { LimitFunction } from "../source/concurrency.js";
+import { createPacer } from "../source/pacing.js";
 import type { Pacer } from "../source/pacing.js";
 import type { RetryAttemptEvent } from "../source/retry.js";
 import type { StagingRepository } from "../staging/stage-raw-replay.js";
@@ -17,7 +15,8 @@ import type { IngestStagingResult } from "../staging/types.js";
 import type { ReplayByteClient } from "../storage/replay-byte-client.js";
 import type { S3RawReplayStorage } from "../storage/s3-raw-storage.js";
 import type { StoreRawReplayResult } from "../storage/store-raw-replay.js";
-import type { Logger } from "pino";
+import { ingestPage } from "./ingest-page.js";
+import { buildRunSummary, toCompactSummary } from "./summary.js";
 
 const WATCH_PAGE = 1;
 
