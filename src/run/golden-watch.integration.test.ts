@@ -43,7 +43,7 @@ afterEach(async () => {
 });
 
 test.skipIf(!goldenFixturesPresent())(
-  "golden watch: drives runWatchLoop via injected seams for N cycles — cycle 1 stores/stages N, later cycles dup N with re-download, clean shutdown, no leaks",
+  "golden watch: drives runWatchLoop via injected seams for N cycles — cycle 1 stores/stages N, later cycles SKIP N pre-fetch (no re-download), clean shutdown, no leaks",
   async () => {
     // ARRANGE — real infra (ephemeral MinIO + Postgres), fixtured source/bytes.
     const fixtures = loadGoldenFixtures();
@@ -94,8 +94,10 @@ test.skipIf(!goldenFixturesPresent())(
         return html;
       },
     };
-    // fetchBytes behind a call counter to prove re-download per cycle (the
-    // current checksum-after-download behavior the oracle pins).
+    // fetchBytes behind a call counter to prove the pre-fetch dedup gate
+    // (DEDUP-01): bytes are downloaded ONLY in cycle 1; cycles >=2 skip the
+    // known candidates BEFORE any download, so the counter never grows past
+    // cycle 1.
     const fetchBytes = vi.fn(async (url: URL): Promise<Uint8Array> => {
       const bytes = fixtures.bytesByUrl.get(url.toString());
       if (bytes === undefined) {
@@ -183,17 +185,20 @@ test.skipIf(!goldenFixturesPresent())(
     expect(stagedCycleOne).toBeGreaterThan(0);
     expect(firstSummary.counts.stored).toBe(stagedCycleOne);
 
-    // Cycles ≥2 dup N: nothing new stored/staged; same page-1 fixtures replayed
-    // → bytes already in MinIO (HEAD→skipped) + already staged (23505→dup).
+    // Cycles ≥2 SKIP N pre-fetch: each known candidate's source identity already
+    // has a staging row, so it is skipped BEFORE any byte download — nothing is
+    // stored, staged, or duplicated, and the skip lands in the distinct
+    // skippedBySourceId counter (DEDUP-01).
     for (const summary of summaries.slice(1)) {
       expect(summary.counts.stored).toBe(0);
       expect(summary.counts.staged).toBe(0);
-      expect(summary.counts.duplicate).toBe(stagedCycleOne);
+      expect(summary.counts.duplicate).toBe(0);
+      expect(summary.counts.skippedBySourceId).toBe(stagedCycleOne);
     }
 
-    // fetchBytes call-count GROWS every cycle — bytes are re-downloaded each
-    // cycle (pins checksum-after-download; dedup-before-fetch is out of scope).
-    expect(fetchBytes.mock.calls.length).toBe(stagedCycleOne * cycleCount);
+    // fetchBytes is called ONLY in cycle 1 — cycles ≥2 skip before the download,
+    // so the total call count is stagedCycleOne, NOT stagedCycleOne * cycleCount.
+    expect(fetchBytes.mock.calls.length).toBe(stagedCycleOne);
 
     // Pacing respected: the inter-cycle pacer floor is awaited once per cycle
     // (inside runCycle, so it fires on every cycle including the last).
