@@ -4,14 +4,14 @@ milestone: v3.1
 milestone_name: Convention Compliance & Tech-Debt Closure
 status: executing
 stopped_at: "Phase 23 complete (1/1 plan; eight five-band depcruise import fences turned on in verify as a NO-OP lock-in — the tree already satisfied every fence so verify stayed green; planted-violation proof + review clean via full skill-chain incl correctness-and-quality.md). Out-of-band: re-review §AA findings from Phases 20/22 fixed (commit 5fa86e6 — teardown/fixture/checkpoint errors now logged under pino err key; verify green, 100% coverage, 515 tests) and the gsd-skill-chain-guard PreToolUse hook now auto-injects references/*.md into convention-bound subagent spawns. Autonomous run at 63% (5/8), continuing to Phase 24."
-last_updated: "2026-06-20T14:12:48.654Z"
-last_activity: 2026-06-20 — Phase 24 Plan 01 complete (ON CONFLICT staging dedup + existsBySourceIdentity)
+last_updated: "2026-06-20T14:23:05.820Z"
+last_activity: 2026-06-20 — Phase 24 Plan 02 complete (distinct skippedBySourceId run-summary counter)
 progress:
   total_phases: 8
   completed_phases: 5
   total_plans: 15
-  completed_plans: 14
-  percent: 93
+  completed_plans: 15
+  percent: 63
 current_phase: 24
 current_phase_name: Watch Pre-Fetch Dedup + ON CONFLICT Staging
 ---
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-06-20)
 ## Current Position
 
 Phase: 24 — Watch Pre-Fetch Dedup + ON CONFLICT Staging
-Plan: 24-01 complete (1/3); next is 24-02
-Status: Phase 24 in progress — Plan 01 (DEDUP-02, DEDUP-03) complete; verify + integration green
-Last activity: 2026-06-20 — Phase 24 Plan 01 complete (ON CONFLICT staging dedup + existsBySourceIdentity)
+Plan: 24-02 complete (2/3); next is 24-03
+Status: Phase 24 in progress — Plans 01-02 complete; verify green (521 tests, 100% coverage)
+Last activity: 2026-06-20 — Phase 24 Plan 02 complete (distinct skippedBySourceId run-summary counter)
 
-Progress: [██████░░░░] 63% (5/8 phases); plans 14/15
+Progress: [██████░░░░] 63% (5/8 phases); plans 15/15
 
 ## v3.1 Roadmap Summary (Phases 19-26)
 
@@ -168,6 +168,6 @@ hand-spawned reviewer/fixer prompts.
 
 ## Session
 
-**Last session:** 2026-06-20T14:12:48.651Z
+**Last session:** 2026-06-20T14:23:05.817Z
 **Stopped at:** Phase 23 complete (1/1 plan; eight depcruise band fences locked in as a no-op; planted-violation proof + review clean via full skill-chain). Out-of-band: §AA re-review findings fixed (5fa86e6) + gsd-skill-chain-guard hook added. Autonomous run at 63% (5/8), continuing to Phase 24.
 **Resume file:** None

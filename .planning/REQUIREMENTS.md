@@ -32,7 +32,7 @@ Committed scope for this milestone. Each maps to exactly one roadmap phase.
 
 ### Watch Ingest Latency & Source Load (DEDUP)
 
-- [ ] **DEDUP-01**: The `watch` page-1 cycle skips a candidate whose `source_replay_id` already exists in staging BEFORE fetching its bytes; absent/empty/ambiguous ids fall through to fetch; byte-checksum dedup remains as the backstop (a genuinely-new replay can never be dropped).
+- [x] **DEDUP-01**: The `watch` page-1 cycle skips a candidate whose `source_replay_id` already exists in staging BEFORE fetching its bytes; absent/empty/ambiguous ids fall through to fetch; byte-checksum dedup remains as the backstop (a genuinely-new replay can never be dropped).
 - [x] **DEDUP-02**: A no-new-replay watch cycle performs only the page-1 list fetch (no redundant byte downloads), reported via a distinct `skipped-by-source-id` run-summary counter.
 - [x] **DEDUP-03**: Staging dedup uses `INSERT ... ON CONFLICT (checksum, object_key) DO NOTHING` for the benign duplicate (ending the postgres duplicate-key ERROR log spam); the conflicting-duplicate (same source id, different checksum) manual-review classification is preserved.
 
@@ -92,7 +92,7 @@ Each requirement maps to exactly one phase. v3.1 continues the project phase num
 | SPLIT-04 | Phase 22 | Complete |
 | MECH-01 | Phase 21 | Complete |
 | MECH-02 | Phase 21 | Complete |
-| DEDUP-01 | Phase 24 | Pending |
+| DEDUP-01 | Phase 24 | Complete |
 | DEDUP-02 | Phase 24 | Complete |
 | DEDUP-03 | Phase 24 | Complete |
 | DISC-01 | Phase 25 | Pending |
