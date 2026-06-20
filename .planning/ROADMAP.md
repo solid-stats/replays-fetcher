@@ -60,7 +60,7 @@ Behavior-preserving migration onto the shared `@solid-stats/ts-toolchain` preset
 - [x] **Phase 21: Mechanical Convention Cleanup** — Bulk `interface→type` (~138) and import-order (~17) corrections, lint/formatter-enforced so they cannot regress (completed 2026-06-20)
 - [x] **Phase 22: God-File Decomposition** — Split the four `max-lines`-suppressed god-files within their bands and remove the suppressions (completed 2026-06-20)
 - [x] **Phase 23: Depcruise Band-Fence Lock-In** — Turn on the eight five-band import fences in `verify`, proven by a planted-violation test (enforced LAST as a no-op lock-in) (completed 2026-06-20)
-- [ ] **Phase 24: Watch Pre-Fetch Dedup + ON CONFLICT Staging** — Skip already-staged candidates before byte-fetch; non-throwing `ON CONFLICT DO NOTHING` ends the duplicate-key log spam (intentional behavior change)
+- [x] **Phase 24: Watch Pre-Fetch Dedup + ON CONFLICT Staging** — Skip already-staged candidates before byte-fetch; non-throwing `ON CONFLICT DO NOTHING` ends the duplicate-key log spam (intentional behavior change) (completed 2026-06-20)
 - [ ] **Phase 25: Discovery Game-Date Capture (Cross-App Gated)** — Parse the listing "Game date" cell to ISO-8601; populate the canonical field once agreed with `server-2` (DISC-02 may slip to v3.2)
 - [ ] **Phase 26: Test-Quality Pass + Correctness Hygiene** — Close the test-quality backlog and the live-verified correctness findings
 
@@ -184,11 +184,11 @@ Plans:
   - **Human-in-the-loop — TECH-DEBT-explicit (DEDUP-01)** — pre-fetch `source_replay_id` dedup needs human review before shipping to staging.
 
 **Behavior-preservation gate**: golden watch oracle **updated** to the new expected dedup counts (intentional behavior change), 100% V8 coverage maintained, depcruise + knip green.
-**Plans**: 2/3 plans executed
+**Plans**: 3/3 plans complete
 
 - [x] 24-01-PLAN.md — Staging adapter: `ON CONFLICT (checksum, object_key) DO NOTHING` benign insert + `existsBySourceIdentity` (DEDUP-02, DEDUP-03)
 - [x] 24-02-PLAN.md — Distinct `skippedBySourceId` counter on RunSummaryCounts/emptyCounts/countRun/buildRunSummary (DEDUP-01, DEDUP-02)
-- [ ] 24-03-PLAN.md — Watch-only `prefetchDedup` gate in `ingestPage` + cannot-miss property test + golden-watch oracle FLIP (DEDUP-01, DEDUP-02, DEDUP-03)
+- [x] 24-03-PLAN.md — Watch-only `prefetchDedup` gate in `ingestPage` + cannot-miss property test + golden-watch oracle FLIP (DEDUP-01, DEDUP-02, DEDUP-03)
 
 ### Phase 25: Discovery Game-Date Capture (Cross-App Gated)
 
@@ -236,7 +236,7 @@ Phases execute in numeric order: 19 → 20 → 21 → 22 → 23 → 24 → 25 �
 | 21. Mechanical Convention Cleanup | v3.1 | 2/2 | Complete    | 2026-06-20 |
 | 22. God-File Decomposition | v3.1 | 4/4 | Complete    | 2026-06-20 |
 | 23. Depcruise Band-Fence Lock-In | v3.1 | 1/1 | Complete    | 2026-06-20 |
-| 24. Watch Pre-Fetch Dedup + ON CONFLICT | v3.1 | 2/3 | In Progress|  |
+| 24. Watch Pre-Fetch Dedup + ON CONFLICT | v3.1 | 3/3 | Complete   | 2026-06-20 |
 | 25. Discovery Game-Date Capture (gated) | v3.1 | 0/TBD | Not started | - |
 | 26. Test-Quality + Correctness Hygiene | v3.1 | 0/TBD | Not started | - |
 
