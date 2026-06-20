@@ -1,5 +1,6 @@
 type ReplayRowObservation = {
   readonly metadata: {
+    readonly discoveredAt?: string;
     readonly missionText?: string;
     readonly serverId?: number;
     readonly world?: string;
@@ -12,6 +13,7 @@ type ReplayRowObservation = {
 };
 
 type MutableReplayRowMetadata = {
+  discoveredAt?: string;
   missionText?: string;
   serverId?: number;
   world?: string;
@@ -36,6 +38,31 @@ const decodeHtmlEntities = (value: string): string =>
 
 const stripTags = (html: string): string =>
   decodeHtmlEntities(html.replaceAll(/<[^>]+>/gu, " "));
+
+/**
+ * Parse the listing "Game date" cell (day-first `DD.MM.YYYY HH:MM`, no seconds)
+ * into a UTC ISO string. Mirrors `replayTimestampFromFilename` in staging, but
+ * for the day-first listing format — UTC by parity with the live filename
+ * convention. Returns undefined for empty/malformed/year-first input (never
+ * throws). The regex is fully anchored with fixed-width groups — ReDoS-safe.
+ */
+export const parseGameDateToUtcIso = (cell: string): string | undefined => {
+  const match =
+    /^(?<day>\d{2})\.(?<month>\d{2})\.(?<year>\d{4})\s+(?<hour>\d{2}):(?<minute>\d{2})$/u.exec(
+      cell.trim(),
+    );
+
+  if (match?.groups === undefined) {
+    return undefined;
+  }
+
+  const { day, hour, minute, month, year } = match.groups as Record<
+    "day" | "hour" | "minute" | "month" | "year",
+    string
+  >;
+
+  return `${year}-${month}-${day}T${hour}:${minute}:00.000Z`;
+};
 
 const hrefToUrl = (
   href: string | undefined,
@@ -95,6 +122,8 @@ const parseReplayRow = (
   ];
   const serverIdText = stripTags(cells[2] ?? "").trim();
   const serverId = Number.parseInt(serverIdText, 10);
+  const gameDateText = stripTags(cells[3] ?? "").trim();
+  const discoveredAt = parseGameDateToUtcIso(gameDateText);
   const source: MutableReplayRowSource = {};
   const metadata: MutableReplayRowMetadata = {};
 
@@ -119,6 +148,10 @@ const parseReplayRow = (
 
   if (!Number.isNaN(serverId)) {
     metadata.serverId = serverId;
+  }
+
+  if (discoveredAt !== undefined) {
+    metadata.discoveredAt = discoveredAt;
   }
 
   return {
