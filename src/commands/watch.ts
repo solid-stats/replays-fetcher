@@ -1,14 +1,15 @@
 import type { Command } from "commander";
 
 import { buildConfigInvalidRunSummary, runExitCode } from "../run/summary.js";
-import type { StagingRepository } from "../staging/stage-raw-replay.js";
+import type { WatchStagingRepository } from "../run/watch-loop.js";
+import type { PostgresStagingRepository } from "../staging/postgres-staging-repository.js";
 import { flushLogger, loadStoreRawConfig, writeJson } from "./shared.js";
 import type { BuildCliDependencies } from "./shared.js";
 import { createStoreRawResources } from "./store-raw-resources.js";
 
 const requireStagingRepository = (
-  repository: StagingRepository | undefined,
-): StagingRepository => {
+  repository: PostgresStagingRepository | undefined,
+): WatchStagingRepository => {
   /* v8 ignore next 3 -- watch always requests staging resources. */
   if (repository === undefined) {
     throw new Error("Expected staging repository for watch");

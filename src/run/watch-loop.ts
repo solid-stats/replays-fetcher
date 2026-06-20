@@ -10,15 +10,28 @@ import type { LimitFunction } from "../source/concurrency.js";
 import { createPacer } from "../source/pacing.js";
 import type { Pacer } from "../source/pacing.js";
 import type { RetryAttemptEvent } from "../source/retry.js";
+import { defaultSourceSystem } from "../staging/payload.js";
 import type { StagingRepository } from "../staging/stage-raw-replay.js";
 import type { IngestStagingResult } from "../staging/types.js";
 import type { ReplayByteClient } from "../storage/replay-byte-client.js";
 import type { S3RawReplayStorage } from "../storage/s3-raw-storage.js";
 import type { StoreRawReplayResult } from "../storage/store-raw-replay.js";
+import type { ExistsBySourceIdentity } from "./ingest-page.js";
 import { ingestPage } from "./ingest-page.js";
 import { buildRunSummary, toCompactSummary } from "./summary.js";
 
 const WATCH_PAGE = 1;
+
+/**
+ * The watch loop opts into the DEDUP-01 pre-fetch gate, so unlike run-once it
+ * needs the staging repository's `existsBySourceIdentity` in addition to
+ * `stage`. The production `PostgresStagingRepository` carries both; widening the
+ * watch contract (rather than the shared `StagingRepository`, which only needs
+ * `stage`) keeps run-once untouched.
+ */
+export type WatchStagingRepository = StagingRepository & {
+  readonly existsBySourceIdentity: ExistsBySourceIdentity;
+};
 
 /* v8 ignore next 5 -- the real timer sleep is replaced by an injected fake in tests; the production default is exercised only by the running daemon. */
 const defaultSleep = async (ms: number): Promise<void> => {
@@ -72,7 +85,7 @@ export type WatchLoopInput = {
     readonly repository: StagingRepository;
     readonly runId?: string;
   }) => Promise<IngestStagingResult>;
-  readonly stagingRepository: StagingRepository;
+  readonly stagingRepository: WatchStagingRepository;
   readonly storage: S3RawReplayStorage;
   readonly storeRawReplay: (input: {
     readonly byteClient: ReplayByteClient;
@@ -149,11 +162,18 @@ const runCycle = async (input: WatchLoopInput, pacer: Pacer): Promise<void> => {
   // boundary — at interval=0 it is what bounds the cycle rate instead of a flood.
   await pacer.awaitFloor();
   const report = await input.discoverReplays(buildDiscoverInput(input));
-  const { rawStorage, staging } = await ingestPage({
+  // DEDUP-01: the watch loop OPTS INTO the pre-fetch dedup gate (run-once never
+  // does). `sourceSystem` is threaded so the pre-fetch SELECT keys match the
+  // eventual staging INSERT, and `existsBySourceIdentity` is the repository's
+  // existence check the gate consults before any byte download.
+  const { counts, rawStorage, staging } = await ingestPage({
     byteClient: input.byteClient,
     candidates: report.candidates,
+    existsBySourceIdentity: input.stagingRepository.existsBySourceIdentity,
     limit,
+    prefetchDedup: true,
     runId,
+    sourceSystem: defaultSourceSystem,
     stageRawReplay: input.stageRawReplay,
     stagingRepository: input.stagingRepository,
     storage: input.storage,
@@ -166,6 +186,7 @@ const runCycle = async (input: WatchLoopInput, pacer: Pacer): Promise<void> => {
     mode: "watch",
     rawStorage,
     runId,
+    skippedBySourceId: counts.skippedBySourceId,
     staging,
     startedAt,
   });

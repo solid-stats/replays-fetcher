@@ -23,8 +23,8 @@ import { runOnce } from "../run/run-once.js";
 import { runWatchLoop } from "../run/watch-loop.js";
 import type { RetryAttemptEvent } from "../source/retry.js";
 import { createPostgresStagingRepository } from "../staging/postgres-staging-repository.js";
+import type { PostgresStagingRepository } from "../staging/postgres-staging-repository.js";
 import { stageRawReplay } from "../staging/stage-raw-replay.js";
-import type { StagingRepository } from "../staging/stage-raw-replay.js";
 import { createReplayByteClient } from "../storage/replay-byte-client.js";
 import type { ReplayByteClient } from "../storage/replay-byte-client.js";
 import { createS3RawReplayStorage } from "../storage/s3-raw-storage.js";
@@ -92,7 +92,10 @@ export type StoreRawResources = {
   readonly dispose: () => Promise<void>;
   readonly evidenceStore: S3EvidenceStore;
   readonly sourceClient: SourceClient;
-  readonly stagingRepository: StagingRepository | undefined;
+  // The full PostgreSQL contract (carries existsBySourceIdentity for the watch
+  // pre-fetch dedup gate). run-once consumes only its `stage` method; watch
+  // needs both, so the resource keeps the wider type.
+  readonly stagingRepository: PostgresStagingRepository | undefined;
   readonly storage: S3RawReplayStorage;
 };
 

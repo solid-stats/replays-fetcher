@@ -85,6 +85,7 @@ type BuildInputOptions = {
   readonly attempts?: number;
   readonly createPacer?: WatchLoopInput["createPacer"];
   readonly discoverReplays?: WatchLoopInput["discoverReplays"];
+  readonly existsBySourceIdentity?: WatchLoopInput["stagingRepository"]["existsBySourceIdentity"];
   readonly heartbeatWrites?: { body: string; path: string }[];
   readonly intervalMs?: number;
   readonly log?: Logger;
@@ -128,7 +129,14 @@ const buildInput = (options: BuildInputOptions): WatchLoopInput => {
         stagingId: "staging-1",
         status: "staged",
       })),
-    stagingRepository: { stage: vi.fn() },
+    stagingRepository: {
+      // Default: nothing pre-exists, so the watch gate never skips and the
+      // store→stage path runs exactly as before (a test opts a skip in by
+      // overriding existsBySourceIdentity to return true).
+      existsBySourceIdentity:
+        options.existsBySourceIdentity ?? (async () => false),
+      stage: vi.fn(),
+    },
     storage: { storeRawReplay: vi.fn() },
     storeRawReplay:
       options.storeRawReplay ??
@@ -217,6 +225,53 @@ test("runWatchLoop emits exactly one compact run summary per cycle with watch mo
   const summary = summaries[0]?.["summary"] as Record<string, unknown>;
   expect(summary["mode"]).toBe("watch");
   expect(summary["counts"]).toMatchObject({ staged: 1, stored: 1 });
+});
+
+test("runWatchLoop skips a known candidate pre-fetch and reports it via skippedBySourceId", async () => {
+  // DEDUP-01: a candidate whose source identity already exists is dropped BEFORE
+  // any byte download. The watch summary surfaces it via the distinct
+  // skippedBySourceId counter — never stored/staged/duplicate — and storeRawReplay
+  // is never called for it.
+  const lines: string[] = [];
+  const log = createLogger({
+    destination: new Writable({
+      write(chunk: Buffer, _encoding, callback) {
+        lines.push(chunk.toString("utf8"));
+        callback();
+      },
+    }),
+    level: "info",
+  });
+  const storeRawReplay = vi.fn(async ({ candidate: replay }) =>
+    rawStored(replay.identity.filename),
+  );
+
+  await runWatchLoop(
+    buildInput({
+      // The single discovered candidate already exists → skip pre-fetch.
+      existsBySourceIdentity: async () => true,
+      log,
+      shouldStop: stopAfter(1),
+      storeRawReplay,
+    }),
+  );
+
+  // The byte download never ran for the skipped candidate.
+  expect(storeRawReplay).not.toHaveBeenCalled();
+
+  const cycleComplete = lines
+    .join("")
+    .split("\n")
+    .filter((line) => line.length > 0)
+    .map((line) => JSON.parse(line) as Record<string, unknown>)
+    .find((entry) => entry["event"] === "watch_cycle_complete");
+  const summary = cycleComplete?.["summary"] as Record<string, unknown>;
+  expect(summary["counts"]).toMatchObject({
+    duplicate: 0,
+    skippedBySourceId: 1,
+    staged: 0,
+    stored: 0,
+  });
 });
 
 test("runWatchLoop runs exactly N cycles sleeping the configured interval between them, then stops", async () => {
