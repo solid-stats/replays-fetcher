@@ -27,8 +27,8 @@ Committed scope for this milestone. Each maps to exactly one roadmap phase.
 
 ### Mechanical Convention Cleanup (MECH)
 
-- [ ] **MECH-01**: All `interface` declarations that should be `type` are converted (~138 sites) and the conversion is enforced by an oxlint `consistent-type-definitions: ["error","type"]` rule so it cannot regress.
-- [ ] **MECH-02**: Import ordering is normalized (~17 sites) and enforced by `oxfmt sortImports` (configured in the shared `@solid-stats/ts-toolchain` preset).
+- [x] **MECH-01**: All `interface` declarations that should be `type` are converted (~138 sites) and the conversion is enforced by an oxlint `consistent-type-definitions: ["error","type"]` rule so it cannot regress.
+- [x] **MECH-02**: Import ordering is normalized (~17 sites) and enforced by `oxfmt sortImports` (configured in the shared `@solid-stats/ts-toolchain` preset).
 
 ### Watch Ingest Latency & Source Load (DEDUP)
 
@@ -90,8 +90,8 @@ Each requirement maps to exactly one phase. v3.1 continues the project phase num
 | SPLIT-02 | Phase 22 | Pending |
 | SPLIT-03 | Phase 22 | Pending |
 | SPLIT-04 | Phase 22 | Pending |
-| MECH-01 | Phase 21 | Pending |
-| MECH-02 | Phase 21 | Pending |
+| MECH-01 | Phase 21 | Complete |
+| MECH-02 | Phase 21 | Complete |
 | DEDUP-01 | Phase 24 | Pending |
 | DEDUP-02 | Phase 24 | Pending |
 | DEDUP-03 | Phase 24 | Pending |

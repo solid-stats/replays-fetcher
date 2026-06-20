@@ -57,7 +57,7 @@ Behavior-preserving migration onto the shared `@solid-stats/ts-toolchain` preset
 
 - [x] **Phase 19: Contracts Home + Config Import Fix + Orphan Cleanup** — Move cross-band DTOs to a leaf contracts module, kill the `config.ts` upward import, resolve the `no-leak.ts` orphan (pure type-move, zero runtime change) (completed 2026-06-20)
 - [x] **Phase 20: Composition-Root Client Consolidation + Watch Teardown** — One `S3Client` + one `pg.Pool` built and injected at the `commands/` root; `watch` drains them on SIGTERM/SIGINT (completed 2026-06-20)
-- [ ] **Phase 21: Mechanical Convention Cleanup** — Bulk `interface→type` (~138) and import-order (~17) corrections, lint/formatter-enforced so they cannot regress
+- [x] **Phase 21: Mechanical Convention Cleanup** — Bulk `interface→type` (~138) and import-order (~17) corrections, lint/formatter-enforced so they cannot regress (completed 2026-06-20)
 - [ ] **Phase 22: God-File Decomposition** — Split the four `max-lines`-suppressed god-files within their bands and remove the suppressions
 - [ ] **Phase 23: Depcruise Band-Fence Lock-In** — Turn on the eight five-band import fences in `verify`, proven by a planted-violation test (enforced LAST as a no-op lock-in)
 - [ ] **Phase 24: Watch Pre-Fetch Dedup + ON CONFLICT Staging** — Skip already-staged candidates before byte-fetch; non-throwing `ON CONFLICT DO NOTHING` ends the duplicate-key log spam (intentional behavior change)
@@ -118,11 +118,12 @@ Behavior-preserving migration onto the shared `@solid-stats/ts-toolchain` preset
 
 **Implementation note**: spike `oxlint --fix` first; only if it cannot convert all 138 sites with `tsc` green, add `ts-morph` as a dev-only one-shot dep, run the codemod, commit, then `pnpm remove ts-morph`. Only the mechanical lane is in scope here — no semantic audit findings (Pitfall 5).
 **Behavior-preservation gate**: golden oracle + 100% V8 coverage + depcruise + knip green.
-**Plans**: 2 plans
+**Plans**: 2/2 plans complete
 
 Plans:
-- [ ] 21-01-PLAN.md — interface→type conversion (oxlint --fix, 156 sites) + consistent-type-definitions lock-in (MECH-01)
-- [ ] 21-02-PLAN.md — import-order normalization (oxfmt sortImports, local) + format:check lock-in (MECH-02)
+
+- [x] 21-01-PLAN.md — interface→type conversion (oxlint --fix, 156 sites) + consistent-type-definitions lock-in (MECH-01)
+- [x] 21-02-PLAN.md — import-order normalization (oxfmt sortImports, local) + format:check lock-in (MECH-02)
 
 ### Phase 22: God-File Decomposition
 
@@ -219,7 +220,7 @@ Phases execute in numeric order: 19 → 20 → 21 → 22 → 23 → 24 → 25 �
 | 13-18 | v3.0 | 16/16 | Complete | 2026-06-14 |
 | 19. Contracts Home + Config Fix + Orphan | v3.1 | 3/3 | Complete    | 2026-06-20 |
 | 20. Composition-Root Clients + Watch Teardown | v3.1 | 2/2 | Complete    | 2026-06-20 |
-| 21. Mechanical Convention Cleanup | v3.1 | 0/TBD | Not started | - |
+| 21. Mechanical Convention Cleanup | v3.1 | 2/2 | Complete    | 2026-06-20 |
 | 22. God-File Decomposition | v3.1 | 0/TBD | Not started | - |
 | 23. Depcruise Band-Fence Lock-In | v3.1 | 0/TBD | Not started | - |
 | 24. Watch Pre-Fetch Dedup + ON CONFLICT | v3.1 | 0/TBD | Not started | - |

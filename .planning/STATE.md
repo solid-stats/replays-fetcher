@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.1
 milestone_name: Convention Compliance & Tech-Debt Closure
 status: executing
-stopped_at: Phase 20 complete (2/2 plans, ARCH-04/05; verify + golden run-once/watch oracles green; review W-01 fixed, W-02/I-01 deferred to Phase 26). Autonomous run continuing to Phase 21.
-last_updated: "2026-06-20T09:51:13.091Z"
+stopped_at: Phase 21 complete (2/2 plans, MECH-01/02; 156 interface→type + import-sort, both lint/format-enforced locally; verify + golden oracles green). Autonomous run continuing to Phase 22.
+last_updated: "2026-06-20T10:42:17.985Z"
 last_activity: 2026-06-20
 progress:
   total_phases: 8
-  completed_phases: 2
-  total_plans: 5
-  completed_plans: 5
-  percent: 25
+  completed_phases: 3
+  total_plans: 7
+  completed_plans: 7
+  percent: 38
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-20)
 
 **Core value:** Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
-**Current focus:** Phase 21 — Mechanical Convention Cleanup (Phases 19, 20 shipped)
+**Current focus:** Phase 22 — God-File Decomposition (Phases 19–21 shipped)
 
 ## Current Position
 
-Phase: 21 of 26 (Mechanical Convention Cleanup) — next to plan
+Phase: 22 of 26 (God-File Decomposition) — next to plan
 Plan: Not started
-Status: Phases 19 + 20 complete — autonomous run advancing to Phase 21
-Last activity: 2026-06-20 — Phase 20 done (2/2 plans, ARCH-04/05; verify + golden run-once/watch oracles green; review W-01 fixed)
+Status: Phases 19 + 20 + 21 complete — autonomous run advancing to Phase 22
+Last activity: 2026-06-20 — Phase 21 done (2/2 plans, MECH-01/02; 156 interface→type + import-sort, lint/format-enforced; verify + golden oracles green)
 
-Progress: [██░░░░░░░░] 25% (2/8 phases)
+Progress: [███░░░░░░░] 38% (3/8 phases)
 
 ## v3.1 Roadmap Summary (Phases 19-26)
 
@@ -137,15 +137,19 @@ None.
 
 ## Next Step
 
-1. Plan Phase 21 (Mechanical Convention Cleanup) — bulk `interface→type` (~138 sites) +
-   import-order (~17), lint/formatter-enforced so they cannot regress. Requirements MECH-01,
-   MECH-02. Spike `oxlint --fix` first; only add `ts-morph` as a dev-only one-shot if it cannot
-   convert all sites with `tsc` green. Sequenced before the god-file splits (Phase 22).
-2. Note: the new `src/types/` leaf contracts (Phase 19) mean `interface→type` there creates no
-   upward imports — safe for the bulk conversion.
+1. Plan Phase 22 (God-File Decomposition) — split the FOUR `oxlint-disable max-lines` god-files
+   strictly WITHIN their bands and remove the suppressions: `src/run/run-once.ts`,
+   `src/discovery/discover.ts`, `src/discovery/source-client.ts`, `src/storage/replay-byte-client.ts`.
+   Requirements SPLIT-01..04. Pure structural refactor; `verify` (incl. depcruise + knip) green
+   after EACH extraction, not just at phase end; golden oracle + 100% coverage after every move.
+2. Mode: `parallel` — the four splits are likely file-disjoint (different bands); run their
+   executors concurrently in isolated worktrees where they do not share files. Watch
+   `src/commands/shared.ts` (now 296/300, no headroom) — not a target but keep an eye.
+3. Carry-forward WR-01: the displaced `max-lines` disable in `run-once.ts` resolves naturally
+   when its suppression is removed here.
 
 ## Session
 
 **Last session:** 2026-06-20
-**Stopped at:** Phase 20 complete (2/2 plans, ARCH-04/05; watch now drains pg.Pool + S3Client on SIGTERM/SIGINT; verify + golden run-once/watch oracles green; W-01 fixed, W-02/I-01 deferred to Phase 26). Autonomous run continuing to Phase 21.
+**Stopped at:** Phase 21 complete (2/2 plans, MECH-01/02; 156 interface→type + import-sort, both enforced locally via `.oxlintrc.json`/`.oxfmtrc.json`; shared-preset propagation deferred cross-app, override accepted; verify + golden oracles green). Autonomous run continuing to Phase 22.
 **Resume file:** None
