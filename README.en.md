@@ -1,4 +1,5 @@
 <!-- Keep README.md (RU) and README.en.md (EN) in sync: edit both in the same change. -->
+
 # replays-fetcher
 
 [Русский](README.md) · **English**
@@ -42,4 +43,5 @@ discovery → S3 write → staging cycle, then exit. The pre-commit gate is
 TypeScript 6 · Node 25 · commander · Zod 4 · PostgreSQL (`pg`) · S3 (`@aws-sdk/client-s3`) · pino
 
 ## License — [MIT](LICENSE)
+
 </content>

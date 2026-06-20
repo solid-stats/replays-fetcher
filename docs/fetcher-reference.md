@@ -326,5 +326,5 @@ For `discover --store-raw --stage`, the command also requires:
 
 - `DATABASE_URL` pointing at the `server-2` PostgreSQL database that owns
   `ingest_staging_records`.
-</content>
-</invoke>
+  </content>
+  </invoke>
