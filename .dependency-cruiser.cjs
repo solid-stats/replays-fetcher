@@ -2,10 +2,26 @@
 // Architecture note: `src/types/` is the leaf cross-cutting *contracts* band —
 // it holds the cross-band data contracts (RunSummary/CompactRunSummary,
 // ReplayCandidate, RawReplayStorageEvidence, IngestStagingPayload, SourceTransport),
-// is imported downward by any band, and imports nothing upward. The eight five-band
-// import fences that would enforce this layering are DEFERRED to Phase 23 (ARCH-06)
-// and intentionally NOT enabled here — this file still enforces only no-circular +
-// no-orphans (+ the stock hygiene rules below).
+// is imported downward by any band, and imports nothing upward.
+//
+// ARCH-06 (Phase 23): the eight five-band import fences below are now ENABLED at
+// severity `error` inside `verify`. They encode the fetcher's five-band ingest
+// architecture (command > orchestration > capability(+adapter) > cross-cutting):
+// downward-only per band (1a/1b/1c), orchestration-composes-no-raw-clients (2),
+// no-replay-parser (3), PG write-scope (4), S3 write-scope (5), discovery-read-only
+// (6), source-no-back-import (7) and diagnostics-never-write (8). They are a NO-OP
+// lock-in: the tree is already fence-clean after Phases 19–22. The composition-root
+// exemption is STRUCTURAL — `commands/` is the composition root and is intentionally
+// NOT fenced against the write bands, so its capability-factory wiring stays legal
+// while fences 4/5 still stop a raw pg/S3 client from leaking into a non-scope band.
+// (This replaces the former `no-commands-to-storage-direct` warn rule, whose 9
+// advisories were all legitimate composition-root wiring.)
+
+// Excludes test/fixture files (`*.test.ts`, `*.integration.test.ts`, `*.fixtures.ts`)
+// from every fence — fixtures legitimately import pg/S3. Anchored as a substring so it
+// matches anywhere in the resolved path.
+const TEST = "[.](?:test|integration|fixtures)[.]";
+
 module.exports = {
   forbidden: [
     {
@@ -188,16 +204,111 @@ module.exports = {
         dependencyTypes: ["npm-peer"],
       },
     },
+    // ── ARCH-06 five-band ingest fences (severity: error, NO-OP lock-in) ──
+
+    // Fence 1 — downward-only per band (command > orchestration > capability > cross-cutting)
     {
-      name: "no-commands-to-storage-direct",
-      severity: "warn",
+      name: "band-orchestration-not-upward",
+      severity: "error",
+      comment: "orchestration (run/) must not import the command band (commands/, cli.ts).",
+      from: { path: "^src/run/", pathNot: TEST },
+      to: { path: "^src/(commands/|cli[.]ts)" },
+    },
+    {
+      name: "band-capability-not-upward",
+      severity: "error",
       comment:
-        "commands/ should not import storage/ or staging/ directly. " +
-        "discover.ts uses DI (BuildCliDependencies) — no real violation expected. " +
-        "This rule is informational: it documents the ingest-boundary fence #2 backlog " +
-        "and will catch any future direct coupling that bypasses the DI pattern.",
-      from: { path: "^src/commands" },
-      to: { path: "^src/(storage|staging)" },
+        "capability bands must not import command (commands/, cli) or orchestration (run/).",
+      from: {
+        path: "^src/(discovery|storage|staging|checkpoint|evidence|contract-check|check)/",
+        pathNot: TEST,
+      },
+      to: { path: "^src/(commands/|cli[.]ts|run/)" },
+    },
+    {
+      name: "band-crosscutting-not-upward",
+      severity: "error",
+      comment:
+        "cross-cutting (config, errors, logging, source, types, observability) must import nothing upward.",
+      from: {
+        path: "^src/(config[.]ts|errors|logging|source|types|observability)/?",
+        pathNot: TEST,
+      },
+      to: {
+        path: "^src/(commands/|cli[.]ts|run/|discovery/|storage/|staging/|checkpoint/|evidence/|contract-check/|check/)",
+      },
+    },
+
+    // Fence 2 — orchestration composes capabilities, never raw clients
+    {
+      name: "band-orchestration-no-raw-clients",
+      severity: "error",
+      comment: "orchestration (run/) composes capabilities, never raw S3/PG/HTTP clients.",
+      from: { path: "^src/run/", pathNot: TEST },
+      to: { path: "node_modules/(?:@aws-sdk/client-s3|pg)/" },
+    },
+
+    // Fence 3 — no replay parsing anywhere (parsing belongs to replay-parser-2)
+    {
+      name: "no-replay-parser",
+      severity: "error",
+      comment:
+        "No module may import an OCAP parser / replay-content reader — parsing belongs to replay-parser-2.",
+      from: { path: "^src/", pathNot: TEST },
+      to: { path: "(ocap|replay-parser|@solid-stats/parser)" },
+    },
+
+    // Fence 4 — PG write-scope
+    {
+      name: "pg-write-scope",
+      severity: "error",
+      comment:
+        "Only commands/ (composition root), staging/ (write) and check/ (diagnostics) may import pg.",
+      from: { path: "^src/", pathNot: ["^src/(commands|staging|check)/", TEST] },
+      to: { path: "node_modules/pg/" },
+    },
+
+    // Fence 5 — S3 write-scope
+    {
+      name: "s3-write-scope",
+      severity: "error",
+      comment:
+        "Only commands/ (composition root), storage/ checkpoint/ evidence/ (write) and check/ (diagnostics) may import @aws-sdk/client-s3.",
+      from: {
+        path: "^src/",
+        pathNot: ["^src/(commands|storage|checkpoint|evidence|check)/", TEST],
+      },
+      to: { path: "node_modules/@aws-sdk/client-s3/" },
+    },
+
+    // Fence 6 — discovery is read-only
+    {
+      name: "discovery-read-only",
+      severity: "error",
+      comment:
+        "discovery/ produces candidates; it never imports the write path (storage/, staging/).",
+      from: { path: "^src/discovery/", pathNot: TEST },
+      to: { path: "^src/(storage|staging)/" },
+    },
+
+    // Fence 7 — resilience is cross-cutting (no back-import)
+    {
+      name: "source-no-back-import",
+      severity: "error",
+      comment:
+        "source/ (resilience primitives) is imported by adapters; it never imports them back.",
+      from: { path: "^src/source/", pathNot: TEST },
+      to: { path: "^src/(discovery|storage|staging|checkpoint|evidence)/" },
+    },
+
+    // Fence 8 — diagnostics never import the write path
+    {
+      name: "diagnostics-not-to-write-path",
+      severity: "error",
+      comment:
+        "check/ contract-check/ may read; they never import the staging/storage write path.",
+      from: { path: "^src/(check|contract-check)/", pathNot: TEST },
+      to: { path: "^src/(staging|storage|checkpoint|evidence)/" },
     },
   ],
   options: {
