@@ -4,12 +4,12 @@ milestone: v3.1
 milestone_name: Convention Compliance & Tech-Debt Closure
 status: executing
 stopped_at: Phase 21 complete (2/2 plans, MECH-01/02; 156 interface→type + import-sort, both lint/format-enforced locally; verify + golden oracles green). Autonomous run continuing to Phase 22.
-last_updated: "2026-06-20T10:42:17.985Z"
-last_activity: 2026-06-20
+last_updated: "2026-06-20T11:02:26.837Z"
+last_activity: 2026-06-20 -- Phase 22 execution started
 progress:
   total_phases: 8
   completed_phases: 3
-  total_plans: 7
+  total_plans: 11
   completed_plans: 7
   percent: 38
 ---
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-20)
 
 **Core value:** Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
-**Current focus:** Phase 22 — God-File Decomposition (Phases 19–21 shipped)
+**Current focus:** Phase 22 — God-File Decomposition
 
 ## Current Position
 
-Phase: 22 of 26 (God-File Decomposition) — next to plan
-Plan: Not started
-Status: Phases 19 + 20 + 21 complete — autonomous run advancing to Phase 22
-Last activity: 2026-06-20 — Phase 21 done (2/2 plans, MECH-01/02; 156 interface→type + import-sort, lint/format-enforced; verify + golden oracles green)
+Phase: 22 (God-File Decomposition) — EXECUTING
+Plan: 1 of 4
+Status: Executing Phase 22
+Last activity: 2026-06-20 -- Phase 22 execution started
 
 Progress: [███░░░░░░░] 38% (3/8 phases)
 
@@ -142,9 +142,11 @@ None.
    `src/discovery/discover.ts`, `src/discovery/source-client.ts`, `src/storage/replay-byte-client.ts`.
    Requirements SPLIT-01..04. Pure structural refactor; `verify` (incl. depcruise + knip) green
    after EACH extraction, not just at phase end; golden oracle + 100% coverage after every move.
+
 2. Mode: `parallel` — the four splits are likely file-disjoint (different bands); run their
    executors concurrently in isolated worktrees where they do not share files. Watch
    `src/commands/shared.ts` (now 296/300, no headroom) — not a target but keep an eye.
+
 3. Carry-forward WR-01: the displaced `max-lines` disable in `run-once.ts` resolves naturally
    when its suppression is removed here.
 
