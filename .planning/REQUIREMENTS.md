@@ -16,7 +16,7 @@ Committed scope for this milestone. Each maps to exactly one roadmap phase.
 - [x] **ARCH-03**: The `no-leak.ts` orphan module is resolved (wired or removed); knip reports no orphans.
 - [x] **ARCH-04**: Exactly one `S3Client` and one `pg.Pool` are constructed in `src/`, built at the `commands/` composition root and injected; all `*FromConfig` convenience factories are removed (grep proves one constructor each).
 - [x] **ARCH-05**: The `watch` daemon drains the `pg.Pool` and destroys the `S3Client` on SIGTERM/SIGINT before exit; adapters never tear down injected clients.
-- [ ] **ARCH-06**: The five-band import fences (downward-only, no band-skip, PG write-scope, S3 write-scope, no-parser, discovery-read-only, diagnostics-never-write, composition-root exemption) are enforced by `.dependency-cruiser.cjs` inside `verify` and proven by a planted-violation test.
+- [x] **ARCH-06**: The five-band import fences (downward-only, no band-skip, PG write-scope, S3 write-scope, no-parser, discovery-read-only, diagnostics-never-write, composition-root exemption) are enforced by `.dependency-cruiser.cjs` inside `verify` and proven by a planted-violation test.
 
 ### God-File Decomposition (SPLIT)
 
@@ -85,7 +85,7 @@ Each requirement maps to exactly one phase. v3.1 continues the project phase num
 | ARCH-03 | Phase 19 | Complete |
 | ARCH-04 | Phase 20 | Complete |
 | ARCH-05 | Phase 20 | Complete |
-| ARCH-06 | Phase 23 | Pending |
+| ARCH-06 | Phase 23 | Complete |
 | SPLIT-01 | Phase 22 | Complete |
 | SPLIT-02 | Phase 22 | Complete |
 | SPLIT-03 | Phase 22 | Complete |

@@ -59,7 +59,7 @@ Behavior-preserving migration onto the shared `@solid-stats/ts-toolchain` preset
 - [x] **Phase 20: Composition-Root Client Consolidation + Watch Teardown** — One `S3Client` + one `pg.Pool` built and injected at the `commands/` root; `watch` drains them on SIGTERM/SIGINT (completed 2026-06-20)
 - [x] **Phase 21: Mechanical Convention Cleanup** — Bulk `interface→type` (~138) and import-order (~17) corrections, lint/formatter-enforced so they cannot regress (completed 2026-06-20)
 - [x] **Phase 22: God-File Decomposition** — Split the four `max-lines`-suppressed god-files within their bands and remove the suppressions (completed 2026-06-20)
-- [ ] **Phase 23: Depcruise Band-Fence Lock-In** — Turn on the eight five-band import fences in `verify`, proven by a planted-violation test (enforced LAST as a no-op lock-in)
+- [x] **Phase 23: Depcruise Band-Fence Lock-In** — Turn on the eight five-band import fences in `verify`, proven by a planted-violation test (enforced LAST as a no-op lock-in) (completed 2026-06-20)
 - [ ] **Phase 24: Watch Pre-Fetch Dedup + ON CONFLICT Staging** — Skip already-staged candidates before byte-fetch; non-throwing `ON CONFLICT DO NOTHING` ends the duplicate-key log spam (intentional behavior change)
 - [ ] **Phase 25: Discovery Game-Date Capture (Cross-App Gated)** — Parse the listing "Game date" cell to ISO-8601; populate the canonical field once agreed with `server-2` (DISC-02 may slip to v3.2)
 - [ ] **Phase 26: Test-Quality Pass + Correctness Hygiene** — Close the test-quality backlog and the live-verified correctness findings
@@ -159,10 +159,11 @@ Plans:
 
 **Pre-plan tuning**: depcruise `forbidden` path regexes must be tuned against the real `ls src/` file tree during planning (adapter files live inside capability dirs; anchors need verification).
 **Behavior-preservation gate**: golden oracle + 100% V8 coverage + depcruise + knip green; fences enforced LAST so they lock in completed work rather than blocking an in-flight move.
-**Plans**: 1 plan
+**Plans**: 1/1 plans complete
 
 Plans:
-- [ ] 23-01-PLAN.md — Add the 8 five-band fences at `error` as a NO-OP lock-in (drop `no-commands-to-storage-direct` warn) + planted-violation test proving all 8 fire
+
+- [x] 23-01-PLAN.md — Add the 8 five-band fences at `error` as a NO-OP lock-in (drop `no-commands-to-storage-direct` warn) + planted-violation test proving all 8 fire
 
 ### Phase 24: Watch Pre-Fetch Dedup + ON CONFLICT Staging
 
@@ -230,7 +231,7 @@ Phases execute in numeric order: 19 → 20 → 21 → 22 → 23 → 24 → 25 �
 | 20. Composition-Root Clients + Watch Teardown | v3.1 | 2/2 | Complete    | 2026-06-20 |
 | 21. Mechanical Convention Cleanup | v3.1 | 2/2 | Complete    | 2026-06-20 |
 | 22. God-File Decomposition | v3.1 | 4/4 | Complete    | 2026-06-20 |
-| 23. Depcruise Band-Fence Lock-In | v3.1 | 0/TBD | Not started | - |
+| 23. Depcruise Band-Fence Lock-In | v3.1 | 1/1 | Complete    | 2026-06-20 |
 | 24. Watch Pre-Fetch Dedup + ON CONFLICT | v3.1 | 0/TBD | Not started | - |
 | 25. Discovery Game-Date Capture (gated) | v3.1 | 0/TBD | Not started | - |
 | 26. Test-Quality + Correctness Hygiene | v3.1 | 0/TBD | Not started | - |

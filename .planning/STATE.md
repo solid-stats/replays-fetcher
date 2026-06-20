@@ -2,16 +2,19 @@
 gsd_state_version: 1.0
 milestone: v3.1
 milestone_name: Convention Compliance & Tech-Debt Closure
+current_phase: 24
+current_phase_name: Watch Pre-Fetch Dedup + ON CONFLICT Staging
 status: executing
-stopped_at: Phase 22 complete (4/4 plans, SPLIT-01..04; 4 god-files split within-band via 4 PARALLEL worktrees, merged conflict-free, all <300, max-lines suppressions gone; verify + golden run-once/watch oracles green; review clean via full skill chain). Autonomous run continuing to Phase 23. HALFWAY (4/8).
-last_updated: "2026-06-20T11:50:05.206Z"
+stopped_at: Phase 23 complete (1/1 plan; eight five-band depcruise import fences turned on in verify as a NO-OP lock-in — the tree already satisfied every fence so verify stayed green; planted-violation proof + review clean via full skill-chain incl correctness-and-quality.md). Out-of-band: re-review §AA findings from Phases 20/22 fixed (commit 5fa86e6 — teardown/fixture/checkpoint errors now logged under pino err key; verify green, 100% coverage, 515 tests) and the gsd-skill-chain-guard PreToolUse hook now auto-injects references/*.md into convention-bound subagent spawns. Autonomous run at 63% (5/8), continuing to Phase 24.
+last_updated: "2026-06-20T13:28:31.681Z"
 last_activity: 2026-06-20
+last_activity_desc: Phase 23 complete, transitioned to Phase 24
 progress:
   total_phases: 8
-  completed_phases: 4
-  total_plans: 11
-  completed_plans: 11
-  percent: 50
+  completed_phases: 5
+  total_plans: 12
+  completed_plans: 12
+  percent: 63
 ---
 
 # Project State
@@ -21,16 +24,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-20)
 
 **Core value:** Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
-**Current focus:** Phase 23 — Depcruise Band-Fence Lock-In (Phases 19–22 shipped; HALFWAY)
+**Current focus:** Phase 24 — Watch Pre-Fetch Dedup + ON CONFLICT Staging
 
 ## Current Position
 
-Phase: 23 of 26 (Depcruise Band-Fence Lock-In) — next to plan
+Phase: 24 — Watch Pre-Fetch Dedup + ON CONFLICT Staging
 Plan: Not started
-Status: Phases 19–22 complete (4/8) — autonomous run advancing to Phase 23
-Last activity: 2026-06-20 — Phase 22 done (4/4 SPLIT plans via 4 parallel worktrees; verify + golden oracles green; review clean)
+Status: Phase 23 complete; Phase 24 not yet started
+Last activity: 2026-06-20 — Phase 23 complete, transitioned to Phase 24
 
-Progress: [█████░░░░░] 50% (4/8 phases)
+Progress: [██████░░░░] 63% (5/8 phases)
 
 ## v3.1 Roadmap Summary (Phases 19-26)
 
@@ -82,7 +85,7 @@ loosened) only for the two intentional behavior changes (Phases 24 and 25).
 
 ## Verify Gate: GREEN ✅
 
-`pnpm run verify` exits 0: format → lint → typecheck → unit (502 tests) → coverage (100%
+`pnpm run verify` exits 0: format → lint → typecheck → unit (515 tests) → coverage (100%
 statements/branches/functions/lines) → build → depcruise → knip. The Docker-backed integration
 suite (incl. the golden end-to-end regression test) is a separate `pnpm run test:integration`
 pre-deploy gate (runs on master before deploy). The golden oracle is the v3.1 behavior-preservation
@@ -125,41 +128,45 @@ None.
 
 - **DISC-02 server-2 dependency (v3.1):** see Open Gates above — hard blocker, may slip DISC-02 to v3.2.
 
-- **Carry-forward (Phase 20 → 22):** `src/commands/shared.ts` is now AT the 300-line `max-lines`
-  limit after the pool-ownership move (no suppression, but zero headroom). It is NOT one of the
-  four `max-lines`-suppressed god-files Phase 22 targets (`run-once.ts`, `discover.ts`,
-  `source-client.ts`, `replay-byte-client.ts`), but Phase 22 should keep an eye on it — any
-  further growth needs a split within `commands/`.
+- **RESOLVED (Phase 20 → §AA fix 5fa86e6):** `src/commands/shared.ts` had hit the 300-line
+  `max-lines` limit after the pool-ownership move. The §AA teardown-logging fix split
+  `createDispose` + `createStoreRawResources` into a new `src/commands/store-raw-resources.ts`
+  ("split structural limits, never suppress"), clearing the headroom problem. No longer a concern.
 
 - **Carry-forward (Phase 20 → 26):** two code-review findings deferred — W-02 (`watch.ts:19`
   raw `Error` on a v8-ignored unreachable guard → typed error) and I-01 (`flushLogger` try-scope
-  doc). See `.planning/phases/20-*/deferred-items.md`; route into Phase 26 CORR-01.
+  doc). See `.planning/phases/20-*/deferred-items.md`; route into Phase 26 CORR-01. (The Phase 20/22
+  §AA re-review findings — swallowed teardown/fixture/checkpoint errors — are already fixed in 5fa86e6.)
 
 ## Next Step
 
-1. Plan Phase 23 (Depcruise Band-Fence Lock-In, ARCH-06) — turn on the EIGHT five-band `forbidden`
-   rules in `.dependency-cruiser.cjs` inside `verify` as a NO-OP lock-in (the tree, after Phases
-   19–22, already satisfies every fence). Prove each fence FIRES via a planted-violation test.
-   The 8 fences: downward-only per band, no band-skip, PG write-scope, S3 write-scope, no-parser,
-   discovery-read-only, diagnostics-never-write, composition-root exemption.
-2. **Pre-plan tuning (load-bearing):** the `forbidden` path regexes must be tuned against the REAL
-   `ls src/` tree — adapter files live inside capability dirs, and Phase 22 added ~14 new sibling
-   modules (run-once-*, discover-*, source-client-*, replay-byte-client-*) that the regexes must
-   account for. Confirm `pnpm run depcruise` stays green (no-op) on the current tree BEFORE locking.
-3. Enforced LAST on purpose — the single most important sequencing invariant. It must lock in
-   completed work, never wedge an in-flight move.
+1. Plan Phase 24 (Watch Pre-Fetch Dedup + ON CONFLICT Staging — DEDUP-01, DEDUP-02, DEDUP-03).
+   First INTENTIONAL behavior change of the milestone: skip already-staged replays BEFORE the byte
+   fetch, and make the staging insert `ON CONFLICT DO NOTHING`. The golden run-once oracle is
+   UPDATED (not loosened) to encode the new skip behavior.
 
-## Reviewer skill-chain note (process)
+2. **Cross-app gate (DEDUP-03, load-bearing):** confirm `ON CONFLICT` benign-vs-conflicting
+   semantics match the server-2 poller's expectations BEFORE the phase is planned (staging-schema
+   contract — adjacent-app evidence or a user question required).
 
-The GSD `agent-skills` resolver returns EMPTY for `gsd-code-reviewer` when its config list has 5
-entries (flaky at 4), so the config stays at the single top review skill. To make a hand-spawned
-reviewer read the FULL chain (review-skill + shared-review-standards + fetcher-conventions +
-shared-backend-ts-standards + shared-ts-standards), inject an explicit `<agent_skills>` block of
-Read directives in the reviewer prompt — proven to work (Phase 22 review read all 5). Apply the
-same to the Phase 26 review.
+3. **Human-in-the-loop (DEDUP-01):** pre-fetch `source_replay_id` dedup is data-loss-capable —
+   TECH-DEBT-explicit human review required before shipping to staging. Surface in discuss/plan.
+
+## Reviewer skill-chain note (process) — RESOLVED via hook
+
+Earlier worry that the GSD `agent-skills` resolver "returns empty at 5 entries" was disproven — it
+was a transient race during a rapid edit/commit; `buildAgentSkillsBlock` has no count cap and 5
+resolves stably. `gsd-code-reviewer` config carries all 5 chain skills. The deeper issue (the
+injection emits only each skill's `SKILL.md`, never its `references/*.md`, so index-only skills like
+`shared-backend-ts-standards` reach the subagent without their real §Z/§AA/§AB rules) is now handled
+mechanically: the **`gsd-skill-chain-guard` PreToolUse hook** (`~/.agents/hooks/`) appends explicit
+`references/*.md` Read directives onto every convention-bound `gsd-*` subagent spawn and makes the
+agent confirm which reference files it read. Verified working on the §AA fixer (read
+correctness-and-quality.md). Belt-and-suspenders: still name the full chain explicitly in
+hand-spawned reviewer/fixer prompts.
 
 ## Session
 
 **Last session:** 2026-06-20
-**Stopped at:** Phase 22 complete (4/4 SPLIT plans; 4 god-files decomposed within-band via 4 parallel worktrees, merged conflict-free, all <300, suppressions gone; ~14 new sibling modules; verify + golden oracles green; review clean via explicit full skill-chain injection). Autonomous run at 50% (4/8), continuing to Phase 23.
+**Stopped at:** Phase 23 complete (1/1 plan; eight depcruise band fences locked in as a no-op; planted-violation proof + review clean via full skill-chain). Out-of-band: §AA re-review findings fixed (5fa86e6) + gsd-skill-chain-guard hook added. Autonomous run at 63% (5/8), continuing to Phase 24.
 **Resume file:** None
