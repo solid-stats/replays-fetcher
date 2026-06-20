@@ -109,10 +109,7 @@
       ".agents/skills/solidstats-fetcher-ts-tests"
     ],
     "gsd-code-reviewer": [
-      ".agents/skills/solidstats-fetcher-ts-code-review",
-      ".agents/skills/solidstats-shared-review-standards",
-      ".agents/skills/solidstats-fetcher-ts-conventions",
-      ".agents/skills/solidstats-shared-backend-ts-standards"
+      ".agents/skills/solidstats-fetcher-ts-code-review"
     ],
     "gsd-code-fixer": [
       ".agents/skills/solidstats-fetcher-ts-conventions"
