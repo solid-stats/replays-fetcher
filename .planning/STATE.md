@@ -2,18 +2,19 @@
 gsd_state_version: 1.0
 milestone: v3.1
 milestone_name: Convention Compliance & Tech-Debt Closure
+current_phase: 25
+current_phase_name: Discovery Game-Date Capture (Cross-App Gated)
 status: executing
-stopped_at: "Phase 23 complete (1/1 plan; eight five-band depcruise import fences turned on in verify as a NO-OP lock-in — the tree already satisfied every fence so verify stayed green; planted-violation proof + review clean via full skill-chain incl correctness-and-quality.md). Out-of-band: re-review §AA findings from Phases 20/22 fixed (commit 5fa86e6 — teardown/fixture/checkpoint errors now logged under pino err key; verify green, 100% coverage, 515 tests) and the gsd-skill-chain-guard PreToolUse hook now auto-injects references/*.md into convention-bound subagent spawns. Autonomous run at 63% (5/8), continuing to Phase 24."
-last_updated: "2026-06-20T14:42:59.130Z"
-last_activity: 2026-06-20 — Phase 24 Plan 03 complete (watch pre-fetch dedup gate + flipped golden-watch oracle)
+stopped_at: "Phase 24 complete (3/3 plans; DEDUP-01..03 — watch-only pre-fetch dedup gated on trustworthy externalId + existing row, benign INSERT ON CONFLICT (checksum,object_key) DO NOTHING, conflicting-duplicate path preserved for server-2 manual review; distinct skippedBySourceId counter; production daemon wired; golden-watch oracle FLIPPED, golden-e2e run-once UNCHANGED; verify green 529 tests/100%, integration 10 tests green; review APPROVE, verify human_needed for the DEDUP-01 data-loss production-ship sign-off). Autonomous run at 75% (6/8), continuing to Phase 25 (DISC — DISC-02 hard-gated on server-2, may slip to v3.2)."
+last_updated: "2026-06-20T14:55:31.279Z"
+last_activity: 2026-06-20
+last_activity_desc: Phase 24 complete, transitioned to Phase 25
 progress:
   total_phases: 8
   completed_phases: 6
   total_plans: 15
   completed_plans: 15
   percent: 75
-current_phase: 24
-current_phase_name: Watch Pre-Fetch Dedup + ON CONFLICT Staging
 ---
 
 # Project State
@@ -23,14 +24,14 @@ current_phase_name: Watch Pre-Fetch Dedup + ON CONFLICT Staging
 See: .planning/PROJECT.md (updated 2026-06-20)
 
 **Core value:** Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
-**Current focus:** Phase 24 — Watch Pre-Fetch Dedup + ON CONFLICT Staging
+**Current focus:** Phase 25 — Discovery Game-Date Capture (Cross-App Gated)
 
 ## Current Position
 
-Phase: 24 — Watch Pre-Fetch Dedup + ON CONFLICT Staging
-Plan: 24-03 complete (3/3); Phase 24 complete
+Phase: 25 — Discovery Game-Date Capture (Cross-App Gated)
+Plan: Not started
 Status: Phase 24 complete — DEDUP-01..03 implemented; verify green (529 tests, 100% coverage); golden-watch oracle flipped, golden-e2e (run-once) unchanged
-Last activity: 2026-06-20 — Phase 24 Plan 03 complete (watch pre-fetch dedup gate + flipped golden-watch oracle)
+Last activity: 2026-06-20 — Phase 24 complete, transitioned to Phase 25
 
 Progress: [████████░░] 75% (6/8 phases); plans 16/16
 
