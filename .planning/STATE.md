@@ -2,19 +2,18 @@
 gsd_state_version: 1.0
 milestone: v3.1
 milestone_name: Convention Compliance & Tech-Debt Closure
-current_phase: 25
-current_phase_name: Discovery Game-Date Capture (Cross-App Gated)
 status: executing
-stopped_at: "Phase 24 complete (3/3 plans; DEDUP-01..03 — watch-only pre-fetch dedup gated on trustworthy externalId + existing row, benign INSERT ON CONFLICT (checksum,object_key) DO NOTHING, conflicting-duplicate path preserved for server-2 manual review; distinct skippedBySourceId counter; production daemon wired; golden-watch oracle FLIPPED, golden-e2e run-once UNCHANGED; verify green 529 tests/100%, integration 10 tests green; review APPROVE, verify human_needed for the DEDUP-01 data-loss production-ship sign-off). Autonomous run at 75% (6/8), continuing to Phase 25 (DISC — DISC-02 hard-gated on server-2, may slip to v3.2)."
-last_updated: "2026-06-20T14:55:31.279Z"
-last_activity: 2026-06-20
-last_activity_desc: Phase 24 complete, transitioned to Phase 25
+stopped_at: Phase 25 complete (1/1 plan; DISC-01/02 — discovery parses the listing "Game date" cell (DD.MM.YYYY HH:MM) into metadata.discoveredAt via parseGameDateToUtcIso (anchored day-first regex, no date lib), threaded through the existing discoveredAt pipeline; staging replayTimestamp is filename-PRIMARY with the listing game-date as a strict fallback (filename ?? listing, never overridden); golden-e2e oracle FLIPPED from discoveredAt.toBeUndefined() to a concrete UTC-shape match across every staging row; verify green 540 tests/100%, integration 10 tests green). DISC-02 listing-timezone (T-25-03) remains a manual-only ship-gate before production.
+last_updated: "2026-06-20T15:24:00.000Z"
+last_activity: 2026-06-20 — Phase 25 complete (DISC-01/02 game-date capture)
 progress:
   total_phases: 8
-  completed_phases: 6
-  total_plans: 15
-  completed_plans: 15
-  percent: 75
+  completed_phases: 8
+  total_plans: 17
+  completed_plans: 17
+  percent: 100
+current_phase: 25
+current_phase_name: Discovery Game-Date Capture (Cross-App Gated)
 ---
 
 # Project State
@@ -29,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-06-20)
 ## Current Position
 
 Phase: 25 — Discovery Game-Date Capture (Cross-App Gated)
-Plan: Not started
-Status: Phase 24 complete — DEDUP-01..03 implemented; verify green (529 tests, 100% coverage); golden-watch oracle flipped, golden-e2e (run-once) unchanged
-Last activity: 2026-06-20 — Phase 24 complete, transitioned to Phase 25
+Plan: 01 complete (1/1)
+Status: Phase 25 complete — DISC-01/02 implemented; verify green (540 tests, 100% coverage); golden-e2e oracle flipped to assert the concrete discoveredAt UTC value. DISC-02 listing-timezone manual ship-gate (T-25-03) still open.
+Last activity: 2026-06-20 — Phase 25 complete (DISC-01/02 game-date capture)
 
-Progress: [████████░░] 75% (6/8 phases); plans 16/16
+Progress: [██████████] 100% (8/8 phases); plans 17/17
 
 ## v3.1 Roadmap Summary (Phases 19-26)
 
@@ -108,6 +107,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [v3.1 Roadmap]: DISC-01 (local game-date parse) ships independently; DISC-02 (canonical-field write + oracle flip) is hard-gated on a server-2 decision and may slip to v3.2.
 - [Phase 24-01, DEDUP-02/03]: Staging benign-duplicate detection rewritten from insert-and-catch-23505 to `INSERT ... ON CONFLICT (checksum, object_key) DO NOTHING RETURNING id`; zero RETURNING rows = benign skip → resolve existing id → `already_staged`. ON CONFLICT target is `(checksum, object_key)` ONLY — the `(source_system, source_replay_id)` violation still throws 23505 → `classifyExistingStaging` → `conflict` (server-2 manual-review feed NOT swallowed, integration-proven).
 - [Phase 24-01, DEDUP-03]: `existsBySourceIdentity(sourceSystem, sourceReplayId): Promise<boolean>` added as a lean `SELECT 1 ... LIMIT 1` (not a reuse of the 6-column findBySourceIdentity) — the pre-fetch existence primitive Plan 24-03 will call.
+- [Phase 25-01, DISC-01/02]: Listing "Game date" (DD.MM.YYYY HH:MM) is parsed in discovery by `parseGameDateToUtcIso` — an anchored day-first named-group regex mirroring `replayTimestampFromFilename`, NO date library. Threaded via the existing `discoveredAt` key end to end (zero cross-band type changes). Staging `replayTimestamp` = `replayTimestampFromFilename(...) ?? evidence.discoveredAt`: filename strictly PRIMARY, listing a strict fallback that never overrides it. Golden-e2e oracle flipped to a concrete UTC-shape match (replay_timestamp stays filename-derived in the corpus, so the fallback is proven by the payload unit test). Listing timezone (T-25-03) is a manual-only ship-gate, not auto-closed.
 
 > Older per-phase decision log (Phases 1-18) is retained in PROJECT.md Key Decisions and the v1.0/v2.0/v3.0 milestone archives. Trimmed here per the STATE.md digest size constraint at the v3.1 boundary.
 
@@ -172,7 +172,7 @@ hand-spawned reviewer/fixer prompts.
 
 ## Session
 
-**Last session:** 2026-06-20T14:41:28.422Z
+**Last session:** 2026-06-20T15:23:41.461Z
 **Stopped at:** Phase 23 complete (1/1 plan; eight depcruise band fences locked in as a no-op; planted-violation proof + review clean via full skill-chain). Out-of-band: §AA re-review findings fixed (5fa86e6) + gsd-skill-chain-guard hook added. Autonomous run at 63% (5/8), continuing to Phase 24.
 **Resume file:** None
 
@@ -181,3 +181,4 @@ hand-spawned reviewer/fixer prompts.
 | Phase | Plan | Duration | Notes |
 |-------|------|----------|-------|
 | Phase 24 P03 | 12 | 3 tasks | 10 files |
+| Phase 25 P01 | 01 | ~7m | 3 tasks, 5 files |

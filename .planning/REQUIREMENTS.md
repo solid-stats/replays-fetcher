@@ -38,8 +38,8 @@ Committed scope for this milestone. Each maps to exactly one roadmap phase.
 
 ### Discovery Completeness (DISC) — cross-app gated on server-2
 
-- [ ] **DISC-01**: Discovery parses the listing "Game date" cell (`DD.MM.YYYY HH:MM`) into an ISO-8601 timestamp threaded into candidate metadata.
-- [ ] **DISC-02**: The parsed game-date populates the canonical field (`promotion_evidence.discoveredAt` and/or `replay_timestamp`) agreed with `server-2`, and the golden oracle assertion that pins the field's absence (`golden-e2e.integration.test.ts:216`) is flipped to assert the concrete value. **Blocked** until the server-2 canonical-date-field decision lands.
+- [x] **DISC-01**: Discovery parses the listing "Game date" cell (`DD.MM.YYYY HH:MM`) into an ISO-8601 timestamp threaded into candidate metadata.
+- [x] **DISC-02**: The parsed game-date populates the canonical field — staging `replayTimestamp` as a strict filename-fallback plus `promotion_evidence.discoveredAt` audit evidence — and the golden oracle assertion that pinned the field's absence is flipped to assert the concrete UTC value. Cross-app gate resolved from server-2 source; residual listing-timezone confirmation (T-25-03) is a manual ship-gate.
 
 ### Correctness Hygiene (CORR)
 
@@ -95,8 +95,8 @@ Each requirement maps to exactly one phase. v3.1 continues the project phase num
 | DEDUP-01 | Phase 24 | Complete |
 | DEDUP-02 | Phase 24 | Complete |
 | DEDUP-03 | Phase 24 | Complete |
-| DISC-01 | Phase 25 | Pending |
-| DISC-02 | Phase 25 | Blocked (server-2) |
+| DISC-01 | Phase 25 | Complete |
+| DISC-02 | Phase 25 | Complete |
 | CORR-01 | Phase 26 | Pending |
 | TEST-01 | Phase 26 | Pending |
 | TEST-02 | Phase 26 | Pending |
@@ -109,7 +109,7 @@ Each requirement maps to exactly one phase. v3.1 continues the project phase num
 - v3.1 requirements: 23 total
 - Mapped to phases: 23 ✓ (every requirement maps to exactly one phase; no orphans, no duplicates)
 - Unmapped: 0
-- Note: DISC-02 is mapped to Phase 25 but its contract-write/oracle-flip portion is **Blocked** on a server-2 canonical-date-field decision and may slip to v3.2; DISC-01 (local parse) ships independently within Phase 25.
+- Note: DISC-01 + DISC-02 both shipped in Phase 25. The DISC-02 cross-app gate was resolved from server-2 source (canonical field = staging `replayTimestamp`; listing is a strict fallback); the residual listing-timezone confirmation (T-25-03) is a manual ship-gate, not a planning blocker.
 
 **Phase → requirement summary:**
 
