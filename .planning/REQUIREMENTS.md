@@ -1,0 +1,114 @@
+# Requirements: replays-fetcher — Milestone v3.1 Convention Compliance & Tech-Debt Closure
+
+**Defined:** 2026-06-20
+**Core Value:** Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
+
+> Behavior-preserving refactor/compliance milestone on a fully-tested ingest CLI. Two intentional behavior changes only: the watch pre-fetch dedup (DEDUP) and the discovery game-date capture (DISC). Every other requirement must leave the golden e2e oracle and 100% V8 coverage untouched. Scope source: the whole-repo convention audit (`pilot-v1.2-result.json`, 335 findings at `c850190` ≡ current source tree) tiered by verification trust, plus `replays-fetcher/TECH-DEBT.md` (TD1–TD5) and the architecture code-followups. The audit's semantic/architecture tier is ~50% false-positive (Haiku-verified); only the mechanical lane is near-100% precision. Architecture and correctness requirements therefore enter as leads that must be re-verified per-finding against live code during discuss/plan before any commit.
+
+## v3.1 Requirements
+
+Committed scope for this milestone. Each maps to exactly one roadmap phase.
+
+### Architecture & Layer Compliance (ARCH)
+
+- [ ] **ARCH-01**: Cross-band data contracts (`ReplayCandidate`, `RawReplayStorageEvidence`, `RunSummary`/`CompactRunSummary`, `IngestStagingPayload`) live in a single cross-cutting contracts module at the bottom of the dependency graph; no band defines a type that another band imports upward. Builders stay in their owning bands — only the types move.
+- [ ] **ARCH-02**: The `config.ts` upward import of `SourceTransport` from `discovery/` is removed; `config.ts` depends on nothing upward.
+- [ ] **ARCH-03**: The `no-leak.ts` orphan module is resolved (wired or removed); knip reports no orphans.
+- [ ] **ARCH-04**: Exactly one `S3Client` and one `pg.Pool` are constructed in `src/`, built at the `commands/` composition root and injected; all `*FromConfig` convenience factories are removed (grep proves one constructor each).
+- [ ] **ARCH-05**: The `watch` daemon drains the `pg.Pool` and destroys the `S3Client` on SIGTERM/SIGINT before exit; adapters never tear down injected clients.
+- [ ] **ARCH-06**: The five-band import fences (downward-only, no band-skip, PG write-scope, S3 write-scope, no-parser, discovery-read-only, diagnostics-never-write, composition-root exemption) are enforced by `.dependency-cruiser.cjs` inside `verify` and proven by a planted-violation test.
+
+### God-File Decomposition (SPLIT)
+
+- [ ] **SPLIT-01**: `src/run/run-once.ts` is split within its band into cohesive modules; its file-level `oxlint-disable max-lines` is removed and never re-added.
+- [ ] **SPLIT-02**: `src/discovery/discover.ts` is split within its band; its `max-lines` suppression is removed.
+- [ ] **SPLIT-03**: `src/discovery/source-client.ts` is split within its band; its `max-lines` suppression is removed.
+- [ ] **SPLIT-04**: `src/storage/replay-byte-client.ts` is split within its band; its `max-lines` suppression is removed.
+
+### Mechanical Convention Cleanup (MECH)
+
+- [ ] **MECH-01**: All `interface` declarations that should be `type` are converted (~138 sites) and the conversion is enforced by an oxlint `consistent-type-definitions: ["error","type"]` rule so it cannot regress.
+- [ ] **MECH-02**: Import ordering is normalized (~17 sites) and enforced by `oxfmt sortImports` (configured in the shared `@solid-stats/ts-toolchain` preset).
+
+### Watch Ingest Latency & Source Load (DEDUP)
+
+- [ ] **DEDUP-01**: The `watch` page-1 cycle skips a candidate whose `source_replay_id` already exists in staging BEFORE fetching its bytes; absent/empty/ambiguous ids fall through to fetch; byte-checksum dedup remains as the backstop (a genuinely-new replay can never be dropped).
+- [ ] **DEDUP-02**: A no-new-replay watch cycle performs only the page-1 list fetch (no redundant byte downloads), reported via a distinct `skipped-by-source-id` run-summary counter.
+- [ ] **DEDUP-03**: Staging dedup uses `INSERT ... ON CONFLICT (checksum, object_key) DO NOTHING` for the benign duplicate (ending the postgres duplicate-key ERROR log spam); the conflicting-duplicate (same source id, different checksum) manual-review classification is preserved.
+
+### Discovery Completeness (DISC) — cross-app gated on server-2
+
+- [ ] **DISC-01**: Discovery parses the listing "Game date" cell (`DD.MM.YYYY HH:MM`) into an ISO-8601 timestamp threaded into candidate metadata.
+- [ ] **DISC-02**: The parsed game-date populates the canonical field (`promotion_evidence.discoveredAt` and/or `replay_timestamp`) agreed with `server-2`, and the golden oracle assertion that pins the field's absence (`golden-e2e.integration.test.ts:216`) is flipped to assert the concrete value. **Blocked** until the server-2 canonical-date-field decision lands.
+
+### Correctness Hygiene (CORR)
+
+- [ ] **CORR-01**: Each verified typed-error / unexplained-cast / swallowed-error finding from the convention audit (semantic tier, re-verified live against current source) is fixed; no raw `Error` is thrown where a typed `AppError` subclass is required, and no audit false-positive is committed as a change.
+
+### Test-Quality (TEST)
+
+- [ ] **TEST-01**: AAA arrange/assert duplicated literals are factored into named constants or typed builders.
+- [ ] **TEST-02**: Multi-behavior tests are split to one behavior per test (RITE).
+- [ ] **TEST-03**: Dedup / conflict / date-parse matrices use `test.each` parameterized tables.
+- [ ] **TEST-04**: Watch-loop timing paths use `vi.useFakeTimers()` — no real sleeps in tests.
+- [ ] **TEST-05**: Untested reachable branches are closed by new tests; no new `v8 ignore` coverage suppressions are added.
+
+## Pre-Plan Coordination (resolve before the gated phases — not new requirements)
+
+| Item | Gates | Owner / Action |
+|------|-------|----------------|
+| Contracts home naming: `contracts/` (research recommendation) vs the already-encoded `types/` | ARCH-01 | Decide at discuss/plan; encode in the depcruise preset + conventions skill in the same plan |
+| Canonical replay-date field (`promotion_evidence.discoveredAt` vs `replay_timestamp`), format, timezone, `web` read-path | DISC-02 | Synchronous question to `server-2` (hard blocker; DISC-02 may slip to v3.2) |
+| `ON CONFLICT` benign-vs-conflicting semantics vs the server-2 poller's expectations | DEDUP-03 | Question to `server-2` before the phase is planned |
+| Pre-fetch `source_replay_id` dedup needs human-in-the-loop review before ship | DEDUP-01 | TECH-DEBT-explicit; review gate before staging deploy |
+| Depcruise `forbidden` path regexes need tuning against the real `src/` tree | ARCH-06 | Tune during plan against `ls src/` (adapters live inside capability dirs) |
+
+## Out of Scope
+
+Over-engineering traps for THIS refactor — the tempting wrong turn inside a v3.1 phase, documented so a future agent doesn't take it. (Project-level exclusions — `~/sg_stats` import, ESLint re-introduction — already live in PROJECT.md and are not repeated here.)
+
+| Feature | Reason |
+|---------|--------|
+| DI container (inversify / tsyringe / awilix) | The ARCH composition-root work is hand-rolled factory injection; a container is over-engineering for a single CLI binary |
+| Shared cross-band contracts as an npm package | The ARCH contracts module is an internal `src/` dir; a package adds release overhead for one consumer |
+| Dedup cache / bloom filter | The DEDUP latency goal is met by a cheap PostgreSQL existence check; an in-memory cache adds a staleness failure mode |
+| ORM | Raw `pg` keeps the DEDUP/staging writes auditable; an ORM hides the write scope |
+
+## Traceability
+
+Populated by the roadmapper. Each requirement maps to exactly one phase.
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| ARCH-01 | TBD | Pending |
+| ARCH-02 | TBD | Pending |
+| ARCH-03 | TBD | Pending |
+| ARCH-04 | TBD | Pending |
+| ARCH-05 | TBD | Pending |
+| ARCH-06 | TBD | Pending |
+| SPLIT-01 | TBD | Pending |
+| SPLIT-02 | TBD | Pending |
+| SPLIT-03 | TBD | Pending |
+| SPLIT-04 | TBD | Pending |
+| MECH-01 | TBD | Pending |
+| MECH-02 | TBD | Pending |
+| DEDUP-01 | TBD | Pending |
+| DEDUP-02 | TBD | Pending |
+| DEDUP-03 | TBD | Pending |
+| DISC-01 | TBD | Pending |
+| DISC-02 | TBD | Blocked (server-2) |
+| CORR-01 | TBD | Pending |
+| TEST-01 | TBD | Pending |
+| TEST-02 | TBD | Pending |
+| TEST-03 | TBD | Pending |
+| TEST-04 | TBD | Pending |
+| TEST-05 | TBD | Pending |
+
+**Coverage:**
+- v3.1 requirements: 23 total
+- Mapped to phases: 0 (roadmapper to assign)
+- Unmapped: 23 ⚠️ (resolved on roadmap creation)
+
+---
+*Requirements defined: 2026-06-20*
+*Last updated: 2026-06-20 after initial v3.1 definition*
