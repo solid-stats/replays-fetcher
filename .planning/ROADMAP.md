@@ -138,7 +138,12 @@ Plans:
   4. The Docker golden run-once oracle and 100% V8 coverage stay green after every extraction — a dropped branch is caught by the oracle, not just by coverage.
 
 **Behavior-preservation gate**: golden oracle + 100% V8 coverage + depcruise + knip green after **each** extraction (run `verify` per-extraction, not once at the end).
-**Plans**: TBD
+**Plans**: 4 plans (all Wave 1, file-disjoint, run in parallel)
+
+- [ ] 22-01-PLAN.md — SPLIT-01: split `run/run-once.ts` (1043L) into parent + 3 same-band siblings (checkpoint/summary/page); remove the suppression
+- [ ] 22-02-PLAN.md — SPLIT-02: split `discovery/discover.ts` (701L) into parent + 2 siblings (candidate/diagnostics); remove the suppression
+- [ ] 22-03-PLAN.md — SPLIT-03: split `discovery/source-client.ts` (534L) into parent + error/retry siblings (SourceFetchError moved into the error sibling + re-exported); remove the suppression
+- [ ] 22-04-PLAN.md — SPLIT-04: split `storage/replay-byte-client.ts` (489L) into parent + error/retry siblings (ReplayByteFetchError moved + re-exported); remove the suppression
 
 ### Phase 23: Depcruise Band-Fence Lock-In
 
