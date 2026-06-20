@@ -11,12 +11,20 @@ import type {
   FailureClassification,
   FailureKind,
 } from "../source/classify-failure.js";
-import { withRetry } from "../source/retry.js";
+import {
+  bytesPhase,
+  runWithRetry,
+  totalTries,
+} from "./replay-byte-client-retry.js";
 import type {
-  RetryAttemptEvent,
-  RetrySourceReadOptions,
-  SourceReadPhase,
-} from "../source/retry.js";
+  ByteFetchOptions,
+  ReplayByteClient,
+} from "./replay-byte-client-types.js";
+
+export type {
+  ByteFetchOptions,
+  ReplayByteClient,
+} from "./replay-byte-client-types.js";
 
 /**
  * Subset of node's `child_process.execFile` options the SSH adapter threads
@@ -36,25 +44,6 @@ type ExecFile = (
 ) => Promise<{ readonly stderr: string; readonly stdout: string }>;
 
 const defaultExecFile = promisify(execFileCallback) as ExecFile;
-
-/**
- * Per-call retry seam threaded into `withRetry` for byte reads. Mirrors
- * `SourceFetchOptions`; when omitted, `attempts` defaults to a single no-retry
- * try so existing callers (`store-raw-replay.ts`) keep their legacy behavior.
- */
-export type ByteFetchOptions = {
-  readonly attempts?: number;
-  readonly now?: () => number;
-  readonly onRetry?: (event: RetryAttemptEvent) => void;
-  readonly page?: number;
-  readonly random?: () => number;
-  readonly signal?: AbortSignal;
-  readonly sleep?: (milliseconds: number) => Promise<void>;
-};
-
-export type ReplayByteClient = {
-  fetchBytes: (url: URL, options?: ByteFetchOptions) => Promise<Uint8Array>;
-};
 
 /**
  * Byte-fetch failure error. The code union is widened ADDITIVELY (Phase 7
@@ -84,17 +73,6 @@ type CreateReplayByteClientOptions = {
   readonly execFile?: ExecFile;
 };
 
-const bytesPhase: SourceReadPhase = "bytes";
-const noRetryAttempts = 0;
-const initialTry = 1;
-
-/**
- * Total byte-read tries the wrapper is configured to make: the initial read
- * plus the bounded retry rounds. Reported in `details.attempts` (DIAG-01).
- */
-const totalTries = (options: ByteFetchOptions | undefined): number =>
-  (options?.attempts ?? noRetryAttempts) + initialTry;
-
 /**
  * Maps the shared classifier's tri-state kind onto the narrow
  * `ReplayByteFetchError` code union. `rate_limited` stays distinct so pacing and
@@ -108,65 +86,6 @@ const toByteCode = (kind: FailureKind): ReplayByteFetchError["code"] => {
   }
 
   return "fetch_failed";
-};
-
-type RetryWiring<TResult> = {
-  readonly classify: (error: unknown) => FailureClassification;
-  readonly read: (signal: AbortSignal) => Promise<TResult>;
-  readonly retryAfterMs?: (
-    error: unknown,
-    now: () => number,
-  ) => number | undefined;
-  readonly url: URL;
-};
-
-/**
- * Threads the per-call retry seam (attempts/page/onRetry/external signal) from
- * `ByteFetchOptions` into the transport-agnostic `withRetry` wrapper. When no
- * options are supplied, `attempts` defaults to 0 so a single try is made,
- * preserving the legacy single-shot behavior for existing callers.
- */
-const runWithRetry = async <TResult>(
-  wiring: RetryWiring<TResult>,
-  options?: ByteFetchOptions,
-): Promise<TResult> => {
-  const attempts = options?.attempts ?? noRetryAttempts;
-  const callerSignal = options?.signal ?? new AbortController().signal;
-
-  let retryOptions: RetrySourceReadOptions<TResult> = {
-    attempts,
-    classify: wiring.classify,
-    phase: bytesPhase,
-    read: wiring.read,
-    signal: callerSignal,
-    url: wiring.url.toString(),
-  };
-
-  if (options?.page !== undefined) {
-    retryOptions = { ...retryOptions, page: options.page };
-  }
-
-  if (options?.onRetry !== undefined) {
-    retryOptions = { ...retryOptions, onRetry: options.onRetry };
-  }
-
-  if (wiring.retryAfterMs !== undefined) {
-    retryOptions = { ...retryOptions, retryAfterMs: wiring.retryAfterMs };
-  }
-
-  if (options?.sleep !== undefined) {
-    retryOptions = { ...retryOptions, sleep: options.sleep };
-  }
-
-  if (options?.random !== undefined) {
-    retryOptions = { ...retryOptions, random: options.random };
-  }
-
-  if (options?.now !== undefined) {
-    retryOptions = { ...retryOptions, now: options.now };
-  }
-
-  return withRetry(retryOptions);
 };
 
 type BuildErrorInput = {
