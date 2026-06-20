@@ -1,4 +1,11 @@
 /** @type {import('dependency-cruiser').IConfiguration} */
+// Architecture note: `src/types/` is the leaf cross-cutting *contracts* band —
+// it holds the cross-band data contracts (RunSummary/CompactRunSummary,
+// ReplayCandidate, RawReplayStorageEvidence, IngestStagingPayload, SourceTransport),
+// is imported downward by any band, and imports nothing upward. The eight five-band
+// import fences that would enforce this layering are DEFERRED to Phase 23 (ARCH-06)
+// and intentionally NOT enabled here — this file still enforces only no-circular +
+// no-orphans (+ the stock hygiene rules below).
 module.exports = {
   forbidden: [
     {

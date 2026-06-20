@@ -146,12 +146,16 @@ the full lint-suppression policy.
    const discoveryClient = createSourceClient({ ...deps, resiliencePolicy: policy.discovery });
    ```
 
-5. **Cross-band data contracts live in cross-cutting `types/`.** A type shared by more than one band
-   — e.g. `RunSummary`, which orchestration (`run/`) produces and the evidence adapter (`evidence/`)
-   persists — lives in `types/`, not in `run/`. Today `RunSummary` is in `run/types.ts` and
-   `evidence/s3-evidence-store.ts` imports it **upward** (a layer violation); moving the *type* to
-   `types/` fixes it while the *builder* (`run/summary.ts`) stays in orchestration. Adapters import
-   the contract downward, never reach up into `run/`.
+5. **Cross-band data contracts live in cross-cutting `src/types/`.** A type shared by more than one
+   band — e.g. `RunSummary`, which orchestration (`run/`) produces and the evidence adapter
+   (`evidence/`) persists — lives in `src/types/`, not in `run/`. This is **done**: `RunSummary` /
+   `CompactRunSummary` and the four cross-band DTOs (`ReplayCandidate`, `RawReplayStorageEvidence`,
+   `IngestStagingPayload`, and `SourceTransport`) now live in `src/types/` — one file per contract
+   (matching the `run-summary.ts` precedent; no barrel). The *builders* stay in their owning bands
+   (`run/summary.ts` still builds `RunSummary`); each band `types.ts` keeps only its band-local types
+   and re-exports the moved contract **downward** via a shim. Adapters import the contract from
+   `src/types/`, never reaching **upward** into `run/`. `src/types/` is the leaf contracts band:
+   imported downward by any band, importing nothing upward.
 
 6. **One external client per backend, built once and injected.** S3 / PostgreSQL / HTTP clients are
    constructed a single time at composition (the `commands/` handler / composition root) and injected
