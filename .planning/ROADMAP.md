@@ -159,7 +159,10 @@ Plans:
 
 **Pre-plan tuning**: depcruise `forbidden` path regexes must be tuned against the real `ls src/` file tree during planning (adapter files live inside capability dirs; anchors need verification).
 **Behavior-preservation gate**: golden oracle + 100% V8 coverage + depcruise + knip green; fences enforced LAST so they lock in completed work rather than blocking an in-flight move.
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 23-01-PLAN.md — Add the 8 five-band fences at `error` as a NO-OP lock-in (drop `no-commands-to-storage-direct` warn) + planted-violation test proving all 8 fire
 
 ### Phase 24: Watch Pre-Fetch Dedup + ON CONFLICT Staging
 
