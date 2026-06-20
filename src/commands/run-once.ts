@@ -8,12 +8,12 @@ import {
 import type { StagingRepository } from "../staging/stage-raw-replay.js";
 import {
   buildRetryWarnEmitter,
-  createStoreRawResources,
   flushLogger,
   loadStoreRawConfig,
   writeJson,
 } from "./shared.js";
 import type { BuildCliDependencies } from "./shared.js";
+import { createStoreRawResources } from "./store-raw-resources.js";
 
 type RunOnceOptions = {
   readonly emitEvidence?: boolean;
@@ -103,7 +103,10 @@ export const registerRunOnceCommand = (
       const resources = createStoreRawResources(
         dependencies,
         configResult.config,
-        true,
+        {
+          log,
+          shouldStage: true,
+        },
       );
       const result = await dependencies.runOnce({
         attempts: configResult.config.sourceRetryAttempts,

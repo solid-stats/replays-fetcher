@@ -2,13 +2,9 @@ import type { Command } from "commander";
 
 import { buildConfigInvalidRunSummary, runExitCode } from "../run/summary.js";
 import type { StagingRepository } from "../staging/stage-raw-replay.js";
-import {
-  createStoreRawResources,
-  flushLogger,
-  loadStoreRawConfig,
-  writeJson,
-} from "./shared.js";
+import { flushLogger, loadStoreRawConfig, writeJson } from "./shared.js";
 import type { BuildCliDependencies } from "./shared.js";
+import { createStoreRawResources } from "./store-raw-resources.js";
 
 const requireStagingRepository = (
   repository: StagingRepository | undefined,
@@ -92,7 +88,10 @@ export const registerWatchCommand = (
       const resources = createStoreRawResources(
         dependencies,
         configResult.config,
-        true,
+        {
+          log,
+          shouldStage: true,
+        },
       );
       const { dispose: disposeShutdownSeam, shouldStop } = createShutdownSeam();
 

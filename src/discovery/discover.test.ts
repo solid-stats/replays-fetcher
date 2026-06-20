@@ -1,5 +1,6 @@
 /* eslint-disable max-lines -- Phase 2 dry-run discovery scenarios are kept together for report-contract readability. */
-import { expect, test } from "vitest";
+import type { Logger } from "pino";
+import { expect, test, vi } from "vitest";
 
 import type { RetryAttemptEvent } from "../source/retry.js";
 import { discoverReplaysDryRun } from "./discover.js";
@@ -756,6 +757,34 @@ test("discoverReplaysDryRun should return an empty report for non-fixture non-ta
 
   expect(report.generatedAt).toBe("2026-05-09T00:00:00.000Z");
   expect(report.candidates).toHaveLength(0);
+});
+
+test("discoverReplaysDryRun should warn (under the pino err key) when the fixture JSON is malformed (§AA)", async () => {
+  // Non-JSON source text forces parseSourceFixture into its catch leg; with a
+  // logger threaded in, the swallowed parse error must be recorded instead of
+  // vanishing before the HTML fallback runs.
+  const warn = vi.fn();
+  const sourceClient: SourceClient = {
+    async fetchText() {
+      return "<html><body>not json at all</body></html>";
+    },
+  };
+
+  const report = await discoverReplaysDryRun({
+    generatedAt: "2026-05-09T00:00:00.000Z",
+    log: { warn } as unknown as Logger,
+    sourceClient,
+    sourceUrl: new URL("https://example.test/replays"),
+  });
+
+  expect(report.candidates).toHaveLength(0);
+  expect(warn).toHaveBeenCalledTimes(1);
+  const [fields, message] = warn.mock.calls[0] ?? [];
+  expect(fields).toHaveProperty("err");
+  expect((fields as { err: unknown }).err).toBeInstanceOf(Error);
+  expect(message).toBe(
+    "fixture JSON parse failed; falling back to HTML discovery",
+  );
 });
 
 const noopOnRetry = (): void => {

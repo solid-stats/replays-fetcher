@@ -40,6 +40,7 @@ export type RunOnceInput = {
   }) => ThrottleController;
   readonly discoverReplays: (input: {
     readonly attempts?: number;
+    readonly log?: Logger;
     readonly maxPages?: number;
     readonly onRetry?: (event: RetryAttemptEvent) => void;
     readonly requestDelayMs?: number;

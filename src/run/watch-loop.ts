@@ -49,6 +49,7 @@ export type WatchLoopInput = {
   readonly createRunId: (now: Date) => string;
   readonly discoverReplays: (input: {
     readonly attempts?: number;
+    readonly log?: Logger;
     readonly maxPages?: number;
     readonly onRetry?: (event: RetryAttemptEvent) => void;
     readonly requestDelayMs?: number;
@@ -91,6 +92,7 @@ const buildDiscoverInput = (
   input: WatchLoopInput,
 ): {
   readonly attempts?: number;
+  readonly log: Logger;
   readonly maxPages: number;
   readonly requestDelayMs: number;
   readonly sourceClient: SourceClient;
@@ -106,6 +108,7 @@ const buildDiscoverInput = (
   // makes EVERY page-1 source request respect `requestSpacingMs`.
   if (input.attempts === undefined) {
     return {
+      log: input.log,
       maxPages: WATCH_PAGE,
       requestDelayMs: input.requestSpacingMs,
       sourceClient: input.sourceClient,
@@ -115,6 +118,7 @@ const buildDiscoverInput = (
 
   return {
     attempts: input.attempts,
+    log: input.log,
     maxPages: WATCH_PAGE,
     requestDelayMs: input.requestSpacingMs,
     sourceClient: input.sourceClient,

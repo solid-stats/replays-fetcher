@@ -1,3 +1,5 @@
+import type { Logger } from "pino";
+
 import type { RetryAttemptEvent } from "../source/retry.js";
 import type {
   DiscoveryDiagnostic,
@@ -8,6 +10,7 @@ import type {
 export type DiscoverReplaysDryRunOptions = {
   readonly attempts?: number;
   readonly generatedAt?: string;
+  readonly log?: Logger;
   readonly maxPages?: number;
   readonly onRetry?: (event: RetryAttemptEvent) => void;
   readonly requestDelayMs?: number;

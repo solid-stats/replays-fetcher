@@ -1,3 +1,5 @@
+import type { Logger } from "pino";
+
 import type { ReadOptions } from "./discover-types.js";
 import { extractFilenameFromDetailHtml, extractReplayRows } from "./html.js";
 import type {
@@ -60,7 +62,10 @@ export const toRawReplayUrl = (filename: string, detailUrl: URL): string => {
 
 const isValidFixtureUrl = (value: string): boolean => URL.parse(value) !== null;
 
-export const parseSourceFixture = (text: string): SourceFixture | undefined => {
+export const parseSourceFixture = (
+  text: string,
+  log?: Logger,
+): SourceFixture | undefined => {
   try {
     const parsed = JSON.parse(text) as Partial<SourceFixture>;
 
@@ -69,7 +74,13 @@ export const parseSourceFixture = (text: string): SourceFixture | undefined => {
         candidates: parsed.candidates,
       };
     }
-  } catch {
+  } catch (error) {
+    // pino's err serializer fires on the literal `err` key (§AA); the catch
+    // binding stays `error` per unicorn/catch-error-name.
+    log?.warn(
+      { err: error },
+      "fixture JSON parse failed; falling back to HTML discovery",
+    );
     return undefined;
   }
 

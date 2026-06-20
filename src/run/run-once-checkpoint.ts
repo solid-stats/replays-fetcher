@@ -239,10 +239,11 @@ export const writePageCheckpoint = async (
   } catch (error) {
     // A transient (non-precondition) checkpoint-write error must never fail the
     // run. The ETag is unchanged on failure, so reuse the one we held. Log the
-    // error itself so a persistent failure (e.g. a backend that rejects the CAS
-    // conditional headers) is diagnosable instead of silently degrading resume.
+    // error under the pino `err` key so its stack is serialized and a persistent
+    // failure (e.g. a backend that rejects the CAS conditional headers) is
+    // diagnosable instead of silently degrading resume (§AA).
     input.log?.warn(
-      { error, page: page.lastCompletedPage, slug: page.slug },
+      { err: error, page: page.lastCompletedPage, slug: page.slug },
       "checkpoint write failed; continuing run",
     );
 
@@ -273,11 +274,12 @@ export const writeFinalCheckpoint = async (
       writeInput(context.slug, checkpoint, context.etag),
     );
   } catch (error) {
-    // Log the error itself (parity with writePageCheckpoint) so a persistent
-    // final-write CAS failure — the exact mode S3_CHECKPOINT_CONDITIONAL_WRITES
-    // was added to fix — is diagnosable instead of silently degrading resume.
+    // Log the error under the pino `err` key (parity with writePageCheckpoint)
+    // so a persistent final-write CAS failure — the exact mode
+    // S3_CHECKPOINT_CONDITIONAL_WRITES was added to fix — is diagnosable instead
+    // of silently degrading resume (§AA).
     input.log?.warn(
-      { error, slug: context.slug },
+      { err: error, slug: context.slug },
       "final checkpoint write failed; continuing run",
     );
   }

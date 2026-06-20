@@ -4,10 +4,8 @@ import { PostgreSqlContainer } from "@testcontainers/postgresql";
 import { afterEach, expect, test, vi } from "vitest";
 
 import { createPgPool, createS3Client } from "../commands/clients.js";
-import {
-  createStoreRawResources,
-  resolveDependencies,
-} from "../commands/shared.js";
+import { resolveDependencies } from "../commands/shared.js";
+import { createStoreRawResources } from "../commands/store-raw-resources.js";
 import type { AppConfig } from "../config.js";
 import { discoverReplaysDryRun } from "../discovery/discover.js";
 import type { SourceClient } from "../discovery/types.js";
@@ -98,11 +96,10 @@ test.skipIf(!goldenFixturesPresent())(
     // Build the resources through the REAL composition root so the teardown path
     // under test (resources.dispose → real pool.end + real s3.destroy) is the one
     // exercised. shouldStage=true → a real testcontainer-backed pool is owned.
-    const resources = createStoreRawResources(
-      resolveDependencies({}),
-      config,
-      true,
-    );
+    const resources = createStoreRawResources(resolveDependencies({}), config, {
+      log: createLogger({ level: "silent" }),
+      shouldStage: true,
+    });
     const stagingRepository = resources.stagingRepository;
     if (stagingRepository === undefined) {
       throw new Error(

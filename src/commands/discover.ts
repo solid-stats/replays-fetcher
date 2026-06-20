@@ -6,12 +6,12 @@ import type { IngestStagingResult } from "../staging/types.js";
 import type { StoreRawReplayResult } from "../storage/store-raw-replay.js";
 import {
   buildRetryWarnEmitter,
-  createStoreRawResources,
   loadDryRunSourceConfig,
   loadStoreRawConfig,
   writeJson,
 } from "./shared.js";
 import type { BuildCliDependencies, StoreRawResources } from "./shared.js";
+import { createStoreRawResources } from "./store-raw-resources.js";
 
 type DiscoverOptions = {
   readonly dryRun?: boolean;
@@ -165,11 +165,14 @@ const runStoreRawDiscovery = async (
     return;
   }
 
-  const resources = createStoreRawResources(
-    dependencies,
-    configResult.config,
+  // The store-raw discover path has no run loop, but the composition-root
+  // teardown still needs a logger so a dispose-time S3/pg failure is diagnosable
+  // ([std: correctness §AA]).
+  const log = dependencies.createLogger();
+  const resources = createStoreRawResources(dependencies, configResult.config, {
+    log,
     shouldStage,
-  );
+  });
   const discoveryReport = await discoverForStoreRaw(
     dependencies,
     configResult.config,

@@ -1,3 +1,5 @@
+import type { Logger } from "pino";
+
 import type { DiscoveryReport, SourceClient } from "../discovery/types.js";
 import { createLimiter } from "../source/concurrency.js";
 import type { LimitFunction } from "../source/concurrency.js";
@@ -49,6 +51,7 @@ const buildDiscoverInput = (
   pageUrl: URL,
 ): {
   readonly attempts?: number;
+  readonly log?: Logger;
   readonly maxPages?: number;
   readonly onRetry?: (event: RetryAttemptEvent) => void;
   readonly sourceClient: SourceClient;
@@ -56,6 +59,7 @@ const buildDiscoverInput = (
 } => {
   let discoverInput: {
     attempts?: number;
+    log?: Logger;
     maxPages?: number;
     onRetry?: (event: RetryAttemptEvent) => void;
     sourceClient: SourceClient;
@@ -68,6 +72,10 @@ const buildDiscoverInput = (
 
   if (input.attempts !== undefined) {
     discoverInput = { ...discoverInput, attempts: input.attempts };
+  }
+
+  if (input.log !== undefined) {
+    discoverInput = { ...discoverInput, log: input.log };
   }
 
   if (input.onRetry !== undefined) {

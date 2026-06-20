@@ -82,7 +82,7 @@ export const discoverReplaysDryRun = async (
       const listReadOptions = buildReadOptions(options, page, "list");
       // Source requests are intentionally sequential to preserve source order.
       const sourceText = await sourceClient.fetchText(pageUrl, listReadOptions);
-      const fixture = parseSourceFixture(sourceText);
+      const fixture = parseSourceFixture(sourceText, options.log);
       // Page detail fetches are part of the same source-order sequence.
       const pageCandidates = await discoverPageCandidates({
         detailReadOptions: buildReadOptions(options, page, "detail"),
