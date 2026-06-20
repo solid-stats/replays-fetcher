@@ -205,26 +205,26 @@ export const loadStoreRawConfig = (
 /**
  * Builds the once-guarded composition-root teardown (ARCH-05). A captured
  * `disposed` flag makes the closure idempotent: the first call destroys the
- * `S3Client` (sync, safe) and ends the `pg.Pool` exactly once; any later call
- * returns immediately, so a double SIGTERM never triggers a second
- * `pool.end()` (pg throws `Called end on pool more than once`). The pool may be
- * `undefined` when staging is disabled — then only the S3 client is destroyed.
- * No credentials/`databaseUrl` are interpolated into any path here [std: §AA].
+ * `S3Client` and ends the `pg.Pool` exactly once; any later call returns
+ * immediately, so a double SIGTERM never triggers a second `pool.end()` (pg
+ * throws on a double end; pool is `undefined` when staging is off). A try/finally
+ * drains the pool even if `s3Client.destroy()` throws (W-01).
  */
 const createDispose = (
   s3Client: S3Client,
   pool: Pool | undefined,
 ): (() => Promise<void>) => {
   let disposed = false;
-
   return async (): Promise<void> => {
     if (disposed) {
       return;
     }
-
     disposed = true;
-    s3Client.destroy();
-    await pool?.end();
+    try {
+      s3Client.destroy();
+    } finally {
+      await pool?.end();
+    }
   };
 };
 
