@@ -10,9 +10,20 @@ The service is intentionally narrow. It fetches replay bytes and records source 
 
 Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
 
-## Current Milestone
+## Current Milestone: v3.1 Convention Compliance & Tech-Debt Closure
 
-No active milestone. **v3.0 Track C Toolchain Convergence (pilot) shipped 2026-06-14** — see Current State below. Define the next one through `/gsd-new-milestone`.
+**Goal:** Bring `replays-fetcher` into line with its approved five-band architecture and conventions, and clear the documented tech-debt backlog — behavior-preserving except the watch pre-fetch dedup (latency / source-load) and the discovery game-date capture.
+
+**Target features:**
+- Architecture / layer compliance — a home for cross-band data contracts (`ReplayCandidate`, `RawReplayStorageEvidence`, the `RunSummary` constituents), one shared `S3Client` + `pg` client built at the composition root and injected, the `config.ts` upward import removed, the `no-leak.ts` orphan resolved.
+- God-file decomposition — split the four files carrying `oxlint-disable max-lines` (`run-once`, `discover`, `source-client`, `replay-byte-client`) within their bands and remove the suppressions.
+- Watch ingest latency & source load — pre-fetch dedup by `source_replay_id` before downloading bytes, plus non-throwing staging dedup (`ON CONFLICT DO NOTHING`) that ends the postgres duplicate-key log spam.
+- Discovery completeness — capture the listing game-date into `discoveredAt` / `replay_timestamp` and `promotion_evidence` (cross-app: coordinate the canonical date field with `server-2`).
+- Mechanical convention cleanup — bulk `type-over-interface` and `import-order` corrections, enforced so they cannot regress.
+- Correctness hygiene — the verified typed-error / unexplained-cast / swallowed-error findings from the convention audit.
+- Test-quality — AAA literal duplication, RITE multi-behavior, parameterized tables, real-sleep determinism, and untested-branch leads.
+
+**Source of scope:** the whole-repo convention audit (`pilot-v1.2-result.json`, 335 findings at `c850190` ≡ current source tree) tiered by verification trust, plus the documented `replays-fetcher/TECH-DEBT.md` backlog (TD1–TD5) and the architecture code-followups. The audit's semantic tier is Haiku-verified (~50% false-positive on the contested sample; the mechanical lane is near-100% precision), so architecture and correctness findings enter as leads verified per-finding during discuss / plan.
 
 ## Requirements
 
@@ -36,7 +47,7 @@ No active milestone. **v3.0 Track C Toolchain Convergence (pilot) shipped 2026-0
 
 ### Active
 
-No active requirements. Define the next milestone with `/gsd-new-milestone`.
+Milestone v3.1 — Convention Compliance & Tech-Debt Closure. Requirements (REQ-IDs) live in `.planning/REQUIREMENTS.md` across seven categories: architecture / layer compliance, god-file decomposition, watch ingest latency & source load, discovery completeness, mechanical convention cleanup, correctness hygiene, and test-quality.
 
 ### Out of Scope
 
@@ -87,7 +98,7 @@ The full milestone audit passed (25/25 requirements, 6/6 phases, integration cle
 
 ## Next Milestone Goals
 
-No active milestone. Define the next one through `/gsd-new-milestone`, with special attention to cross-project compatibility if scope touches staging schema, object identity, parser handoff, operator-visible statuses, `server-2`, or `web`. Candidate directions: production Kubernetes rollout, a guarded historical `~/sg_stats` import, or operating the resilient full run against the live `sg.zone` corpus.
+Active milestone: **v3.1 Convention Compliance & Tech-Debt Closure** (see above). Candidate directions for the milestone after v3.1, with special attention to cross-project compatibility if scope touches staging schema, object identity, parser handoff, operator-visible statuses, `server-2`, or `web`: production Kubernetes rollout, a guarded historical `~/sg_stats` import, or operating the resilient full run against the live `sg.zone` corpus.
 
 ## Constraints
 
@@ -146,4 +157,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state.
 
 ---
-*Last updated: 2026-06-14 after v3.0 (Track C Toolchain Convergence) milestone*
+*Last updated: 2026-06-20 — started v3.1 (Convention Compliance & Tech-Debt Closure) milestone*
