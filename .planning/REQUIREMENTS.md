@@ -20,10 +20,10 @@ Committed scope for this milestone. Each maps to exactly one roadmap phase.
 
 ### God-File Decomposition (SPLIT)
 
-- [ ] **SPLIT-01**: `src/run/run-once.ts` is split within its band into cohesive modules; its file-level `oxlint-disable max-lines` is removed and never re-added.
-- [ ] **SPLIT-02**: `src/discovery/discover.ts` is split within its band; its `max-lines` suppression is removed.
-- [ ] **SPLIT-03**: `src/discovery/source-client.ts` is split within its band; its `max-lines` suppression is removed.
-- [ ] **SPLIT-04**: `src/storage/replay-byte-client.ts` is split within its band; its `max-lines` suppression is removed.
+- [x] **SPLIT-01**: `src/run/run-once.ts` is split within its band into cohesive modules; its file-level `oxlint-disable max-lines` is removed and never re-added.
+- [x] **SPLIT-02**: `src/discovery/discover.ts` is split within its band; its `max-lines` suppression is removed.
+- [x] **SPLIT-03**: `src/discovery/source-client.ts` is split within its band; its `max-lines` suppression is removed.
+- [x] **SPLIT-04**: `src/storage/replay-byte-client.ts` is split within its band; its `max-lines` suppression is removed.
 
 ### Mechanical Convention Cleanup (MECH)
 
@@ -86,10 +86,10 @@ Each requirement maps to exactly one phase. v3.1 continues the project phase num
 | ARCH-04 | Phase 20 | Complete |
 | ARCH-05 | Phase 20 | Complete |
 | ARCH-06 | Phase 23 | Pending |
-| SPLIT-01 | Phase 22 | Pending |
-| SPLIT-02 | Phase 22 | Pending |
-| SPLIT-03 | Phase 22 | Pending |
-| SPLIT-04 | Phase 22 | Pending |
+| SPLIT-01 | Phase 22 | Complete |
+| SPLIT-02 | Phase 22 | Complete |
+| SPLIT-03 | Phase 22 | Complete |
+| SPLIT-04 | Phase 22 | Complete |
 | MECH-01 | Phase 21 | Complete |
 | MECH-02 | Phase 21 | Complete |
 | DEDUP-01 | Phase 24 | Pending |

@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.1
 milestone_name: Convention Compliance & Tech-Debt Closure
 status: executing
-stopped_at: Phase 21 complete (2/2 plans, MECH-01/02; 156 interface→type + import-sort, both lint/format-enforced locally; verify + golden oracles green). Autonomous run continuing to Phase 22.
-last_updated: "2026-06-20T11:02:26.837Z"
-last_activity: 2026-06-20 -- Phase 22 execution started
+stopped_at: Phase 22 complete (4/4 plans, SPLIT-01..04; 4 god-files split within-band via 4 PARALLEL worktrees, merged conflict-free, all <300, max-lines suppressions gone; verify + golden run-once/watch oracles green; review clean via full skill chain). Autonomous run continuing to Phase 23. HALFWAY (4/8).
+last_updated: "2026-06-20T11:50:05.206Z"
+last_activity: 2026-06-20
 progress:
   total_phases: 8
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 11
-  completed_plans: 7
-  percent: 38
+  completed_plans: 11
+  percent: 50
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-20)
 
 **Core value:** Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
-**Current focus:** Phase 22 — God-File Decomposition
+**Current focus:** Phase 23 — Depcruise Band-Fence Lock-In (Phases 19–22 shipped; HALFWAY)
 
 ## Current Position
 
-Phase: 22 (God-File Decomposition) — EXECUTING
-Plan: 1 of 4
-Status: Executing Phase 22
-Last activity: 2026-06-20 -- Phase 22 execution started
+Phase: 23 of 26 (Depcruise Band-Fence Lock-In) — next to plan
+Plan: Not started
+Status: Phases 19–22 complete (4/8) — autonomous run advancing to Phase 23
+Last activity: 2026-06-20 — Phase 22 done (4/4 SPLIT plans via 4 parallel worktrees; verify + golden oracles green; review clean)
 
-Progress: [███░░░░░░░] 38% (3/8 phases)
+Progress: [█████░░░░░] 50% (4/8 phases)
 
 ## v3.1 Roadmap Summary (Phases 19-26)
 
@@ -137,21 +137,29 @@ None.
 
 ## Next Step
 
-1. Plan Phase 22 (God-File Decomposition) — split the FOUR `oxlint-disable max-lines` god-files
-   strictly WITHIN their bands and remove the suppressions: `src/run/run-once.ts`,
-   `src/discovery/discover.ts`, `src/discovery/source-client.ts`, `src/storage/replay-byte-client.ts`.
-   Requirements SPLIT-01..04. Pure structural refactor; `verify` (incl. depcruise + knip) green
-   after EACH extraction, not just at phase end; golden oracle + 100% coverage after every move.
+1. Plan Phase 23 (Depcruise Band-Fence Lock-In, ARCH-06) — turn on the EIGHT five-band `forbidden`
+   rules in `.dependency-cruiser.cjs` inside `verify` as a NO-OP lock-in (the tree, after Phases
+   19–22, already satisfies every fence). Prove each fence FIRES via a planted-violation test.
+   The 8 fences: downward-only per band, no band-skip, PG write-scope, S3 write-scope, no-parser,
+   discovery-read-only, diagnostics-never-write, composition-root exemption.
+2. **Pre-plan tuning (load-bearing):** the `forbidden` path regexes must be tuned against the REAL
+   `ls src/` tree — adapter files live inside capability dirs, and Phase 22 added ~14 new sibling
+   modules (run-once-*, discover-*, source-client-*, replay-byte-client-*) that the regexes must
+   account for. Confirm `pnpm run depcruise` stays green (no-op) on the current tree BEFORE locking.
+3. Enforced LAST on purpose — the single most important sequencing invariant. It must lock in
+   completed work, never wedge an in-flight move.
 
-2. Mode: `parallel` — the four splits are likely file-disjoint (different bands); run their
-   executors concurrently in isolated worktrees where they do not share files. Watch
-   `src/commands/shared.ts` (now 296/300, no headroom) — not a target but keep an eye.
+## Reviewer skill-chain note (process)
 
-3. Carry-forward WR-01: the displaced `max-lines` disable in `run-once.ts` resolves naturally
-   when its suppression is removed here.
+The GSD `agent-skills` resolver returns EMPTY for `gsd-code-reviewer` when its config list has 5
+entries (flaky at 4), so the config stays at the single top review skill. To make a hand-spawned
+reviewer read the FULL chain (review-skill + shared-review-standards + fetcher-conventions +
+shared-backend-ts-standards + shared-ts-standards), inject an explicit `<agent_skills>` block of
+Read directives in the reviewer prompt — proven to work (Phase 22 review read all 5). Apply the
+same to the Phase 26 review.
 
 ## Session
 
 **Last session:** 2026-06-20
-**Stopped at:** Phase 21 complete (2/2 plans, MECH-01/02; 156 interface→type + import-sort, both enforced locally via `.oxlintrc.json`/`.oxfmtrc.json`; shared-preset propagation deferred cross-app, override accepted; verify + golden oracles green). Autonomous run continuing to Phase 22.
+**Stopped at:** Phase 22 complete (4/4 SPLIT plans; 4 god-files decomposed within-band via 4 parallel worktrees, merged conflict-free, all <300, suppressions gone; ~14 new sibling modules; verify + golden oracles green; review clean via explicit full skill-chain injection). Autonomous run at 50% (4/8), continuing to Phase 23.
 **Resume file:** None

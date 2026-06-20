@@ -58,7 +58,7 @@ Behavior-preserving migration onto the shared `@solid-stats/ts-toolchain` preset
 - [x] **Phase 19: Contracts Home + Config Import Fix + Orphan Cleanup** — Move cross-band DTOs to a leaf contracts module, kill the `config.ts` upward import, resolve the `no-leak.ts` orphan (pure type-move, zero runtime change) (completed 2026-06-20)
 - [x] **Phase 20: Composition-Root Client Consolidation + Watch Teardown** — One `S3Client` + one `pg.Pool` built and injected at the `commands/` root; `watch` drains them on SIGTERM/SIGINT (completed 2026-06-20)
 - [x] **Phase 21: Mechanical Convention Cleanup** — Bulk `interface→type` (~138) and import-order (~17) corrections, lint/formatter-enforced so they cannot regress (completed 2026-06-20)
-- [ ] **Phase 22: God-File Decomposition** — Split the four `max-lines`-suppressed god-files within their bands and remove the suppressions
+- [x] **Phase 22: God-File Decomposition** — Split the four `max-lines`-suppressed god-files within their bands and remove the suppressions (completed 2026-06-20)
 - [ ] **Phase 23: Depcruise Band-Fence Lock-In** — Turn on the eight five-band import fences in `verify`, proven by a planted-violation test (enforced LAST as a no-op lock-in)
 - [ ] **Phase 24: Watch Pre-Fetch Dedup + ON CONFLICT Staging** — Skip already-staged candidates before byte-fetch; non-throwing `ON CONFLICT DO NOTHING` ends the duplicate-key log spam (intentional behavior change)
 - [ ] **Phase 25: Discovery Game-Date Capture (Cross-App Gated)** — Parse the listing "Game date" cell to ISO-8601; populate the canonical field once agreed with `server-2` (DISC-02 may slip to v3.2)
@@ -138,12 +138,12 @@ Plans:
   4. The Docker golden run-once oracle and 100% V8 coverage stay green after every extraction — a dropped branch is caught by the oracle, not just by coverage.
 
 **Behavior-preservation gate**: golden oracle + 100% V8 coverage + depcruise + knip green after **each** extraction (run `verify` per-extraction, not once at the end).
-**Plans**: 4 plans (all Wave 1, file-disjoint, run in parallel)
+**Plans**: 4/4 plans complete
 
-- [ ] 22-01-PLAN.md — SPLIT-01: split `run/run-once.ts` (1043L) into parent + 3 same-band siblings (checkpoint/summary/page); remove the suppression
-- [ ] 22-02-PLAN.md — SPLIT-02: split `discovery/discover.ts` (701L) into parent + 2 siblings (candidate/diagnostics); remove the suppression
-- [ ] 22-03-PLAN.md — SPLIT-03: split `discovery/source-client.ts` (534L) into parent + error/retry siblings (SourceFetchError moved into the error sibling + re-exported); remove the suppression
-- [ ] 22-04-PLAN.md — SPLIT-04: split `storage/replay-byte-client.ts` (489L) into parent + error/retry siblings (ReplayByteFetchError moved + re-exported); remove the suppression
+- [x] 22-01-PLAN.md — SPLIT-01: split `run/run-once.ts` (1043L) into parent + 3 same-band siblings (checkpoint/summary/page); remove the suppression
+- [x] 22-02-PLAN.md — SPLIT-02: split `discovery/discover.ts` (701L) into parent + 2 siblings (candidate/diagnostics); remove the suppression
+- [x] 22-03-PLAN.md — SPLIT-03: split `discovery/source-client.ts` (534L) into parent + error/retry siblings (SourceFetchError moved into the error sibling + re-exported); remove the suppression
+- [x] 22-04-PLAN.md — SPLIT-04: split `storage/replay-byte-client.ts` (489L) into parent + error/retry siblings (ReplayByteFetchError moved + re-exported); remove the suppression
 
 ### Phase 23: Depcruise Band-Fence Lock-In
 
@@ -226,7 +226,7 @@ Phases execute in numeric order: 19 → 20 → 21 → 22 → 23 → 24 → 25 �
 | 19. Contracts Home + Config Fix + Orphan | v3.1 | 3/3 | Complete    | 2026-06-20 |
 | 20. Composition-Root Clients + Watch Teardown | v3.1 | 2/2 | Complete    | 2026-06-20 |
 | 21. Mechanical Convention Cleanup | v3.1 | 2/2 | Complete    | 2026-06-20 |
-| 22. God-File Decomposition | v3.1 | 0/TBD | Not started | - |
+| 22. God-File Decomposition | v3.1 | 4/4 | Complete    | 2026-06-20 |
 | 23. Depcruise Band-Fence Lock-In | v3.1 | 0/TBD | Not started | - |
 | 24. Watch Pre-Fetch Dedup + ON CONFLICT | v3.1 | 0/TBD | Not started | - |
 | 25. Discovery Game-Date Capture (gated) | v3.1 | 0/TBD | Not started | - |
