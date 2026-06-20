@@ -2,18 +2,19 @@
 gsd_state_version: 1.0
 milestone: v3.1
 milestone_name: Convention Compliance & Tech-Debt Closure
+current_phase: 26
+current_phase_name: Test-Quality Pass + Correctness Hygiene
 status: executing
-stopped_at: Phase 25 complete (1/1 plan; DISC-01/02 — discovery parses the listing "Game date" cell (DD.MM.YYYY HH:MM) into metadata.discoveredAt via parseGameDateToUtcIso (anchored day-first regex, no date lib), threaded through the existing discoveredAt pipeline; staging replayTimestamp is filename-PRIMARY with the listing game-date as a strict fallback (filename ?? listing, never overridden); golden-e2e oracle FLIPPED from discoveredAt.toBeUndefined() to a concrete UTC-shape match across every staging row; verify green 540 tests/100%, integration 10 tests green). DISC-02 listing-timezone (T-25-03) remains a manual-only ship-gate before production.
-last_updated: "2026-06-20T15:24:00.000Z"
-last_activity: 2026-06-20 — Phase 25 complete (DISC-01/02 game-date capture)
+stopped_at: "Phase 25 complete (1/1 plan; DISC-01/02 — discovery parses the listing Game-date cell into metadata.discoveredAt; staging replayTimestamp is filename-PRIMARY with the listing game-date as a strict fallback; golden-e2e oracle FLIPPED; deep review caught a real range-validation BLOCKER missed by verify+plan-check — in-shape-invalid dates -> bad timestamptz; fixed in 67c0d68 via shared componentsToUtcIso for BOTH parsers; re-review APPROVE; verify 556 tests/100%, integration green). DISC-02 listing-TZ is a documented ship-gate. Autonomous run at 88% (7/8). Phase 26 NOT started — paused here at user request (low on tokens)."
+last_updated: "2026-06-20T15:48:14.789Z"
+last_activity: 2026-06-20
+last_activity_desc: Phase 25 complete, transitioned to Phase 26
 progress:
   total_phases: 8
-  completed_phases: 8
-  total_plans: 17
-  completed_plans: 17
-  percent: 100
-current_phase: 25
-current_phase_name: Discovery Game-Date Capture (Cross-App Gated)
+  completed_phases: 7
+  total_plans: 16
+  completed_plans: 16
+  percent: 88
 ---
 
 # Project State
@@ -23,16 +24,16 @@ current_phase_name: Discovery Game-Date Capture (Cross-App Gated)
 See: .planning/PROJECT.md (updated 2026-06-20)
 
 **Core value:** Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
-**Current focus:** Phase 25 — Discovery Game-Date Capture (Cross-App Gated)
+**Current focus:** Phase 26 — Test-Quality Pass + Correctness Hygiene (NOT started — paused at user request)
 
 ## Current Position
 
-Phase: 25 — Discovery Game-Date Capture (Cross-App Gated)
-Plan: 01 complete (1/1)
+Phase: 26 — Test-Quality Pass + Correctness Hygiene
+Plan: Not started
 Status: Phase 25 complete — DISC-01/02 implemented; verify green (540 tests, 100% coverage); golden-e2e oracle flipped to assert the concrete discoveredAt UTC value. DISC-02 listing-timezone manual ship-gate (T-25-03) still open.
-Last activity: 2026-06-20 — Phase 25 complete (DISC-01/02 game-date capture)
+Last activity: 2026-06-20 — Phase 25 complete, transitioned to Phase 26
 
-Progress: [██████████] 100% (8/8 phases); plans 17/17
+Progress: [████████▓░] 88% (7/8 phases); Phase 26 remaining
 
 ## v3.1 Roadmap Summary (Phases 19-26)
 
