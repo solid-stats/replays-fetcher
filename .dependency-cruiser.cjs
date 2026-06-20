@@ -210,7 +210,8 @@ module.exports = {
     {
       name: "band-orchestration-not-upward",
       severity: "error",
-      comment: "orchestration (run/) must not import the command band (commands/, cli.ts).",
+      comment:
+        "orchestration (run/) must not import the command band (commands/, cli.ts).",
       from: { path: "^src/run/", pathNot: TEST },
       to: { path: "^src/(commands/|cli[.]ts)" },
     },
@@ -243,7 +244,8 @@ module.exports = {
     {
       name: "band-orchestration-no-raw-clients",
       severity: "error",
-      comment: "orchestration (run/) composes capabilities, never raw S3/PG/HTTP clients.",
+      comment:
+        "orchestration (run/) composes capabilities, never raw S3/PG/HTTP clients.",
       from: { path: "^src/run/", pathNot: TEST },
       to: { path: "node_modules/(?:@aws-sdk/client-s3|pg)/" },
     },
@@ -264,7 +266,10 @@ module.exports = {
       severity: "error",
       comment:
         "Only commands/ (composition root), staging/ (write) and check/ (diagnostics) may import pg.",
-      from: { path: "^src/", pathNot: ["^src/(commands|staging|check)/", TEST] },
+      from: {
+        path: "^src/",
+        pathNot: ["^src/(commands|staging|check)/", TEST],
+      },
       to: { path: "node_modules/pg/" },
     },
 

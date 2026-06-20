@@ -1462,7 +1462,12 @@ test("run-once orchestrator should only touch checkpoint, raw storage, and stagi
 // they assert a behavior spanning several modules. `no-leak.test.ts` (T-11-09)
 // guards the redaction contract across create-logger.ts + summary.ts + run-once.ts;
 // its former doc-only companion `no-leak.ts` was removed as a dead orphan (ARCH-03).
-const crossSurfaceTestFiles = new Set(["src/run/no-leak.test.ts"]);
+// `depcruise-fences.test.ts` (ARCH-06) proves the eight five-band import fences in
+// `.dependency-cruiser.cjs` fire — a build/CI-gate contract, not a source module.
+const crossSurfaceTestFiles = new Set([
+  "src/run/no-leak.test.ts",
+  "src/depcruise-fences.test.ts",
+]);
 
 test("unit tests should remain colocated beside source files", async () => {
   const projectFiles = await listProjectFiles(new URL("../", import.meta.url));
