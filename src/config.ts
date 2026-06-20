@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { ConfigValidationError } from "./errors/config-validation-error.js";
 
-import type { SourceTransport } from "./discovery/types.js";
+import type { SourceTransport } from "./types/source-transport.js";
 
 const booleanFromEnvironment = z
   .union([z.boolean(), z.string()])

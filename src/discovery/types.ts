@@ -8,10 +8,9 @@ export type {
   DiscoveryDiagnostic,
 } from "../types/discovery-diagnostic.js";
 export type { ReplayCandidate } from "../types/replay-candidate.js";
+export type { SourceTransport } from "../types/source-transport.js";
 
 export type DiscoveryMode = "dry-run";
-
-export type SourceTransport = "direct" | "ssh";
 
 export interface DiscoveryReport {
   readonly candidates: readonly ReplayCandidate[];
