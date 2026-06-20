@@ -90,6 +90,7 @@ test("ingestPage fans store→stage over the limiter and returns rawStorage/stag
   expect(result.counts).toStrictEqual({
     discovered: 1,
     failed: 0,
+    skippedBySourceId: 0,
     staged: 1,
     stored: 1,
   });
@@ -175,6 +176,7 @@ test("ingestPage tallies a skipped/already_staged candidate as neither stored no
   expect(result.counts).toStrictEqual({
     discovered: 1,
     failed: 0,
+    skippedBySourceId: 0,
     staged: 0,
     stored: 0,
   });

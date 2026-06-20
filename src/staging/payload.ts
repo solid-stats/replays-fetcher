@@ -6,7 +6,7 @@ import type {
   StageableRawReplayEvidence,
 } from "./types.js";
 
-const defaultSourceSystem = "sg-zone";
+export const defaultSourceSystem = "sg-zone";
 
 type ToIngestStagingPayloadOptions = {
   readonly runId?: string;
