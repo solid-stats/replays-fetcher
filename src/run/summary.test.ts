@@ -129,6 +129,7 @@ test("buildRunSummary should aggregate successful run counts without secrets", (
       failed: 0,
       fetched: 1,
       skipped: 0,
+      skippedBySourceId: 0,
       staged: 1,
       stored: 1,
     },
@@ -152,6 +153,57 @@ test("buildRunSummary should aggregate successful run counts without secrets", (
   expect(JSON.stringify(summary)).not.toContain("requests");
   expect(JSON.stringify(summary)).not.toContain("moderation_actions");
   expect(runExitCode(summary)).toBe(0);
+});
+
+test("buildRunSummary should default skippedBySourceId to 0 when the input omits it", () => {
+  const summary = buildRunSummary({
+    discoveryReport: discoveryReport(),
+    finishedAt,
+    rawStorage: [raw("stored")],
+    runId,
+    staging: [{ stagingId: "staging-1", status: "staged" }],
+    startedAt,
+  });
+
+  expect(summary.counts.skippedBySourceId).toBe(0);
+});
+
+test("buildRunSummary should reflect a supplied skippedBySourceId without touching skipped or duplicate", () => {
+  const supplied = Number("3");
+  const summary = buildRunSummary({
+    discoveryReport: discoveryReport(),
+    finishedAt,
+    rawStorage: [raw("skipped")],
+    runId,
+    skippedBySourceId: supplied,
+    staging: [{ status: "already_staged" }],
+    startedAt,
+  });
+
+  // The new bucket reflects the caller value …
+  expect(summary.counts.skippedBySourceId).toBe(supplied);
+  // … while skipped (raw skipped + not_stageable) and duplicate
+  // (already_staged) are derived from the arrays and independent of it.
+  expect(summary.counts.skipped).toBe(1);
+  expect(summary.counts.duplicate).toBe(1);
+});
+
+test("buildRunSummary should keep skipped and duplicate independent of a zero skippedBySourceId", () => {
+  const summary = buildRunSummary({
+    discoveryReport: discoveryReport(),
+    finishedAt,
+    rawStorage: [raw("skipped")],
+    runId,
+    staging: [
+      { status: "already_staged" },
+      { reason: "not stageable", status: "not_stageable" },
+    ],
+    startedAt,
+  });
+
+  expect(summary.counts.skippedBySourceId).toBe(0);
+  expect(summary.counts.skipped).toBe(2);
+  expect(summary.counts.duplicate).toBe(1);
 });
 
 test("buildRunSummary should classify source, raw storage, and staging failures", () => {
@@ -554,6 +606,7 @@ test("buildConfigInvalidRunSummary should produce a failed run-once summary", ()
       failed: 0,
       fetched: 0,
       skipped: 0,
+      skippedBySourceId: 0,
       staged: 0,
       stored: 0,
     },
@@ -740,6 +793,7 @@ test("toCompactSummary should omit absent optional keys (Object.hasOwn === false
       failed: 0,
       fetched: 0,
       skipped: 0,
+      skippedBySourceId: 0,
       staged: 0,
       stored: 0,
     },

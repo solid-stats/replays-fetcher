@@ -25,6 +25,7 @@ const counts = {
   failed: 0,
   fetched: 1,
   skipped: 0,
+  skippedBySourceId: 0,
   staged: 1,
   stored: 1,
 } as const;
