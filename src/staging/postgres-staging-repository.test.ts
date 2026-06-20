@@ -84,6 +84,19 @@ const createUniqueViolationClient = (
   return client;
 };
 
+const createBenignConflictClient = (
+  objectRows: readonly StagingRow[],
+): StagingQueryClient =>
+  ({
+    async query(text: string) {
+      if (normalizeSql(text).startsWith("insert into ingest_staging_records")) {
+        return { rows: [] };
+      }
+
+      return { rows: objectRows };
+    },
+  }) as StagingQueryClient;
+
 test("PostgresStagingRepository should insert pending ingest staging records", async () => {
   const calls: QueryCall[] = [];
   const client = {
@@ -122,9 +135,9 @@ test("PostgresStagingRepository should insert pending ingest staging records", a
   );
 });
 
-test("PostgresStagingRepository should return already_staged for matching source identity", async () => {
+test("PostgresStagingRepository should return already_staged via empty RETURNING rows for a benign exact duplicate", async () => {
   const repository = createPostgresStagingRepository(
-    createUniqueViolationClient([
+    createBenignConflictClient([
       {
         checksum,
         id: insertedStagingId,
@@ -147,6 +160,18 @@ test("PostgresStagingRepository should return already_staged for matching source
     payload,
     stagingId: insertedStagingId,
     status: "already_staged",
+  });
+});
+
+test("PostgresStagingRepository should fall through to classify when benign empty rows resolve no existing row", async () => {
+  const repository = createPostgresStagingRepository(
+    createBenignConflictClient([]),
+  );
+
+  await expect(repository.stage(payload)).resolves.toStrictEqual({
+    payload,
+    reason: "unique_violation_without_existing_staging",
+    status: "failed",
   });
 });
 
@@ -220,21 +245,6 @@ test("PostgresStagingRepository should return structured failure for database er
       throw new Error("database unavailable");
     },
   });
-
-  await expect(repository.stage(payload)).resolves.toStrictEqual({
-    payload,
-    reason: "staging_write_failed",
-    status: "failed",
-  });
-});
-
-test("PostgresStagingRepository should fail when insert returns no row", async () => {
-  const client = {
-    async query() {
-      return { rows: [] };
-    },
-  } as StagingQueryClient;
-  const repository = createPostgresStagingRepository(client);
 
   await expect(repository.stage(payload)).resolves.toStrictEqual({
     payload,

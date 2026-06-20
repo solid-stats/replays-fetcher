@@ -40,16 +40,6 @@ const isUniqueViolation = (error: unknown): boolean =>
   "code" in error &&
   (error as DatabaseError).code === uniqueViolationCode;
 
-const requiredRow = <Row>(rows: readonly Row[]): Row => {
-  const [row] = rows;
-
-  if (row === undefined) {
-    throw new Error("Expected staging insert to return a row");
-  }
-
-  return row;
-};
-
 const insertStaging = async (
   client: StagingQueryClient,
   payload: IngestStagingPayload,
@@ -68,6 +58,7 @@ const insertStaging = async (
         conflict_details
       )
       values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb)
+      on conflict (checksum, object_key) do nothing
       returning id
     `,
     [
@@ -179,13 +170,31 @@ export const createPostgresStagingRepository = (
   async stage(payload): Promise<IngestStagingResult> {
     try {
       const result = await insertStaging(client, payload);
-      const row = requiredRow(result.rows);
+      const [inserted] = result.rows;
 
-      return {
-        payload,
-        stagingId: row.id,
-        status: "staged",
-      };
+      if (inserted !== undefined) {
+        return {
+          payload,
+          stagingId: inserted.id,
+          status: "staged",
+        };
+      }
+
+      // Zero RETURNING rows: the benign (checksum, object_key) conflict fired
+      // and was skipped by ON CONFLICT DO NOTHING — resolve the existing row so
+      // already_staged still carries a stagingId (no throw on this path).
+      const existing = await findByObjectIdentity(client, payload);
+
+      if (existing !== undefined) {
+        return {
+          existing: toExisting(existing),
+          payload,
+          stagingId: existing.id,
+          status: "already_staged",
+        };
+      }
+
+      return classifyExistingStaging(client, payload);
     } catch (error) {
       if (!isUniqueViolation(error)) {
         return {
