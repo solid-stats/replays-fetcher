@@ -95,7 +95,7 @@ export const registerWatchCommand = (
         configResult.config,
         true,
       );
-      const { dispose, shouldStop } = createShutdownSeam();
+      const { dispose: disposeShutdownSeam, shouldStop } = createShutdownSeam();
 
       try {
         // WATCH-02: the watcher is checkpoint-independent —
@@ -130,11 +130,15 @@ export const registerWatchCommand = (
         await flushLogger(rootLogger);
         process.exitCode = result.exitCode;
       } finally {
+        // ARCH-05: drain the composition-root clients AFTER the loop resolves
+        // (the drain point — in-flight ingest is already done) and after the
+        // pino flush. Idempotent: a double signal still ends the pool once.
+        await resources.dispose();
         // Production-owned listener cleanup: remove both signal handlers
         // (including the unfired counterpart) so the daemon never leaks a
         // process listener and does not lean on a test harness's
         // removeAllListeners.
-        dispose();
+        disposeShutdownSeam();
       }
     });
 };

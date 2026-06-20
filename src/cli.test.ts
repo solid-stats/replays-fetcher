@@ -2237,7 +2237,7 @@ test("buildCli watch should emit a config-invalid summary and exit 2 without sid
   expect(process.exitCode).toBe(2);
 });
 
-test("buildCli watch should register SIGTERM/SIGINT handlers that flip the stop seam, awaiting flush before exitCode", async () => {
+test("buildCli watch should register SIGTERM/SIGINT handlers that flip the stop seam, draining clients after flush", async () => {
   stubValidEnvironment();
   const events: string[] = [];
   const log = createLogger({
@@ -2258,11 +2258,23 @@ test("buildCli watch should register SIGTERM/SIGINT handlers that flip the stop 
   };
   vi.spyOn(process.stdout, "write").mockImplementation(() => true);
 
+  // Inject FAKE clients (Pitfall 4): without this, createStoreRawResources
+  // builds a REAL pg.Pool, and the new resources.dispose() would call
+  // `.end()` on an unconnected pool → open-handle flake. The teardown record
+  // proves dispose() ran AFTER the flush.
+  const poolEnd = vi.fn(async (): Promise<void> => {
+    events.push("teardown");
+  });
+  const s3Destroy = vi.fn();
+
   await buildCli({
     createLogger: () => log,
+    createPgPool: () => ({ end: poolEnd, query: vi.fn() }) as unknown as Pool,
     createPostgresStagingRepository: () => ({ stage: vi.fn() }),
     createReplayByteClient: () => ({ fetchBytes: vi.fn() }),
     createS3CheckpointStore: () => ({ read: vi.fn(), write: vi.fn() }),
+    createS3Client: () =>
+      ({ destroy: s3Destroy, send: vi.fn() }) as unknown as S3Client,
     createS3RawReplayStorage: () => ({ storeRawReplay: vi.fn() }),
     createSourceClient: () => ({ fetchText: vi.fn() }),
     now: () => new Date("2026-06-16T12:00:00.000Z"),
@@ -2278,8 +2290,45 @@ test("buildCli watch should register SIGTERM/SIGINT handlers that flip the stop 
     },
   }).parseAsync(["node", "replays-fetcher", "watch"]);
 
-  // The flush is awaited AFTER the loop resolves and BEFORE exitCode is set.
-  expect(events).toStrictEqual(["loop", "flush"]);
+  // Teardown drains the clients exactly once, AFTER the loop resolves and the
+  // pino flush — events end loop → flush → teardown.
+  expect(events).toStrictEqual(["loop", "flush", "teardown"]);
+  expect(poolEnd).toHaveBeenCalledTimes(1);
+  expect(s3Destroy).toHaveBeenCalledTimes(1);
+  expect(process.exitCode).toBe(0);
+});
+
+test("buildCli watch ends the pool exactly once even when SIGTERM fires twice (idempotent teardown)", async () => {
+  stubValidEnvironment();
+  vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+  const poolEnd = vi.fn(async (): Promise<void> => undefined);
+  const s3Destroy = vi.fn();
+
+  await buildCli({
+    createPgPool: () => ({ end: poolEnd, query: vi.fn() }) as unknown as Pool,
+    createPostgresStagingRepository: () => ({ stage: vi.fn() }),
+    createReplayByteClient: () => ({ fetchBytes: vi.fn() }),
+    createS3CheckpointStore: () => ({ read: vi.fn(), write: vi.fn() }),
+    createS3Client: () =>
+      ({ destroy: s3Destroy, send: vi.fn() }) as unknown as S3Client,
+    createS3RawReplayStorage: () => ({ storeRawReplay: vi.fn() }),
+    createSourceClient: () => ({ fetchText: vi.fn() }),
+    now: () => new Date("2026-06-16T12:00:00.000Z"),
+    async runWatchLoop(input: { readonly shouldStop: () => boolean }) {
+      // Two signals (e.g. k8s SIGTERM then SIGINT-as-SIGTERM): the seam flips
+      // once, the loop exits once, and the once-guard in dispose() must keep
+      // pool.end() to a single call with no unhandled rejection.
+      process.emit("SIGTERM");
+      process.emit("SIGTERM");
+      expect(input.shouldStop()).toBe(true);
+
+      return { exitCode: 0 as const };
+    },
+  }).parseAsync(["node", "replays-fetcher", "watch"]);
+
+  expect(poolEnd).toHaveBeenCalledTimes(1);
+  expect(s3Destroy).toHaveBeenCalledTimes(1);
   expect(process.exitCode).toBe(0);
 });
 
@@ -2291,16 +2340,20 @@ test("buildCli watch removes BOTH signal handlers after the loop resolves (no le
   const sigintBefore = process.listenerCount("SIGINT");
 
   await buildCli({
+    createPgPool: () => ({ end: vi.fn(), query: vi.fn() }) as unknown as Pool,
     createPostgresStagingRepository: () => ({ stage: vi.fn() }),
     createReplayByteClient: () => ({ fetchBytes: vi.fn() }),
     createS3CheckpointStore: () => ({ read: vi.fn(), write: vi.fn() }),
+    createS3Client: () =>
+      ({ destroy: vi.fn(), send: vi.fn() }) as unknown as S3Client,
     createS3RawReplayStorage: () => ({ storeRawReplay: vi.fn() }),
     createSourceClient: () => ({ fetchText: vi.fn() }),
     now: () => new Date("2026-06-16T12:00:00.000Z"),
     // The loop returns WITHOUT any signal firing, so the SIGTERM/SIGINT handlers
-    // are both unfired — production `dispose()` must still remove them. If it
-    // leaned on the test harness's removeAllListeners, the counts would be off
-    // here (the harness only runs in afterEach, after this assertion).
+    // are both unfired — production `disposeShutdownSeam()` must still remove
+    // them. If it leaned on the test harness's removeAllListeners, the counts
+    // would be off here (the harness only runs in afterEach, after this
+    // assertion). The client teardown (resources.dispose) registers no listener.
     runWatchLoop: (async () => ({ exitCode: 0 as const })) as never,
   }).parseAsync(["node", "replays-fetcher", "watch"]);
 
