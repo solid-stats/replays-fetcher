@@ -184,7 +184,11 @@ Plans:
   - **Human-in-the-loop — TECH-DEBT-explicit (DEDUP-01)** — pre-fetch `source_replay_id` dedup needs human review before shipping to staging.
 
 **Behavior-preservation gate**: golden watch oracle **updated** to the new expected dedup counts (intentional behavior change), 100% V8 coverage maintained, depcruise + knip green.
-**Plans**: TBD
+**Plans**: 3 plans (Wave 1: 24-01 + 24-02 parallel; Wave 2: 24-03)
+
+- [ ] 24-01-PLAN.md — Staging adapter: `ON CONFLICT (checksum, object_key) DO NOTHING` benign insert + `existsBySourceIdentity` (DEDUP-02, DEDUP-03)
+- [ ] 24-02-PLAN.md — Distinct `skippedBySourceId` counter on RunSummaryCounts/emptyCounts/countRun/buildRunSummary (DEDUP-01, DEDUP-02)
+- [ ] 24-03-PLAN.md — Watch-only `prefetchDedup` gate in `ingestPage` + cannot-miss property test + golden-watch oracle FLIP (DEDUP-01, DEDUP-02, DEDUP-03)
 
 ### Phase 25: Discovery Game-Date Capture (Cross-App Gated)
 

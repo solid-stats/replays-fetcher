@@ -1,8 +1,8 @@
 ---
 phase: 24
 slug: watch-pre-fetch-dedup-on-conflict-staging
-status: draft
-nyquist_compliant: false
+status: planned
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-06-20
 ---
@@ -50,7 +50,13 @@ created: 2026-06-20
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | Status |
 |---------|------|------|-------------|-----------|-------------------|--------|
-| _pending planner_ | — | — | DEDUP-01..03 | — | — | ⬜ pending |
+| 24-01 Task 1 — ON CONFLICT (checksum,object_key) DO NOTHING benign insert | 24-01 | 1 | DEDUP-02 | unit | `pnpm vitest run src/staging/postgres-staging-repository.test.ts` | ⬜ pending |
+| 24-01 Task 2 — existsBySourceIdentity + benign-quiet + conflict-not-swallowed (§B) | 24-01 | 1 | DEDUP-03 | testcontainers PostgreSQL integration | `pnpm run test:integration` (staging suite) | ⬜ pending |
+| 24-02 Task 1 — skippedBySourceId on RunSummaryCounts/emptyCounts/countRun | 24-02 | 1 | DEDUP-01, DEDUP-02 | unit | `pnpm vitest run src/run/summary.test.ts` | ⬜ pending |
+| 24-02 Task 2 — buildRunSummary threads skippedBySourceId (default 0, run-once byte-identical) | 24-02 | 1 | DEDUP-01, DEDUP-02 | unit | `pnpm vitest run src/run/summary.test.ts` | ⬜ pending |
+| 24-03 Task 1 — cannot-miss property test over the externalId state matrix + skip tally | 24-03 | 2 | DEDUP-01 | unit property table (test.each) | `pnpm vitest run src/run/ingest-page.test.ts` | ⬜ pending |
+| 24-03 Task 2 — watch runCycle sets prefetchDedup, threads sourceSystem + skip count | 24-03 | 2 | DEDUP-01, DEDUP-02 | unit | `pnpm vitest run src/run/watch-loop.test.ts` | ⬜ pending |
+| 24-03 Task 3 — golden WATCH oracle FLIPPED (cycles ≥2: zero fetchBytes, skippedBySourceId asserted, duplicate 0); run-once oracle unchanged | 24-03 | 2 | DEDUP-01, DEDUP-03 | golden oracle (testcontainers PG + MinIO) | `pnpm run test:integration` | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
