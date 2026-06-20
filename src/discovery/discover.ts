@@ -1,5 +1,16 @@
-import type { RetryAttemptEvent } from "../source/retry.js";
 /* oxlint-disable max-lines -- Discovery orchestration is split once storage/staging phases add separate modules. */
+import {
+  buildReadOptions,
+  buildReport,
+  buildSourceFailureDiagnostic,
+  diagnosticEvidence,
+  withOptionalDiagnosticEvidence,
+} from "./discover-diagnostics.js";
+import type {
+  DiscoverPageCandidatesResult,
+  DiscoverReplaysDryRunOptions,
+  ReadOptions,
+} from "./discover-types.js";
 import { extractFilenameFromDetailHtml, extractReplayRows } from "./html.js";
 import { SourceFetchError } from "./source-client.js";
 import type {
@@ -8,24 +19,6 @@ import type {
   ReplayCandidate,
   SourceClient,
 } from "./types.js";
-
-type DiscoverReplaysDryRunOptions = {
-  readonly attempts?: number;
-  readonly generatedAt?: string;
-  readonly maxPages?: number;
-  readonly onRetry?: (event: RetryAttemptEvent) => void;
-  readonly requestDelayMs?: number;
-  readonly sleep?: (milliseconds: number) => Promise<void>;
-  readonly sourceClient: SourceClient;
-  readonly sourceUrl: URL;
-};
-
-type ReadOptions = {
-  readonly attempts?: number;
-  readonly onRetry?: (event: RetryAttemptEvent) => void;
-  readonly page: number;
-  readonly phase: "detail" | "list";
-};
 
 type SourceCandidateFixture = {
   readonly discoveredAt?: string;
@@ -55,18 +48,6 @@ type MutableReplaySource = {
   page?: number;
   rawUrl?: string;
   url: string;
-};
-
-type BuildReportOptions = {
-  readonly candidates: readonly ReplayCandidate[];
-  readonly diagnostics: readonly DiscoveryDiagnostic[];
-  readonly ok: boolean;
-  readonly options: DiscoverReplaysDryRunOptions;
-};
-
-type DiscoverPageCandidatesResult = {
-  readonly candidates: readonly ReplayCandidate[];
-  readonly diagnostics: readonly DiscoveryDiagnostic[];
 };
 
 type CandidateFixtureResult =
@@ -265,57 +246,6 @@ const hasChangedMetadata = (
   });
 };
 
-const diagnosticEvidence = (
-  externalId: string | undefined,
-  page: number | undefined,
-): {
-  readonly externalId?: string;
-  readonly page?: number;
-} => {
-  const evidence: {
-    externalId?: string;
-    page?: number;
-  } = {};
-
-  if (externalId !== undefined) {
-    evidence.externalId = externalId;
-  }
-
-  if (page !== undefined) {
-    evidence.page = page;
-  }
-
-  return evidence;
-};
-
-const withOptionalDiagnosticEvidence = (
-  diagnostic: DiscoveryDiagnostic,
-  evidence: {
-    readonly externalId?: string;
-    readonly page?: number;
-  },
-): DiscoveryDiagnostic => {
-  const nextDiagnostic: {
-    candidateIndex?: number;
-    code: DiscoveryDiagnostic["code"];
-    externalId?: string;
-    message: string;
-    page?: number;
-    severity: DiscoveryDiagnostic["severity"];
-    sourceUrl?: string;
-  } = { ...diagnostic };
-
-  if (evidence.externalId !== undefined) {
-    nextDiagnostic.externalId = evidence.externalId;
-  }
-
-  if (evidence.page !== undefined) {
-    nextDiagnostic.page = evidence.page;
-  }
-
-  return nextDiagnostic;
-};
-
 const collectCandidateDiagnostics = (
   candidates: readonly ReplayCandidate[],
 ): DiscoverPageCandidatesResult => {
@@ -487,147 +417,6 @@ const discoverPageCandidates = async (input: {
     candidates: candidateDiagnostics.candidates,
     diagnostics: [...diagnostics, ...candidateDiagnostics.diagnostics],
   };
-};
-
-const buildReport = (input: BuildReportOptions): DiscoveryReport => {
-  const report: DiscoveryReport = {
-    candidates: input.candidates,
-    counts: {
-      candidates: input.candidates.length,
-      diagnostics: input.diagnostics.length,
-      discovered: input.candidates.length,
-    },
-    diagnostics: input.diagnostics,
-    generatedAt: input.options.generatedAt ?? new Date().toISOString(),
-    mode: "dry-run",
-    ok: input.ok,
-    sourceUrl: input.options.sourceUrl.toString(),
-  };
-
-  if (input.options.maxPages !== undefined) {
-    return {
-      ...report,
-      maxPages: input.options.maxPages,
-    };
-  }
-
-  return report;
-};
-
-const attachNumber = (
-  diagnostic: DiscoveryDiagnostic,
-  key: "attempts" | "httpStatus" | "page",
-  value: unknown,
-): DiscoveryDiagnostic => {
-  if (typeof value !== "number") {
-    return diagnostic;
-  }
-
-  return { ...diagnostic, [key]: value };
-};
-
-const attachString = (
-  diagnostic: DiscoveryDiagnostic,
-  key: "causeCode" | "causeMessage",
-  value: unknown,
-): DiscoveryDiagnostic => {
-  if (typeof value !== "string") {
-    return diagnostic;
-  }
-
-  return { ...diagnostic, [key]: value };
-};
-
-const attachPhase = (
-  diagnostic: DiscoveryDiagnostic,
-  value: unknown,
-): DiscoveryDiagnostic => {
-  if (value !== "bytes" && value !== "detail" && value !== "list") {
-    return diagnostic;
-  }
-
-  return { ...diagnostic, phase: value };
-};
-
-const attachCfChallenge = (
-  diagnostic: DiscoveryDiagnostic,
-  value: unknown,
-): DiscoveryDiagnostic => {
-  if (value !== true) {
-    return diagnostic;
-  }
-
-  return { ...diagnostic, cfChallenge: true };
-};
-
-const withSourceFailureEvidence = (
-  diagnostic: DiscoveryDiagnostic,
-  details: Readonly<Record<string, unknown>> | undefined,
-): DiscoveryDiagnostic => {
-  if (details === undefined) {
-    return diagnostic;
-  }
-
-  let next = attachNumber(diagnostic, "attempts", details["attempts"]);
-  next = attachNumber(next, "httpStatus", details["httpStatus"]);
-  next = attachNumber(next, "page", details["page"]);
-  next = attachString(next, "causeCode", details["causeCode"]);
-  next = attachString(next, "causeMessage", details["causeMessage"]);
-  next = attachPhase(next, details["phase"]);
-  next = attachCfChallenge(next, details["cfChallenge"]);
-
-  return next;
-};
-
-const detailUrlOrSource = (error: SourceFetchError, sourceUrl: URL): string => {
-  const url = error.details?.["url"];
-
-  if (typeof url === "string") {
-    return url;
-  }
-
-  return sourceUrl.toString();
-};
-
-/**
- * Maps the thrown `SourceFetchError` into an enriched, identifiers-only
- * `DiscoveryDiagnostic` (DIAG-01/04). The enriched evidence (phase, httpStatus,
- * causeCode, causeMessage, page, attempts, cfChallenge) is read from the
- * error's `details` allowlist; each optional field is attached only when defined
- * so exact-optional typing holds. No response body / bytes / secret is copied.
- */
-const buildSourceFailureDiagnostic = (
-  error: SourceFetchError,
-  sourceUrl: URL,
-  failedPage: number,
-): DiscoveryDiagnostic => {
-  const base: DiscoveryDiagnostic = {
-    code: error.code,
-    message: error.message,
-    page: failedPage,
-    severity: "error",
-    sourceUrl: detailUrlOrSource(error, sourceUrl),
-  };
-
-  return withSourceFailureEvidence(base, error.details);
-};
-
-const buildReadOptions = (
-  options: DiscoverReplaysDryRunOptions,
-  page: number,
-  phase: "detail" | "list",
-): ReadOptions => {
-  let readOptions: ReadOptions = { page, phase };
-
-  if (options.attempts !== undefined) {
-    readOptions = { ...readOptions, attempts: options.attempts };
-  }
-
-  if (options.onRetry !== undefined) {
-    readOptions = { ...readOptions, onRetry: options.onRetry };
-  }
-
-  return readOptions;
 };
 
 const createPacedSourceClient = (
