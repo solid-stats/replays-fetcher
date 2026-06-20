@@ -11,7 +11,7 @@ Committed scope for this milestone. Each maps to exactly one roadmap phase.
 
 ### Architecture & Layer Compliance (ARCH)
 
-- [ ] **ARCH-01**: Cross-band data contracts (`ReplayCandidate`, `RawReplayStorageEvidence`, `RunSummary`/`CompactRunSummary`, `IngestStagingPayload`) live in a single cross-cutting contracts module at the bottom of the dependency graph; no band defines a type that another band imports upward. Builders stay in their owning bands — only the types move.
+- [ ] **ARCH-01**: Cross-band data contracts (`ReplayCandidate`, `RawReplayStorageEvidence`, `RunSummary`/`CompactRunSummary`, `IngestStagingPayload`) live in the cross-cutting **`src/types/`** module at the bottom of the dependency graph (naming RESOLVED — see Pre-Plan Coordination); no band defines a type that another band imports upward. Builders stay in their owning bands — only the types move; per-band `types.ts` keep band-local types only.
 - [ ] **ARCH-02**: The `config.ts` upward import of `SourceTransport` from `discovery/` is removed; `config.ts` depends on nothing upward.
 - [ ] **ARCH-03**: The `no-leak.ts` orphan module is resolved (wired or removed); knip reports no orphans.
 - [ ] **ARCH-04**: Exactly one `S3Client` and one `pg.Pool` are constructed in `src/`, built at the `commands/` composition root and injected; all `*FromConfig` convenience factories are removed (grep proves one constructor each).
@@ -57,7 +57,7 @@ Committed scope for this milestone. Each maps to exactly one roadmap phase.
 
 | Item | Gates | Owner / Action |
 |------|-------|----------------|
-| Contracts home naming: `contracts/` (research recommendation) vs the already-encoded `types/` | ARCH-01 | Decide at discuss/plan; encode in the depcruise preset + conventions skill in the same plan |
+| Contracts home naming: `contracts/` vs `types/` | ARCH-01 | **RESOLVED 2026-06-20 → `src/types/`.** Conventions skill §A already names the cross-cutting band `types/` (signed off) and `src/types/run-summary.ts` is the existing seed; keeping `types/` needs no vendored-skill or depcruise change. `contracts/` was rejected: its only edge is naming clarity, which does not justify diverging from signed-off §A or a cross-repo skill edit inside a milestone whose purpose is closing code↔skill gaps. Action: move scattered cross-band contracts into `src/types/`; per-band `types.ts` keep band-local types. |
 | Canonical replay-date field (`promotion_evidence.discoveredAt` vs `replay_timestamp`), format, timezone, `web` read-path | DISC-02 | Synchronous question to `server-2` (hard blocker; DISC-02 may slip to v3.2) |
 | `ON CONFLICT` benign-vs-conflicting semantics vs the server-2 poller's expectations | DEDUP-03 | Question to `server-2` before the phase is planned |
 | Pre-fetch `source_replay_id` dedup needs human-in-the-loop review before ship | DEDUP-01 | TECH-DEBT-explicit; review gate before staging deploy |
