@@ -98,6 +98,54 @@ test("toIngestStagingPayload should omit absent discovered timestamp evidence", 
   });
 });
 
+test("replayTimestamp keeps the filename-derived value when both filename and listing game-date are present", () => {
+  const result = toIngestStagingPayload({
+    ...storedEvidence,
+    discoveredAt: "2099-01-01T00:00:00.000Z",
+    sourceFilename: "2026_05_09__00_32_44__1_ocap",
+  });
+
+  expect(result).toMatchObject({
+    payload: {
+      replayTimestamp: "2026-05-09T00:32:44.000Z",
+    },
+    stageable: true,
+  });
+});
+
+test("replayTimestamp falls back to the listing game-date when the filename carries no timestamp", () => {
+  const result = toIngestStagingPayload({
+    ...storedEvidence,
+    discoveredAt: "2026-06-14T19:01:00.000Z",
+    sourceFilename: "custom-replay-name.ocap",
+  });
+
+  expect(result).toMatchObject({
+    payload: {
+      replayTimestamp: "2026-06-14T19:01:00.000Z",
+    },
+    stageable: true,
+  });
+});
+
+test("replayTimestamp is absent when neither the filename nor the listing game-date carries a timestamp", () => {
+  const evidenceWithoutTimestamps: RawReplayStorageEvidence = {
+    bucket: storedEvidence.bucket,
+    byteSize: storedEvidence.byteSize,
+    checksum: storedEvidence.checksum,
+    fetchedAt: storedEvidence.fetchedAt,
+    objectKey: storedEvidence.objectKey,
+    source: storedEvidence.source,
+    sourceFilename: "custom-replay-name.ocap",
+    status: storedEvidence.status,
+  };
+  const result = toIngestStagingPayload(evidenceWithoutTimestamps);
+
+  if (result.stageable) {
+    expect(result.payload).not.toHaveProperty("replayTimestamp");
+  }
+});
+
 test("toIngestStagingPayload should preserve skipped raw storage status as stageable evidence", () => {
   const result = toIngestStagingPayload({
     ...storedEvidence,
