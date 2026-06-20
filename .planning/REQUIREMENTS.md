@@ -11,9 +11,9 @@ Committed scope for this milestone. Each maps to exactly one roadmap phase.
 
 ### Architecture & Layer Compliance (ARCH)
 
-- [ ] **ARCH-01**: Cross-band data contracts (`ReplayCandidate`, `RawReplayStorageEvidence`, `RunSummary`/`CompactRunSummary`, `IngestStagingPayload`) live in the cross-cutting **`src/types/`** module at the bottom of the dependency graph (naming RESOLVED — see Pre-Plan Coordination); no band defines a type that another band imports upward. Builders stay in their owning bands — only the types move; per-band `types.ts` keep band-local types only.
-- [ ] **ARCH-02**: The `config.ts` upward import of `SourceTransport` from `discovery/` is removed; `config.ts` depends on nothing upward.
-- [ ] **ARCH-03**: The `no-leak.ts` orphan module is resolved (wired or removed); knip reports no orphans.
+- [x] **ARCH-01**: Cross-band data contracts (`ReplayCandidate`, `RawReplayStorageEvidence`, `RunSummary`/`CompactRunSummary`, `IngestStagingPayload`) live in the cross-cutting **`src/types/`** module at the bottom of the dependency graph (naming RESOLVED — see Pre-Plan Coordination); no band defines a type that another band imports upward. Builders stay in their owning bands — only the types move; per-band `types.ts` keep band-local types only.
+- [x] **ARCH-02**: The `config.ts` upward import of `SourceTransport` from `discovery/` is removed; `config.ts` depends on nothing upward.
+- [x] **ARCH-03**: The `no-leak.ts` orphan module is resolved (wired or removed); knip reports no orphans.
 - [ ] **ARCH-04**: Exactly one `S3Client` and one `pg.Pool` are constructed in `src/`, built at the `commands/` composition root and injected; all `*FromConfig` convenience factories are removed (grep proves one constructor each).
 - [ ] **ARCH-05**: The `watch` daemon drains the `pg.Pool` and destroys the `S3Client` on SIGTERM/SIGINT before exit; adapters never tear down injected clients.
 - [ ] **ARCH-06**: The five-band import fences (downward-only, no band-skip, PG write-scope, S3 write-scope, no-parser, discovery-read-only, diagnostics-never-write, composition-root exemption) are enforced by `.dependency-cruiser.cjs` inside `verify` and proven by a planted-violation test.
@@ -80,9 +80,9 @@ Each requirement maps to exactly one phase. v3.1 continues the project phase num
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ARCH-01 | Phase 19 | Pending |
-| ARCH-02 | Phase 19 | Pending |
-| ARCH-03 | Phase 19 | Pending |
+| ARCH-01 | Phase 19 | Complete |
+| ARCH-02 | Phase 19 | Complete |
+| ARCH-03 | Phase 19 | Complete |
 | ARCH-04 | Phase 20 | Pending |
 | ARCH-05 | Phase 20 | Pending |
 | ARCH-06 | Phase 23 | Pending |
@@ -105,12 +105,14 @@ Each requirement maps to exactly one phase. v3.1 continues the project phase num
 | TEST-05 | Phase 26 | Pending |
 
 **Coverage:**
+
 - v3.1 requirements: 23 total
 - Mapped to phases: 23 ✓ (every requirement maps to exactly one phase; no orphans, no duplicates)
 - Unmapped: 0
 - Note: DISC-02 is mapped to Phase 25 but its contract-write/oracle-flip portion is **Blocked** on a server-2 canonical-date-field decision and may slip to v3.2; DISC-01 (local parse) ships independently within Phase 25.
 
 **Phase → requirement summary:**
+
 - Phase 19 (Contracts Home + Config Fix + Orphan): ARCH-01, ARCH-02, ARCH-03
 - Phase 20 (Composition-Root Clients + Watch Teardown): ARCH-04, ARCH-05
 - Phase 21 (Mechanical Convention Cleanup): MECH-01, MECH-02

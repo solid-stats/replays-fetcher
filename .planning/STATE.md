@@ -2,15 +2,16 @@
 gsd_state_version: 1.0
 milestone: v3.1
 milestone_name: Convention Compliance & Tech-Debt Closure
-status: planning
-last_updated: "2026-06-20T06:30:00.000Z"
+status: executing
+stopped_at: Phase 19 complete (ARCH-01/02/03, 3/3 plans, verify + golden-oracle green); autonomous run continuing to Phase 20.
+last_updated: "2026-06-20T08:44:55.226Z"
 last_activity: 2026-06-20
 progress:
   total_phases: 8
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 1
+  total_plans: 3
+  completed_plans: 3
+  percent: 13
 ---
 
 # Project State
@@ -20,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-20)
 
 **Core value:** Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
-**Current focus:** v3.1 Convention Compliance & Tech-Debt Closure — roadmapped (Phases 19-26). Next: plan Phase 19.
+**Current focus:** Phase 20 — Composition-Root Client Consolidation + Watch Teardown (Phase 19 shipped)
 
 ## Current Position
 
-Phase: 19 of 26 (Contracts Home + Config Import Fix + Orphan Cleanup) — first v3.1 phase
-Plan: — of — (not yet planned)
-Status: Ready to plan
-Last activity: 2026-06-20 — v3.1 roadmap created (8 phases, 19-26), 23/23 requirements mapped
+Phase: 20 of 26 (Composition-Root Client Consolidation + Watch Teardown)
+Plan: Not started (next: plan Phase 20)
+Status: Phase 19 complete — autonomous run advancing to Phase 20
+Last activity: 2026-06-20 — Phase 19 done (3/3 plans, ARCH-01/02/03, verify + golden oracle green, code review APPROVE)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█░░░░░░░░░] 13% (1/8 phases)
 
 ## v3.1 Roadmap Summary (Phases 19-26)
 
@@ -60,16 +61,21 @@ loosened) only for the two intentional behavior changes (Phases 24 and 25).
 - **Pre-plan decision (Phase 19):** contracts home naming — `contracts/` (research rec) vs the
   already-encoded `types/`. Settle and encode in the depcruise preset + conventions skill in the
   same plan.
+
 - **Pre-plan tuning (Phase 23):** depcruise `forbidden` path regexes must be tuned against the
   real `ls src/` tree (adapter files live inside capability dirs).
+
 - **Cross-app — server-2 (Phase 24, DEDUP-03):** confirm `ON CONFLICT` benign-vs-conflicting
   semantics match the server-2 poller's expectations before the phase is planned.
+
 - **Human-in-the-loop (Phase 24, DEDUP-01):** pre-fetch `source_replay_id` dedup is
   data-loss-capable; TECH-DEBT-explicit human review required before shipping to staging.
+
 - **Cross-app HARD BLOCKER — server-2 (Phase 25, DISC-02):** canonical replay-date field, format,
   timezone, and `web` read-path must be agreed with server-2 before the DISC-02 contract write +
   golden-oracle flip land. DISC-01 (local parse) ships independently; **DISC-02 may slip to v3.2**
   if the decision does not land before milestone close.
+
 - **Audit trust (Phase 26, CORR-01):** convention-audit semantic tier is ~50% false-positive
   (Haiku-verified). Re-verify every correctness-hygiene finding live (file:line) against current
   source before it becomes a commit; only the mechanical lane (Phase 21) is bulk-safe.
@@ -116,18 +122,18 @@ None.
 - **Subagent reliability (2026-06-13):** During v3.0 setup, parallel research/roadmapper subagents
   returned fabricated output with `tool_uses: 0` (hallucinated reads/writes, wrote nothing to
   disk). Verify subagent disk writes before trusting their summaries on later phases.
+
 - **DISC-02 server-2 dependency (v3.1):** see Open Gates above — hard blocker, may slip DISC-02 to v3.2.
 
 ## Next Step
 
-1. **Re-run `/gsd-map-codebase` BEFORE planning Phase 19** — the `.planning/codebase/` map is stale
-   relative to the current tree (v3.0 close); refresh it so the planner works against current
-   reality (the v3.1 architecture phases depend on an accurate `src/` map).
-2. Resolve the Phase 19 pre-plan decision (`contracts/` vs `types/` naming).
-3. Then plan Phase 19 (Contracts Home + Config Import Fix + Orphan Cleanup) with `/gsd-plan-phase 19`.
+1. Plan Phase 20 (Composition-Root Client Consolidation + Watch Teardown) — one `S3Client` +
+   one `pg.Pool` built and injected at the `commands/` root; `watch` drains them on
+   SIGTERM/SIGINT. Requirements ARCH-04, ARCH-05.
+2. Codebase map is current (refreshed today for v3.1); contracts home settled as `src/types/`.
 
 ## Session
 
 **Last session:** 2026-06-20
-**Stopped at:** v3.1 roadmap created (ROADMAP.md + REQUIREMENTS.md traceability); Phases 19-26 defined.
+**Stopped at:** Phase 19 complete (3/3 plans, ARCH-01/02/03; verify + golden oracle green; review clean). Autonomous run continuing to Phase 20.
 **Resume file:** None
