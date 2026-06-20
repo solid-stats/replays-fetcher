@@ -1,3 +1,6 @@
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 /**
  * Human-run golden-fixture capture script (NOT run by the executor — it is denied
  * live source access via permission settings; only the human runs this against a
@@ -23,9 +26,6 @@
  * `sourceRequestSpacingMs`.
  */
 import { gzipSync } from "node:zlib";
-import { mkdir, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { loadSourceConfig } from "../src/config.js";
 import { toRawReplayUrl } from "../src/discovery/discover.js";
@@ -34,9 +34,8 @@ import {
   extractReplayRows,
 } from "../src/discovery/html.js";
 import { createSourceClient } from "../src/discovery/source-client.js";
-import { createReplayByteClient } from "../src/storage/replay-byte-client.js";
-
 import type { SourceClient } from "../src/discovery/types.js";
+import { createReplayByteClient } from "../src/storage/replay-byte-client.js";
 import type { ReplayByteClient } from "../src/storage/replay-byte-client.js";
 
 const TOTAL_PAGES = 10;
@@ -45,13 +44,13 @@ const FIRST_PAGE = 1;
 const here = dirname(fileURLToPath(import.meta.url));
 const fixtureRoot = join(here, "..", "src", "run", "fixtures", "golden");
 
-interface ManifestFile {
+type ManifestFile = {
   listPages: Record<string, string>;
   details: Record<string, string>;
   bytes: Record<string, string>;
   sourceUrl: string;
   expectedExternalIds: string[];
-}
+};
 
 /**
  * Page-1 URL is `sourceUrl` verbatim; page N sets `?p=N`. Re-derived locally
@@ -84,14 +83,14 @@ const writeGzip = async (
   await writeFile(absolute, gzipSync(body));
 };
 
-interface RowCaptureInput {
+type RowCaptureInput = {
   readonly byteClient: ReplayByteClient;
   readonly detailUrl: string;
   readonly externalId: string;
   readonly manifest: ManifestFile;
   readonly sourceClient: SourceClient;
   readonly spacingMs: number;
-}
+};
 
 /**
  * Captures the detail page (and, when the filename resolves, the raw bytes) for a
