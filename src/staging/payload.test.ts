@@ -1,4 +1,3 @@
-/* eslint-disable max-lines -- payload precedence + range-validation scenarios are kept together for staging-contract readability. */
 import { expect, test } from "vitest";
 
 import { parseGameDateToUtcIso } from "../discovery/html.js";
@@ -14,11 +13,8 @@ const sourceUrl = "https://sg.zone/replays/1778269931";
 const sourceFilename = "2026_05_09__00_32_44__1_ocap";
 const filenameTimestamp = "2026-05-09T00:32:44.000Z";
 
-/**
- * Typed builder for the stored-evidence input — the single place the
- * `RawReplayStorageEvidence` literal lives. Tests pass `overrides` for the
- * one field under test instead of repeating the whole literal (std §G).
- */
+// Typed builder — the single place the `RawReplayStorageEvidence` literal
+// lives; tests override only the field under test (std §G).
 const createStoredEvidence = (
   overrides: Partial<RawReplayStorageEvidence> = {},
 ): RawReplayStorageEvidence => ({
@@ -37,6 +33,15 @@ const createStoredEvidence = (
   status: "stored",
   ...overrides,
 });
+
+// Drop `discoveredAt` so no listing fallback is present.
+const withoutListingDate = (
+  overrides: Partial<RawReplayStorageEvidence> = {},
+): RawReplayStorageEvidence => {
+  const { discoveredAt: _discoveredAt, ...rest } =
+    createStoredEvidence(overrides);
+  return rest;
+};
 
 test("toIngestStagingPayload should map stored raw evidence to a pending server-2 staging payload", () => {
   const evidence = createStoredEvidence();
@@ -95,55 +100,65 @@ test("toIngestStagingPayload should omit run_id when no run id is provided", () 
 });
 
 test("toIngestStagingPayload should omit absent discovered timestamp evidence", () => {
-  const { discoveredAt: _discoveredAt, ...evidenceWithoutDiscoveredAt } =
-    createStoredEvidence();
-  const result = toIngestStagingPayload(evidenceWithoutDiscoveredAt);
+  const result = toIngestStagingPayload(withoutListingDate());
 
   expect(JSON.stringify(result)).not.toContain("discoveredAt");
-  expect(result).toMatchObject({
-    payload: {
-      replayTimestamp: filenameTimestamp,
-    },
-    stageable: true,
-  });
 });
 
-test("replayTimestamp keeps the filename-derived value when both filename and listing game-date are present", () => {
-  const result = toIngestStagingPayload(
+// replayTimestamp PRESENT — filename-primary vs listing-fallback precedence
+// (test.each, mirrors src/discovery/html.test.ts).
+test.each([
+  [
+    "keeps the filename-derived value when both filename and listing game-date are present",
     createStoredEvidence({
       discoveredAt: "2099-01-01T00:00:00.000Z",
       sourceFilename,
     }),
-  );
-
-  expect(result).toMatchObject({
-    payload: {
-      replayTimestamp: filenameTimestamp,
-    },
-    stageable: true,
-  });
-});
-
-test("replayTimestamp falls back to the listing game-date when the filename carries no timestamp", () => {
-  const result = toIngestStagingPayload(
+    filenameTimestamp,
+  ],
+  [
+    "derives from the filename when no listing game-date is present",
+    withoutListingDate(),
+    filenameTimestamp,
+  ],
+  [
+    "falls back to the listing game-date when the filename carries no timestamp",
     createStoredEvidence({
       discoveredAt: "2026-06-14T19:01:00.000Z",
       sourceFilename: "custom-replay-name.ocap",
     }),
+    "2026-06-14T19:01:00.000Z",
+  ],
+])(
+  "replayTimestamp %s",
+  (_name, evidence: RawReplayStorageEvidence, expected: string) => {
+    const result = toIngestStagingPayload(evidence);
+
+    expect(result).toMatchObject({
+      payload: { replayTimestamp: expected },
+      stageable: true,
+    });
+  },
+);
+
+// replayTimestamp ABSENT — filename-format + range-validation arms (test.each).
+test.each([
+  [
+    "is absent when neither the filename nor the listing game-date carries a timestamp",
+    "custom-replay-name.ocap",
+  ],
+  [
+    "is absent for unknown filename formats with no listing game-date",
+    "custom-replay-name.ocap",
+  ],
+  [
+    "is absent when the filename timestamp is in-shape but out of range (range validation)",
+    "2026_13_32__25_99_99__1_ocap",
+  ],
+])("replayTimestamp %s", (_name, filename: string) => {
+  const result = toIngestStagingPayload(
+    withoutListingDate({ sourceFilename: filename }),
   );
-
-  expect(result).toMatchObject({
-    payload: {
-      replayTimestamp: "2026-06-14T19:01:00.000Z",
-    },
-    stageable: true,
-  });
-});
-
-test("replayTimestamp is absent when neither the filename nor the listing game-date carries a timestamp", () => {
-  const { discoveredAt: _discoveredAt, ...evidenceWithoutTimestamps } =
-    createStoredEvidence({ sourceFilename: "custom-replay-name.ocap" });
-  const result = toIngestStagingPayload(evidenceWithoutTimestamps);
 
   if (result.stageable) {
     expect(result.payload).not.toHaveProperty("replayTimestamp");
@@ -151,32 +166,15 @@ test("replayTimestamp is absent when neither the filename nor the listing game-d
 });
 
 test("an out-of-range listing game-date never produces a discoveredAt, so the fallback stages no bogus replayTimestamp", () => {
-  // The listing cell is range-validated at its producer (`parseGameDateToUtcIso`),
-  // so an in-shape-but-out-of-range cell yields no discoveredAt at all — the
-  // bogus value never reaches the `?? evidence.discoveredAt` fallback and is
-  // never staged into replay_timestamp (Postgres rejects 2026-13-32 outright).
+  // Standalone: asserts the PRODUCER contract — the listing cell is
+  // range-validated at `parseGameDateToUtcIso`, so an out-of-range cell yields
+  // no discoveredAt, never reaching the `?? evidence.discoveredAt` fallback.
   const discoveredAt = parseGameDateToUtcIso("32.13.2026 25:99");
   expect(discoveredAt).toBeUndefined();
 
-  const { discoveredAt: _discoveredAt, ...withoutDiscoveredAt } =
-    createStoredEvidence({ sourceFilename: "custom-replay-name.ocap" });
-  const result = toIngestStagingPayload({
-    ...withoutDiscoveredAt,
-    ...(discoveredAt === undefined ? {} : { discoveredAt }),
-  });
-
-  if (result.stageable) {
-    expect(result.payload).not.toHaveProperty("replayTimestamp");
-  }
-});
-
-test("replayTimestamp is absent when the filename timestamp is in-shape but out of range", () => {
-  // `replayTimestampFromFilename` must range-validate too: an impossible
-  // year_month_day__hour_minute_second prefix yields no timestamp rather than a
-  // bogus value. No listing fallback present, so replayTimestamp stays absent.
-  const { discoveredAt: _discoveredAt, ...withoutDiscoveredAt } =
-    createStoredEvidence({ sourceFilename: "2026_13_32__25_99_99__1_ocap" });
-  const result = toIngestStagingPayload(withoutDiscoveredAt);
+  const result = toIngestStagingPayload(
+    withoutListingDate({ sourceFilename: "custom-replay-name.ocap" }),
+  );
 
   if (result.stageable) {
     expect(result.payload).not.toHaveProperty("replayTimestamp");
@@ -210,16 +208,6 @@ test("toIngestStagingPayload should allow overriding source system", () => {
     },
     stageable: true,
   });
-});
-
-test("toIngestStagingPayload should omit replay timestamps for unknown filename formats with no listing game-date", () => {
-  const { discoveredAt: _discoveredAt, ...withoutDiscoveredAt } =
-    createStoredEvidence({ sourceFilename: "custom-replay-name.ocap" });
-  const result = toIngestStagingPayload(withoutDiscoveredAt);
-
-  if (result.stageable) {
-    expect(result.payload).not.toHaveProperty("replayTimestamp");
-  }
 });
 
 test("toIngestStagingPayload should derive deterministic source identity when external ID is missing", () => {
@@ -296,8 +284,11 @@ test("toIngestStagingPayload should leave a non-URL source string unchanged", ()
   });
 });
 
-test("toIngestStagingPayload should return non-stageable evidence for failed or conflict raw storage", () => {
-  for (const status of ["conflict", "failed"] as const) {
+// Non-stageable raw-storage statuses, one status per row (RITE) instead of a
+// multi-status loop in a single test.
+test.each(["conflict", "failed"] as const)(
+  "toIngestStagingPayload should return non-stageable evidence for %s raw storage",
+  (status) => {
     expect(
       toIngestStagingPayload(createStoredEvidence({ status })),
     ).toStrictEqual({
@@ -305,5 +296,5 @@ test("toIngestStagingPayload should return non-stageable evidence for failed or 
       stageable: false,
       status: "not_stageable",
     });
-  }
-});
+  },
+);
