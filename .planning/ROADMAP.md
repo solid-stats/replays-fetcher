@@ -62,7 +62,7 @@ Behavior-preserving migration onto the shared `@solid-stats/ts-toolchain` preset
 - [x] **Phase 23: Depcruise Band-Fence Lock-In** — Turn on the eight five-band import fences in `verify`, proven by a planted-violation test (enforced LAST as a no-op lock-in) (completed 2026-06-20)
 - [x] **Phase 24: Watch Pre-Fetch Dedup + ON CONFLICT Staging** — Skip already-staged candidates before byte-fetch; non-throwing `ON CONFLICT DO NOTHING` ends the duplicate-key log spam (intentional behavior change) (completed 2026-06-20)
 - [x] **Phase 25: Discovery Game-Date Capture (Cross-App Gated)** — Parse the listing "Game date" cell to UTC ISO; populate the canonical staging `replayTimestamp` as a filename-fallback + flip the golden oracle (cross-app gate RESOLVED from server-2 source; both DISC-01 + DISC-02 ship) (completed 2026-06-20)
-- [ ] **Phase 26: Test-Quality Pass + Correctness Hygiene** — Close the test-quality backlog and the live-verified correctness findings
+- [x] **Phase 26: Test-Quality Pass + Correctness Hygiene** — Close the test-quality backlog and the live-verified correctness findings (completed 2026-06-22)
 
 ## Phase Details
 
@@ -223,7 +223,7 @@ Plans:
 
 **Phase risk (surfaced, not assumed)**: the convention audit's semantic tier is ~50% false-positive (Haiku-verified); every correctness-hygiene finding must be re-verified live (file:line) against current source before becoming a commit. Expect the category to shrink substantially from its raw 335-finding count.
 **Behavior-preservation gate**: golden oracle + 100% V8 coverage maintained; no new `v8 ignore` suppressions; depcruise + knip green.
-**Plans**: 1/4 plans executed
+**Plans**: 4/4 plans complete
 
 Plans:
 **Wave 1**
@@ -232,9 +232,9 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 26-02-PLAN.md — TEST-01/02/03: payload.test.ts typed builder + RITE one-behavior split (remove inline max-lines disable) + date-parse `test.each`
-- [ ] 26-03-PLAN.md — TEST-03: postgres-staging dedup/conflict matrix → `test.each`; integration conflict-vs-benign pair evaluated/converted
-- [ ] 26-04-PLAN.md — TEST-04/05/01: ingest-page + run-once out-of-order sleeps → deterministic ordering (no wall-clock); literal builders; v8-ignore reachability sweep (no new ignore)
+- [x] 26-02-PLAN.md — TEST-01/02/03: payload.test.ts typed builder + RITE one-behavior split (remove inline max-lines disable) + date-parse `test.each`
+- [x] 26-03-PLAN.md — TEST-03: postgres-staging dedup/conflict matrix → `test.each`; integration conflict-vs-benign pair evaluated/converted
+- [x] 26-04-PLAN.md — TEST-04/05/01: ingest-page + run-once out-of-order sleeps → deterministic ordering (no wall-clock); literal builders; v8-ignore reachability sweep (no new ignore)
 
 ## Progress
 
@@ -253,7 +253,7 @@ Phases execute in numeric order: 19 → 20 → 21 → 22 → 23 → 24 → 25 �
 | 23. Depcruise Band-Fence Lock-In | v3.1 | 1/1 | Complete    | 2026-06-20 |
 | 24. Watch Pre-Fetch Dedup + ON CONFLICT | v3.1 | 3/3 | Complete    | 2026-06-20 |
 | 25. Discovery Game-Date Capture (gated) | v3.1 | 1/1 | Complete    | 2026-06-20 |
-| 26. Test-Quality + Correctness Hygiene | v3.1 | 1/4 | In Progress|  |
+| 26. Test-Quality + Correctness Hygiene | v3.1 | 4/4 | Complete   | 2026-06-22 |
 
 ---
 
