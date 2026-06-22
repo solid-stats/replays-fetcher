@@ -160,9 +160,9 @@ test.each([
     withoutListingDate({ sourceFilename: filename }),
   );
 
-  if (result.stageable) {
-    expect(result.payload).not.toHaveProperty("replayTimestamp");
-  }
+  // Assert stageability so a future flip to stageable: false fails loudly.
+  expect(result.stageable).toBe(true);
+  expect(JSON.stringify(result)).not.toContain("replayTimestamp");
 });
 
 test("an out-of-range listing game-date never produces a discoveredAt, so the fallback stages no bogus replayTimestamp", () => {
@@ -176,9 +176,9 @@ test("an out-of-range listing game-date never produces a discoveredAt, so the fa
     withoutListingDate({ sourceFilename: "custom-replay-name.ocap" }),
   );
 
-  if (result.stageable) {
-    expect(result.payload).not.toHaveProperty("replayTimestamp");
-  }
+  // Assert stageability so a future flip to stageable: false fails loudly.
+  expect(result.stageable).toBe(true);
+  expect(JSON.stringify(result)).not.toContain("replayTimestamp");
 });
 
 test("toIngestStagingPayload should preserve skipped raw storage status as stageable evidence", () => {
