@@ -43,15 +43,15 @@ Committed scope for this milestone. Each maps to exactly one roadmap phase.
 
 ### Correctness Hygiene (CORR)
 
-- [ ] **CORR-01**: Each verified typed-error / unexplained-cast / swallowed-error finding from the convention audit (semantic tier, re-verified live against current source) is fixed; no raw `Error` is thrown where a typed `AppError` subclass is required, and no audit false-positive is committed as a change.
+- [x] **CORR-01**: Each verified typed-error / unexplained-cast / swallowed-error finding from the convention audit (semantic tier, re-verified live against current source) is fixed; no raw `Error` is thrown where a typed `AppError` subclass is required, and no audit false-positive is committed as a change.
 
 ### Test-Quality (TEST)
 
-- [ ] **TEST-01**: AAA arrange/assert duplicated literals are factored into named constants or typed builders.
-- [ ] **TEST-02**: Multi-behavior tests are split to one behavior per test (RITE).
-- [ ] **TEST-03**: Dedup / conflict / date-parse matrices use `test.each` parameterized tables.
-- [ ] **TEST-04**: Watch-loop timing paths use `vi.useFakeTimers()` — no real sleeps in tests.
-- [ ] **TEST-05**: Untested reachable branches are closed by new tests; no new `v8 ignore` coverage suppressions are added.
+- [x] **TEST-01**: AAA arrange/assert duplicated literals are factored into named constants or typed builders.
+- [x] **TEST-02**: Multi-behavior tests are split to one behavior per test (RITE).
+- [x] **TEST-03**: Dedup / conflict / date-parse matrices use `test.each` parameterized tables.
+- [x] **TEST-04**: Watch-loop timing paths use `vi.useFakeTimers()` — no real sleeps in tests.
+- [x] **TEST-05**: Untested reachable branches are closed by new tests; no new `v8 ignore` coverage suppressions are added.
 
 ## Pre-Plan Coordination (resolve before the gated phases — not new requirements)
 
@@ -97,12 +97,12 @@ Each requirement maps to exactly one phase. v3.1 continues the project phase num
 | DEDUP-03 | Phase 24 | Complete |
 | DISC-01 | Phase 25 | Complete |
 | DISC-02 | Phase 25 | Complete |
-| CORR-01 | Phase 26 | Pending |
-| TEST-01 | Phase 26 | Pending |
-| TEST-02 | Phase 26 | Pending |
-| TEST-03 | Phase 26 | Pending |
-| TEST-04 | Phase 26 | Pending |
-| TEST-05 | Phase 26 | Pending |
+| CORR-01 | Phase 26 | Complete |
+| TEST-01 | Phase 26 | Complete |
+| TEST-02 | Phase 26 | Complete |
+| TEST-03 | Phase 26 | Complete |
+| TEST-04 | Phase 26 | Complete |
+| TEST-05 | Phase 26 | Complete |
 
 **Coverage:**
 
