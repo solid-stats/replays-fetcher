@@ -34,10 +34,13 @@ const toDetailsRecord = (
  *
  * `isOperational: false` marks this as a programmer bug, not an expected
  * operational condition: if the guard ever fires, a composition invariant was
- * broken. The CLI error boundary maps a non-operational `AppError` to exit 1 (a
- * programmer bug aborting the run) — NOT exit 2, which is reserved for
- * `ConfigValidationError` at boot. Deliberately has NO `httpStatus`: this is a
- * CLI, not an HTTP service (app-error.ts:9-12 — do not restore it).
+ * broken. An uncaught throw from a command handler exits 1 via the top-level
+ * boundary (`cli.ts`), which maps any escaped throw to exit 1 without inspecting
+ * the error type; `isOperational: false` is the semantic marker that this is a
+ * programmer bug for reporting, not an input to exit-code selection (exit 2 is
+ * chosen per-command for `ConfigValidationError`, not at this boundary).
+ * Deliberately has NO `httpStatus`: this is a CLI, not an HTTP service
+ * (app-error.ts:9-12 — do not restore it).
  */
 export class InvariantViolationError extends AppError<"invariant_violation"> {
   public constructor(details: InvariantViolationDetails) {
