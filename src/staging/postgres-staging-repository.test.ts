@@ -83,7 +83,7 @@ const createUniqueViolationClient = (
 ): StagingQueryClient => {
   let selectCount = 0;
 
-  const client = {
+  return {
     async query(text: string) {
       if (normalizeSql(text).startsWith("insert into ingest_staging_records")) {
         throw new UniqueViolationError();
@@ -98,8 +98,6 @@ const createUniqueViolationClient = (
       return { rows: objectRows };
     },
   } as StagingQueryClient;
-
-  return client;
 };
 
 const createBenignConflictClient = (
@@ -150,16 +148,17 @@ test("PostgresStagingRepository should insert pending ingest staging records", a
   ]);
 });
 
-// stage() classification matrix: each row stubs a pg client (benign
-// empty-RETURNING or 23505 violation), calls stage(payload), and asserts the
-// classification. `expected` -> full-result toStrictEqual; `match` -> the
-// conflict subset toMatchObject — each row keeps its original oracle shape.
+// stage() classification matrix. Discriminated on the oracle (a row carries
+// EITHER `expected` for toStrictEqual OR `match` for toMatchObject, never
+// neither) so no malformed row reaches the vacuous `?? {}` fallback this fixes.
+type MatchResult = Partial<IngestStagingResult>;
 type ClassificationCase = {
   readonly client: StagingQueryClient;
-  readonly expected?: IngestStagingResult;
-  readonly match?: Partial<IngestStagingResult>;
   readonly name: string;
-};
+} & (
+  | { readonly expected: IngestStagingResult; readonly match?: undefined }
+  | { readonly expected?: undefined; readonly match: MatchResult }
+);
 
 const changedSourceIdentityRow: StagingRow = {
   checksum: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
@@ -240,8 +239,9 @@ test.each(classificationCases)(
 
     const result = await repository.stage(payload);
 
+    // Union guarantees `match` is defined when `expected` is absent.
     if (expected === undefined) {
-      expect(result).toMatchObject(match ?? {});
+      expect(result).toMatchObject(match);
     } else {
       expect(result).toStrictEqual(expected);
     }
