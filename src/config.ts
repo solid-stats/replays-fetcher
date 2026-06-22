@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { ConfigValidationError } from "./errors/config-validation-error.js";
+import { SOURCE_TRANSPORTS } from "./types/source-transport.js";
 
 const booleanFromEnvironment = z
   .union([z.boolean(), z.string()])
@@ -88,7 +89,7 @@ const sourceConfigSchema = z
       .max(MAX_SPACING_MS)
       .default(defaultSourceRequestSpacingMs),
     sourceUrl: z.url().max(MAX_URL_LEN),
-    sourceTransport: z.enum(["direct", "ssh"]).default("direct"),
+    sourceTransport: z.enum(SOURCE_TRANSPORTS).default("direct"),
     sourceSshHost: z.string().min(1).max(MAX_HOSTNAME_LEN).optional(),
     sourceSshCommand: z
       .string()
@@ -186,12 +187,8 @@ const stringOrUndefined = (
   return undefined;
 };
 
-// CORR-01 (T-26-01 Tampering): normalize an empty/whitespace transport to
-// undefined (so the schema default applies) and hand any other string straight
-// to the schema's z.enum(["direct","ssh"]). No blind `as SourceTransport` cast:
-// an unknown non-empty string (e.g. "ftp") is NOT asserted as a valid transport
-// here — z.enum is the single validator and rejects it with a
-// ConfigValidationError, so an invalid value can never masquerade as valid.
+// CORR-01 (T-26-01 Tampering): empty/whitespace → undefined (schema default);
+// any other string is validated by z.enum, never blind-cast to SourceTransport.
 const sourceTransportOrUndefined = (
   value: boolean | string | undefined,
 ): string | undefined => {
