@@ -256,6 +256,27 @@ test("loadSourceConfig should treat empty source transport as default direct tra
   expect(config.sourceTransport).toBe("direct");
 });
 
+test("loadSourceConfig should reject an unknown source transport string", () => {
+  // CORR-01 (T-26-01 Tampering): an invalid transport must not masquerade as a
+  // valid SourceTransport. It is passed through to the schema's z.enum, which
+  // rejects it with a ConfigValidationError — never silently cast or defaulted.
+  expect(() =>
+    loadSourceConfig({
+      REPLAY_SOURCE_TRANSPORT: "ftp",
+      REPLAY_SOURCE_URL: "https://example.test/replays",
+    }),
+  ).toThrow(ConfigValidationError);
+});
+
+test("loadSourceConfig should name the offending field for an unknown transport", () => {
+  expect(() =>
+    loadSourceConfig({
+      REPLAY_SOURCE_TRANSPORT: "ftp",
+      REPLAY_SOURCE_URL: "https://example.test/replays",
+    }),
+  ).toThrow("sourceTransport");
+});
+
 test("loadConfig should load SSH source transport settings when provided", () => {
   const config = loadConfig({
     ...validEnvironment,

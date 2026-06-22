@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 import { ConfigValidationError } from "./errors/config-validation-error.js";
-import type { SourceTransport } from "./types/source-transport.js";
 
 const booleanFromEnvironment = z
   .union([z.boolean(), z.string()])
@@ -187,14 +186,20 @@ const stringOrUndefined = (
   return undefined;
 };
 
+// CORR-01 (T-26-01 Tampering): normalize an empty/whitespace transport to
+// undefined (so the schema default applies) and hand any other string straight
+// to the schema's z.enum(["direct","ssh"]). No blind `as SourceTransport` cast:
+// an unknown non-empty string (e.g. "ftp") is NOT asserted as a valid transport
+// here — z.enum is the single validator and rejects it with a
+// ConfigValidationError, so an invalid value can never masquerade as valid.
 const sourceTransportOrUndefined = (
   value: boolean | string | undefined,
-): SourceTransport | undefined => {
+): string | undefined => {
   if (typeof value !== "string" || value.trim().length === 0) {
     return undefined;
   }
 
-  return value as SourceTransport;
+  return value;
 };
 
 const redactSecret = (value: string): string => {
@@ -214,7 +219,7 @@ const readSourceConfigInput = (
   readonly sourceSshCommand: string | undefined;
   readonly sourceSshHost: string | undefined;
   readonly sourceTimeoutMs: string | boolean | undefined;
-  readonly sourceTransport: SourceTransport | undefined;
+  readonly sourceTransport: string | undefined;
   readonly sourceUrl: string | boolean | undefined;
   readonly watchHeartbeatPath: string | undefined;
   readonly watchIntervalMs: string | boolean | undefined;
