@@ -11,7 +11,34 @@ const checksum =
   "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const fetchedAt = "2026-06-16T13:40:05.000Z";
 const testConcurrency = 4;
-const OUT_OF_ORDER_DELAY_MS = 10;
+
+type Deferred = {
+  readonly promise: Promise<void>;
+  readonly resolve: () => void;
+};
+
+/**
+ * A resolvable promise handle used to force a deterministic completion order in
+ * the out-of-order tests — no wall-clock `setTimeout`. The test makes one
+ * candidate await another candidate's deferred so completion order is controlled
+ * by an explicit signal, not by a timer race.
+ */
+const createDeferred = (): Deferred => {
+  // The Promise executor runs synchronously, so the resolver is captured before
+  // `createDeferred` returns. `unknown[]` holds the captured resolver so no
+  // placeholder function or uninitialized `let` is needed (lint-clean).
+  const captured: (() => void)[] = [];
+  const promise = new Promise<void>((resolveFn) => {
+    captured.push(resolveFn);
+  });
+
+  return {
+    promise,
+    resolve: () => {
+      captured[0]?.();
+    },
+  };
+};
 
 const replayCandidate = (
   externalId: string,
@@ -102,6 +129,9 @@ test("ingestPage re-orders fulfilled values by candidate index despite out-of-or
   const candidateOne = replayCandidate("601", "replay-a.ocap");
   const candidateTwo = replayCandidate("602", "replay-b.ocap");
   const stageCallOrder: string[] = [];
+  // Candidate B finishes its store before candidate A — forced deterministically:
+  // A awaits B's signal, B resolves it as soon as B's store runs. No wall-clock.
+  const candidateBStored = createDeferred();
 
   const result = await ingestPage({
     byteClient: { fetchBytes: vi.fn() },
@@ -116,14 +146,12 @@ test("ingestPage re-orders fulfilled values by candidate index despite out-of-or
     stagingRepository: { stage: vi.fn() },
     storage: { storeRawReplay: vi.fn() },
     async storeRawReplay({ candidate }) {
-      // Candidate B resolves before candidate A (out-of-order completion).
-      let delay = 0;
       if (candidate.identity.filename === "replay-a.ocap") {
-        delay = OUT_OF_ORDER_DELAY_MS;
+        // A blocks until B has stored, guaranteeing B completes first.
+        await candidateBStored.promise;
+      } else {
+        candidateBStored.resolve();
       }
-      await new Promise((resolve) => {
-        setTimeout(resolve, delay);
-      });
 
       return rawStored(candidate.identity.filename);
     },
@@ -239,9 +267,10 @@ test("ingestPage serializes dispatch through the shared limiter when concurrency
     async storeRawReplay({ candidate }) {
       running += 1;
       maxInFlight = Math.max(maxInFlight, running);
-      await new Promise((resolve) => {
-        setTimeout(resolve, OUT_OF_ORDER_DELAY_MS);
-      });
+      // Yield across a microtask so any task the limiter could dispatch in
+      // parallel gets the chance to start while this one is still in-flight;
+      // with concurrency 1 none does. Deterministic, no wall-clock.
+      await Promise.resolve();
       running -= 1;
 
       return rawStored(candidate.identity.filename);
