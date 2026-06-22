@@ -223,12 +223,12 @@ Plans:
 
 **Phase risk (surfaced, not assumed)**: the convention audit's semantic tier is ~50% false-positive (Haiku-verified); every correctness-hygiene finding must be re-verified live (file:line) against current source before becoming a commit. Expect the category to shrink substantially from its raw 335-finding count.
 **Behavior-preservation gate**: golden oracle + 100% V8 coverage maintained; no new `v8 ignore` suppressions; depcruise + knip green.
-**Plans**: 4 plans (Wave 1: 26-01 CORR source-fixes; Wave 2 parallel: 26-02 / 26-03 / 26-04 test-quality, all depend on 26-01)
+**Plans**: 1/4 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 26-01-PLAN.md — CORR-01: W-02 guard class (3 sites) → typed InvariantViolationError; config.ts:197 `as SourceTransport` cast → union membership-check; run-once-summary §AA traceback `{ err }`; I-01 doc note (no false-positive touched)
+- [x] 26-01-PLAN.md — CORR-01: W-02 guard class (3 sites) → typed InvariantViolationError; config.ts:197 `as SourceTransport` cast → union membership-check; run-once-summary §AA traceback `{ err }`; I-01 doc note (no false-positive touched)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -253,7 +253,7 @@ Phases execute in numeric order: 19 → 20 → 21 → 22 → 23 → 24 → 25 �
 | 23. Depcruise Band-Fence Lock-In | v3.1 | 1/1 | Complete    | 2026-06-20 |
 | 24. Watch Pre-Fetch Dedup + ON CONFLICT | v3.1 | 3/3 | Complete    | 2026-06-20 |
 | 25. Discovery Game-Date Capture (gated) | v3.1 | 1/1 | Complete    | 2026-06-20 |
-| 26. Test-Quality + Correctness Hygiene | v3.1 | 0/TBD | Not started | - |
+| 26. Test-Quality + Correctness Hygiene | v3.1 | 1/4 | In Progress|  |
 
 ---
 

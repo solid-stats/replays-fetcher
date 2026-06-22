@@ -6,15 +6,15 @@ current_phase: 26
 current_phase_name: Test-Quality Pass + Correctness Hygiene
 status: executing
 stopped_at: Phase 25 complete (1/1 plan; DISC-01/02 — discovery parses the listing Game-date cell into metadata.discoveredAt; staging replayTimestamp is filename-PRIMARY with the listing game-date as a strict fallback; golden-e2e oracle FLIPPED; deep review caught a real range-validation BLOCKER missed by verify+plan-check — in-shape-invalid dates -> bad timestamptz; fixed in 67c0d68 via shared componentsToUtcIso for BOTH parsers; re-review APPROVE; verify 556 tests/100%, integration green). DISC-02 listing-TZ is a documented ship-gate. Autonomous run at 88% (7/8). Phase 26 NOT started — paused here at user request (low on tokens).
-last_updated: "2026-06-22T13:53:00.732Z"
-last_activity: 2026-06-20
-last_activity_desc: Phase 25 complete, transitioned to Phase 26
+last_updated: "2026-06-22T13:56:55.032Z"
+last_activity: 2026-06-22
+last_activity_desc: Phase 26 execution started
 progress:
   total_phases: 8
   completed_phases: 7
-  total_plans: 16
+  total_plans: 20
   completed_plans: 16
-  percent: 88
+  percent: 80
 ---
 
 # Project State
@@ -24,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-20)
 
 **Core value:** Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
-**Current focus:** Phase 26 — Test-Quality Pass + Correctness Hygiene (NOT started — paused at user request)
+**Current focus:** Phase 26 — Test-Quality Pass + Correctness Hygiene
 
 ## Current Position
 
-Phase: 26 — Test-Quality Pass + Correctness Hygiene
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-06-20 — Phase 25 complete, transitioned to Phase 26
+Phase: 26 (Test-Quality Pass + Correctness Hygiene) — EXECUTING
+Plan: 1 of 4
+Status: Executing Phase 26
+Last activity: 2026-06-22 — Phase 26 execution started
 
 Progress: [████████▓░] 88% (7/8 phases); Phase 26 remaining
 
