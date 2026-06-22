@@ -5,8 +5,8 @@ milestone_name: Convention Compliance & Tech-Debt Closure
 current_phase: 26
 current_phase_name: Test-Quality Pass + Correctness Hygiene
 status: executing
-stopped_at: "Phase 25 complete (1/1 plan; DISC-01/02 — discovery parses the listing Game-date cell into metadata.discoveredAt; staging replayTimestamp is filename-PRIMARY with the listing game-date as a strict fallback; golden-e2e oracle FLIPPED; deep review caught a real range-validation BLOCKER missed by verify+plan-check — in-shape-invalid dates -> bad timestamptz; fixed in 67c0d68 via shared componentsToUtcIso for BOTH parsers; re-review APPROVE; verify 556 tests/100%, integration green). DISC-02 listing-TZ is a documented ship-gate. Autonomous run at 88% (7/8). Phase 26 NOT started — paused here at user request (low on tokens)."
-last_updated: "2026-06-20T15:48:14.789Z"
+stopped_at: Phase 25 complete (1/1 plan; DISC-01/02 — discovery parses the listing Game-date cell into metadata.discoveredAt; staging replayTimestamp is filename-PRIMARY with the listing game-date as a strict fallback; golden-e2e oracle FLIPPED; deep review caught a real range-validation BLOCKER missed by verify+plan-check — in-shape-invalid dates -> bad timestamptz; fixed in 67c0d68 via shared componentsToUtcIso for BOTH parsers; re-review APPROVE; verify 556 tests/100%, integration green). DISC-02 listing-TZ is a documented ship-gate. Autonomous run at 88% (7/8). Phase 26 NOT started — paused here at user request (low on tokens).
+last_updated: "2026-06-22T13:53:00.732Z"
 last_activity: 2026-06-20
 last_activity_desc: Phase 25 complete, transitioned to Phase 26
 progress:
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-06-20)
 
 Phase: 26 — Test-Quality Pass + Correctness Hygiene
 Plan: Not started
-Status: Phase 25 complete — DISC-01/02 implemented; verify green (540 tests, 100% coverage); golden-e2e oracle flipped to assert the concrete discoveredAt UTC value. DISC-02 listing-timezone manual ship-gate (T-25-03) still open.
+Status: Ready to execute
 Last activity: 2026-06-20 — Phase 25 complete, transitioned to Phase 26
 
 Progress: [████████▓░] 88% (7/8 phases); Phase 26 remaining
