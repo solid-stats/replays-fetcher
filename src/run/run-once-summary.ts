@@ -167,9 +167,9 @@ const writeEvidence = async (
   if (input.emitEvidence === true && input.evidenceStore !== undefined) {
     try {
       await input.evidenceStore.write({ runId: input.runId, summary });
-    } catch {
+    } catch (error) {
       input.log?.warn(
-        { event: "evidence_write_failed", runId: input.runId },
+        { err: error, event: "evidence_write_failed", runId: input.runId },
         "evidence write failed; continuing run",
       );
     }
@@ -185,9 +185,9 @@ const writeEvidence = async (
         input.evidenceFile,
         JSON.stringify(summary),
       );
-    } catch {
+    } catch (error) {
       input.log?.warn(
-        { event: "evidence_write_failed", runId: input.runId },
+        { err: error, event: "evidence_write_failed", runId: input.runId },
         "evidence file write failed; continuing run",
       );
     }
