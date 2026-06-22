@@ -1,5 +1,6 @@
 import type { Command } from "commander";
 
+import { InvariantViolationError } from "../errors/invariant-violation-error.js";
 import {
   buildConfigInvalidRunSummary,
   runExitCode,
@@ -50,7 +51,10 @@ const requireStagingRepository = (
 ): StagingRepository => {
   /* v8 ignore next -- run-once always requests staging resources. */
   if (repository === undefined) {
-    throw new Error("Expected staging repository for run-once");
+    throw new InvariantViolationError({
+      command: "run-once",
+      guard: "requireStagingRepository",
+    });
   }
 
   return repository;
