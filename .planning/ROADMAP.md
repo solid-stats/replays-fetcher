@@ -223,7 +223,14 @@ Plans:
 
 **Phase risk (surfaced, not assumed)**: the convention audit's semantic tier is ~50% false-positive (Haiku-verified); every correctness-hygiene finding must be re-verified live (file:line) against current source before becoming a commit. Expect the category to shrink substantially from its raw 335-finding count.
 **Behavior-preservation gate**: golden oracle + 100% V8 coverage maintained; no new `v8 ignore` suppressions; depcruise + knip green.
-**Plans**: TBD
+**Plans**: 4 plans (Wave 1: 26-01 CORR source-fixes; Wave 2 parallel: 26-02 / 26-03 / 26-04 test-quality, all depend on 26-01)
+
+Plans:
+
+- [ ] 26-01-PLAN.md — CORR-01: W-02 guard class (3 sites) → typed InvariantViolationError; config.ts:197 `as SourceTransport` cast → union membership-check; run-once-summary §AA traceback `{ err }`; I-01 doc note (no false-positive touched)
+- [ ] 26-02-PLAN.md — TEST-01/02/03: payload.test.ts typed builder + RITE one-behavior split (remove inline max-lines disable) + date-parse `test.each`
+- [ ] 26-03-PLAN.md — TEST-03: postgres-staging dedup/conflict matrix → `test.each`; integration conflict-vs-benign pair evaluated/converted
+- [ ] 26-04-PLAN.md — TEST-04/05/01: ingest-page + run-once out-of-order sleeps → deterministic ordering (no wall-clock); literal builders; v8-ignore reachability sweep (no new ignore)
 
 ## Progress
 
