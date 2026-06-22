@@ -3,7 +3,7 @@ import { expect, test } from "vitest";
 
 import { createPostgresStagingRepository } from "./postgres-staging-repository.js";
 import type { StagingQueryClient } from "./postgres-staging-repository.js";
-import type { IngestStagingPayload } from "./types.js";
+import type { IngestStagingPayload, IngestStagingResult } from "./types.js";
 
 type QueryCall = {
   readonly text: string;
@@ -150,101 +150,103 @@ test("PostgresStagingRepository should insert pending ingest staging records", a
   ]);
 });
 
-test("PostgresStagingRepository should return already_staged via empty RETURNING rows for a benign exact duplicate", async () => {
-  const repository = createPostgresStagingRepository(
-    createBenignConflictClient([matchingStagingRow]),
-  );
+// stage() classification matrix: each row stubs a pg client (benign
+// empty-RETURNING or 23505 violation), calls stage(payload), and asserts the
+// classification. `expected` -> full-result toStrictEqual; `match` -> the
+// conflict subset toMatchObject — each row keeps its original oracle shape.
+type ClassificationCase = {
+  readonly client: StagingQueryClient;
+  readonly expected?: IngestStagingResult;
+  readonly match?: Partial<IngestStagingResult>;
+  readonly name: string;
+};
 
-  await expect(repository.stage(payload)).resolves.toStrictEqual(
-    alreadyStagedResult,
-  );
-});
+const changedSourceIdentityRow: StagingRow = {
+  checksum: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  id: insertedStagingId,
+  object_key:
+    "raw/sha256/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.ocap",
+  source_replay_id: payload.sourceReplayId,
+  source_system: payload.sourceSystem,
+  status: "pending",
+};
+const crossSourceObjectRow: StagingRow = {
+  checksum,
+  id: insertedStagingId,
+  object_key: objectKey,
+  source_replay_id: "different-source",
+  source_system: payload.sourceSystem,
+  status: "pending",
+};
 
-test("PostgresStagingRepository should fall through to classify when benign empty rows resolve no existing row", async () => {
-  const repository = createPostgresStagingRepository(
-    createBenignConflictClient([]),
-  );
-
-  await expect(repository.stage(payload)).resolves.toStrictEqual({
-    payload,
-    reason: "unique_violation_without_existing_staging",
-    status: "failed",
-  });
-});
-
-test("PostgresStagingRepository should classify a 23505 with a matching source row as already_staged", async () => {
-  const repository = createPostgresStagingRepository(
-    createUniqueViolationClient([matchingStagingRow]),
-  );
-
-  await expect(repository.stage(payload)).resolves.toStrictEqual(
-    alreadyStagedResult,
-  );
-});
-
-test("PostgresStagingRepository should return conflict for changed source identity evidence", async () => {
-  const repository = createPostgresStagingRepository(
-    createUniqueViolationClient([
-      {
-        checksum:
-          "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-        id: insertedStagingId,
-        object_key:
-          "raw/sha256/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.ocap",
-        source_replay_id: payload.sourceReplayId,
-        source_system: payload.sourceSystem,
+const classificationCases: readonly ClassificationCase[] = [
+  {
+    client: createBenignConflictClient([matchingStagingRow]),
+    expected: alreadyStagedResult,
+    name: "already_staged via empty RETURNING rows for a benign exact duplicate",
+  },
+  {
+    client: createBenignConflictClient([]),
+    expected: {
+      payload,
+      reason: "unique_violation_without_existing_staging",
+      status: "failed",
+    },
+    name: "fall through to classify when benign empty rows resolve no existing row",
+  },
+  {
+    client: createUniqueViolationClient([matchingStagingRow]),
+    expected: alreadyStagedResult,
+    name: "23505 with a matching source row classified as already_staged",
+  },
+  {
+    client: createUniqueViolationClient([changedSourceIdentityRow]),
+    match: {
+      reason: "source_identity_conflict",
+      status: "conflict",
+    },
+    name: "conflict for changed source identity evidence",
+  },
+  {
+    client: createUniqueViolationClient([], [crossSourceObjectRow]),
+    match: {
+      existing: {
+        checksum,
+        objectKey,
+        sourceReplayId: "different-source",
+        sourceSystem: payload.sourceSystem,
         status: "pending",
       },
-    ]),
-  );
-
-  await expect(repository.stage(payload)).resolves.toMatchObject({
-    reason: "source_identity_conflict",
-    status: "conflict",
-  });
-});
-
-test("PostgresStagingRepository should return conflict for existing raw object under another source", async () => {
-  const repository = createPostgresStagingRepository(
-    createUniqueViolationClient(
-      [],
-      [
-        {
-          checksum,
-          id: insertedStagingId,
-          object_key: objectKey,
-          source_replay_id: "different-source",
-          source_system: payload.sourceSystem,
-          status: "pending",
-        },
-      ],
-    ),
-  );
-
-  await expect(repository.stage(payload)).resolves.toMatchObject({
-    existing: {
-      checksum,
-      objectKey,
-      sourceReplayId: "different-source",
-      sourceSystem: payload.sourceSystem,
-      status: "pending",
+      reason: "raw_object_identity_conflict",
+      status: "conflict",
     },
-    reason: "raw_object_identity_conflict",
-    status: "conflict",
-  });
-});
+    name: "conflict for existing raw object under another source",
+  },
+  {
+    client: createUniqueViolationClient([]),
+    expected: {
+      payload,
+      reason: "unique_violation_without_existing_staging",
+      status: "failed",
+    },
+    name: "fail when unique violation cannot be matched to staging evidence",
+  },
+];
 
-test("PostgresStagingRepository should fail when unique violation cannot be matched to staging evidence", async () => {
-  const repository = createPostgresStagingRepository(
-    createUniqueViolationClient([]),
-  );
+test.each(classificationCases)(
+  "PostgresStagingRepository.stage should resolve $name",
+  async ({ client, expected, match }) => {
+    const repository = createPostgresStagingRepository(client);
 
-  await expect(repository.stage(payload)).resolves.toStrictEqual({
-    payload,
-    reason: "unique_violation_without_existing_staging",
-    status: "failed",
-  });
-});
+    const result = await repository.stage(payload);
+
+    if (expected === undefined) {
+      expect(result).toMatchObject(match ?? {});
+    } else {
+      expect(result).toStrictEqual(expected);
+    }
+  },
+);
 
 test("PostgresStagingRepository should return structured failure for database errors", async () => {
   const repository = createPostgresStagingRepository({
