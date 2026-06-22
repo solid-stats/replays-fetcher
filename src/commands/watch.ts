@@ -1,5 +1,6 @@
 import type { Command } from "commander";
 
+import { InvariantViolationError } from "../errors/invariant-violation-error.js";
 import { buildConfigInvalidRunSummary, runExitCode } from "../run/summary.js";
 import type { WatchStagingRepository } from "../run/watch-loop.js";
 import type { PostgresStagingRepository } from "../staging/postgres-staging-repository.js";
@@ -12,7 +13,10 @@ const requireStagingRepository = (
 ): WatchStagingRepository => {
   /* v8 ignore next 3 -- watch always requests staging resources. */
   if (repository === undefined) {
-    throw new Error("Expected staging repository for watch");
+    throw new InvariantViolationError({
+      command: "watch",
+      guard: "requireStagingRepository",
+    });
   }
 
   return repository;
@@ -126,6 +130,11 @@ export const registerWatchCommand = (
 
         // D-16 (PROG-04): drain pino BEFORE setting process.exitCode, never
         // process.exit() mid-stream. exitCode 0 on clean shutdown.
+        //
+        // I-01: flushLogger runs INSIDE the try deliberately (mirrors run-once)
+        // so a flush rejection still runs resources.dispose() in the finally
+        // below, then propagates uncaught to the CLI boundary (exit 1) — it must
+        // NOT be silently swallowed. Do not move this into the finally.
         await flushLogger(rootLogger);
         process.exitCode = result.exitCode;
       } finally {

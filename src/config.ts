@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { ConfigValidationError } from "./errors/config-validation-error.js";
-import type { SourceTransport } from "./types/source-transport.js";
+import { SOURCE_TRANSPORTS } from "./types/source-transport.js";
 
 const booleanFromEnvironment = z
   .union([z.boolean(), z.string()])
@@ -89,7 +89,7 @@ const sourceConfigSchema = z
       .max(MAX_SPACING_MS)
       .default(defaultSourceRequestSpacingMs),
     sourceUrl: z.url().max(MAX_URL_LEN),
-    sourceTransport: z.enum(["direct", "ssh"]).default("direct"),
+    sourceTransport: z.enum(SOURCE_TRANSPORTS).default("direct"),
     sourceSshHost: z.string().min(1).max(MAX_HOSTNAME_LEN).optional(),
     sourceSshCommand: z
       .string()
@@ -187,14 +187,16 @@ const stringOrUndefined = (
   return undefined;
 };
 
+// CORR-01 (T-26-01 Tampering): empty/whitespace → undefined (schema default);
+// any other string is validated by z.enum, never blind-cast to SourceTransport.
 const sourceTransportOrUndefined = (
   value: boolean | string | undefined,
-): SourceTransport | undefined => {
+): string | undefined => {
   if (typeof value !== "string" || value.trim().length === 0) {
     return undefined;
   }
 
-  return value as SourceTransport;
+  return value;
 };
 
 const redactSecret = (value: string): string => {
@@ -214,7 +216,7 @@ const readSourceConfigInput = (
   readonly sourceSshCommand: string | undefined;
   readonly sourceSshHost: string | undefined;
   readonly sourceTimeoutMs: string | boolean | undefined;
-  readonly sourceTransport: SourceTransport | undefined;
+  readonly sourceTransport: string | undefined;
   readonly sourceUrl: string | boolean | undefined;
   readonly watchHeartbeatPath: string | undefined;
   readonly watchIntervalMs: string | boolean | undefined;

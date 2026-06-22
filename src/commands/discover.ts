@@ -2,6 +2,7 @@ import type { Command } from "commander";
 
 import type { AppConfig } from "../config.js";
 import type { DiscoveryReport, SourceClient } from "../discovery/types.js";
+import { InvariantViolationError } from "../errors/invariant-violation-error.js";
 import type { IngestStagingResult } from "../staging/types.js";
 import type { StoreRawReplayResult } from "../storage/store-raw-replay.js";
 import {
@@ -97,7 +98,10 @@ const stageRawEvidence = async (
 ): Promise<IngestStagingResult> => {
   /* v8 ignore next -- registerDiscoverCommand only calls staging when the repository was created. */
   if (repository === undefined) {
-    throw new Error("Expected staging repository for stage mode");
+    throw new InvariantViolationError({
+      command: "discover",
+      guard: "stageRawEvidence",
+    });
   }
 
   return dependencies.stageRawReplay({ rawResult, repository });
