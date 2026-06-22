@@ -23,4 +23,8 @@
   //      read-path reuse (see JSDoc) and kept exported by that explicit intent.
   // Conservative policy: ignoreExportsUsedInFile instead of unexport/delete.
   "ignoreExportsUsedInFile": true,
+  // fallow is a CLI binary the GSD code-review workflow shells out to (structural
+  // pre-pass); it is a devDependency invoked by path, never imported, so knip cannot
+  // trace its use. Declared here so the config-once policy holds (no inline suppression).
+  "ignoreDependencies": ["fallow"],
 }
