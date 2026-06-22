@@ -40,6 +40,7 @@
     "@types/pg": "^8.20.0",
     "@vitest/coverage-v8": "^4.1.5",
     "dependency-cruiser": "^17.4.3",
+    "fallow": "^2.101.0",
     "knip": "^6.16.1",
     "lefthook": "2.1.9",
     "oxfmt": "0.54.0",
