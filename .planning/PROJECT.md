@@ -10,7 +10,9 @@ The service is intentionally narrow. It fetches replay bytes and records source 
 
 Reliably discover and stage new replay files without corrupting `server-2` business state or creating duplicate parse work.
 
-## Current Milestone: v3.1 Convention Compliance & Tech-Debt Closure
+## Current Milestone: None — v3.1 shipped 2026-06-22
+
+> v3.1 Convention Compliance & Tech-Debt Closure shipped 2026-06-22 (Phases 19-26). Next milestone to be selected via `/gsd-new-milestone`. The v3.1 scope below is retained for reference; full archive in `milestones/v3.1-ROADMAP.md`.
 
 **Goal:** Bring `replays-fetcher` into line with its approved five-band architecture and conventions, and clear the documented tech-debt backlog — behavior-preserving except the watch pre-fetch dedup (latency / source-load) and the discovery game-date capture.
 
@@ -96,9 +98,11 @@ The full milestone audit passed (25/25 requirements, 6/6 phases, integration cle
 
 **v3.0 Track C Toolchain Convergence (pilot) shipped 2026-06-14** (Phases 13-18, 16 plans). The fetcher now rides the shared `@solid-stats/ts-toolchain` preset (pinned `#v0.1.2`): `tsconfig`/`.oxlintrc`/`lefthook.yml` `extends` the preset, `.oxfmtrc` byte-mirrors it, and `vitest.config.ts` `mergeConfig`s the shared coverage base — single source of truth across configs. ESLint→Oxlint, Prettier→Oxfmt, `tsc`-emit→tsdown (`dist/cli.mjs` ESM bundle), `eslint-plugin-import`→dependency-cruiser + knip; lefthook pre-commit (Oxfmt + Oxlint staged) + pre-push (tsc + Vitest) installed from the preset and mirroring CI; the new `verify` surface runs green at 100% V8 coverage (1797/1797) and CI rides it. Behavior-preserving — zero `src/` business-logic change across the milestone; ingest boundaries untouched. The audit surfaced and closed the one real gap (the shared vitest preset shipped raw `.ts`, unimportable under Node type-stripping → fixed in preset `v0.1.2` as `base.js`+`base.d.ts`). One tracked non-blocking follow-up remains: the preset's pre-commit `oxfmt --check` false-blocks all-ignored staged sets (fix prepared, awaits a `v0.1.3` push). The pilot is proven; `server-2` and `web` are next in the rollout.
 
+**v3.1 Convention Compliance & Tech-Debt Closure shipped 2026-06-22** (Phases 19-26, 20 plans). The fetcher now matches its approved five-band architecture, enforced inside `verify`: cross-band contracts in a leaf `src/types/` module with the `config.ts` upward import gone (P19); exactly one `S3Client` + one `pg.Pool` built at the composition root and drained on SIGTERM/SIGINT (P20); ~156 `interface→type` + import-order corrections lint-locked (P21); the four `max-lines` god-files split within-band with suppressions removed (P22); the eight depcruise band-fences enforced as a no-op lock-in proven by a planted-violation test (P23). Two intentional behavior changes: watch pre-fetch dedup by `source_replay_id` before the byte fetch + non-throwing `ON CONFLICT DO NOTHING` staging (P24), and discovery game-date capture (`DD.MM.YYYY HH:MM` → UTC ISO) as a filename-fallback for `replayTimestamp` plus `promotion_evidence.discoveredAt`, golden oracle flipped to the concrete value (P25). Closed the test-quality backlog + live-verified correctness findings: W-02 raw-`Error` guards → typed `InvariantViolationError`, `config.ts` blind cast → Zod-validated `SourceTransport`, §AA evidence-write traceback, plus typed builders / RITE / `test.each` / deterministic-ordering test refactors (P26). `pnpm run verify` green at 100% V8 coverage (567 unit tests); Docker golden e2e oracle green (10 integration tests); depcruise + knip clean. Behavior-preserving except P24/P25. **Two deployment-time ship-gates remain** before the changed ingest behavior reaches production staging: T-24-04 (pre-fetch dedup data-loss sign-off) and T-25-03 (listing-timezone confirmation) — see `milestones/v3.1-MILESTONE-AUDIT.md`.
+
 ## Next Milestone Goals
 
-Active milestone: **v3.1 Convention Compliance & Tech-Debt Closure** (see above). Candidate directions for the milestone after v3.1, with special attention to cross-project compatibility if scope touches staging schema, object identity, parser handoff, operator-visible statuses, `server-2`, or `web`: production Kubernetes rollout, a guarded historical `~/sg_stats` import, or operating the resilient full run against the live `sg.zone` corpus.
+No active milestone (v3.1 shipped 2026-06-22). Candidate directions, with special attention to cross-project compatibility if scope touches staging schema, object identity, parser handoff, operator-visible statuses, `server-2`, or `web`: production Kubernetes rollout, a guarded historical `~/sg_stats` import, or operating the resilient full run against the live `sg.zone` corpus.
 
 ## Constraints
 
@@ -157,4 +161,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state.
 
 ---
-*Last updated: 2026-06-20 — started v3.1 (Convention Compliance & Tech-Debt Closure) milestone*
+*Last updated: 2026-06-22 — after v3.1 (Convention Compliance & Tech-Debt Closure) milestone shipped*

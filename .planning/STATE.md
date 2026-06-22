@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v3.1
 milestone_name: Convention Compliance & Tech-Debt Closure
-current_phase: 26
-status: executing
-stopped_at: "Phase 23 complete (1/1 plan; eight depcruise band fences locked in as a no-op; planted-violation proof + review clean via full skill-chain). Out-of-band: §AA re-review findings fixed (5fa86e6) + gsd-skill-chain-guard hook added. Autonomous run at 63% (5/8), continuing to Phase 24."
-last_updated: "2026-06-22T15:12:02.817Z"
+current_phase: 1
+status: Awaiting next milestone
+stopped_at: "Milestone v3.1 complete (8/8 phases, 20 plans). Phase 26 (Test-Quality + Correctness Hygiene) shipped 2026-06-22: CORR-01 typed InvariantViolationError + validated SourceTransport + §AA traceback; TEST-01..05 builders/RITE/test.each/deterministic-ordering. verify green (567 tests, 100% coverage), golden e2e oracle green. Audit 23/23 requirements (tech_debt: 2 deployment ship-gates T-24-04, T-25-03). Archived + tagged v3.1. Note: out-of-band `fallow` enable (commit 8540649 + uncommitted package.json/pnpm-lock) left untouched per user."
+last_updated: "2026-06-22T15:17:01.376Z"
 last_activity: 2026-06-22
-last_activity_desc: Phase 26 complete
+last_activity_desc: Milestone v3.1 completed and archived
 progress:
   total_phases: 8
   completed_phases: 8
@@ -28,12 +28,10 @@ See: .planning/PROJECT.md (updated 2026-06-20)
 
 ## Current Position
 
-Phase: 26
-Plan: Not started
-Status: Executing Phase 26
-Last activity: 2026-06-22 — Phase 26 complete
-
-Progress: [████████▓░] 88% (7/8 phases); Phase 26 remaining
+Phase: Milestone v3.1 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-06-22 — Milestone v3.1 completed and archived
 
 ## v3.1 Roadmap Summary (Phases 19-26)
 
@@ -126,6 +124,15 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 None.
 
+## Deferred Items
+
+Acknowledged and deferred at v3.1 milestone close (2026-06-22) — both are deployment-time human ship-gates, NOT code gaps (full detail in `milestones/v3.1-MILESTONE-AUDIT.md`):
+
+| Category | Item | Status |
+|----------|------|--------|
+| ship-gate | T-24-04 — production-staging data-loss sign-off before the watch pre-fetch dedup ships to a real production staging target | deferred |
+| ship-gate | T-25-03 — listing-timezone confirmation before production ship (filename timestamp stays primary; bounded risk) | deferred |
+
 ### Blockers/Concerns
 
 - **Subagent reliability (2026-06-13):** During v3.0 setup, parallel research/roadmapper subagents
@@ -183,3 +190,7 @@ hand-spawned reviewer/fixer prompts.
 |-------|------|----------|-------|
 | Phase 24 P03 | 12 | 3 tasks | 10 files |
 | Phase 25 P01 | 01 | ~7m | 3 tasks, 5 files |
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone

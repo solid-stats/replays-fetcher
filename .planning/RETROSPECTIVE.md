@@ -118,6 +118,38 @@ Migrated the fetcher off ESLint/Prettier/tsc onto the VoidZero stack (Oxlint + O
 
 ---
 
+## Milestone: v3.1 — Convention Compliance & Tech-Debt Closure
+
+**Shipped:** 2026-06-22
+**Phases:** 8 (19-26) | **Plans:** 20
+
+### What Was Built
+Five-band architecture brought into compliance and enforced inside `verify`: leaf contracts home + composition-root single-client + god-file splits + eight depcruise band-fences (no-op lock-in). Two intentional behavior changes — watch pre-fetch dedup with `ON CONFLICT DO NOTHING`, and discovery game-date capture as a filename-fallback. Closed the test-quality backlog (typed builders, RITE, `test.each`, deterministic ordering) and the live-verified correctness findings (W-02 typed `InvariantViolationError`, validated `SourceTransport`, §AA traceback).
+
+### What Worked
+- **Load-bearing build order held.** Enforcing depcruise fences LAST (P23) as a no-op lock-in meant the fences never wedged `verify` mid-milestone — the tree already satisfied them.
+- **Anti-false-positive discipline paid off.** Phase 26's ~50%-false-positive audit tier shrank hard on live re-verification: CORR-01 collapsed to W-02 (a 3-site class) + one cast + one §AA site; planner/executor correctly dropped premises that didn't hold (e.g. TEST-01 "5+ inline literals"). Zero false-positive churn committed.
+- **Golden e2e oracle as the behavior gate** caught what coverage alone could not across every refactor phase; stayed byte-stable except the two intentional flips (P24/P25).
+- **Parallel worktree executors** (P26 wave 2: 26-02/03/04 on disjoint files) merged cleanly with no post-merge conflicts.
+
+### What Was Inefficient
+- **Doc/skill premises drifted from the repo.** P26 found `solidstats-shared-ts-standards §C` wrong for this repo (oxlint enforces `max-lines:300` on `*.test.ts`, no test override) — the executor had to split rather than rely on a non-existent disable. Skill-feedback candidate.
+- **Out-of-band git activity mid-close** (a parallel `fallow` enable commit + uncommitted deps) forced a pause at milestone close to avoid entangling it with the close commit/tag.
+
+### Patterns Established
+- Typed-invariant error (`InvariantViolationError`, `isOperational:false`) for unreachable composition guards instead of raw `Error`, keeping the v8-ignore.
+- `as const satisfies` + `z.enum` single-sourcing for config unions (drops blind casts).
+
+### Key Lessons
+- For a behavior-preserving compliance milestone, the golden e2e oracle + depcruise + 100% coverage + knip are sufficient integration evidence — a separate integration-checker pass is redundant.
+- Re-verify every semantic-audit finding live before it becomes a commit; the category shrinks substantially and false positives never land.
+
+### Cost Observations
+- Model mix: orchestrator on Opus; GSD subagents on configured tiers (researcher/planner/executor on Opus, checker/verifier on Sonnet).
+- Notable: P26 ran research → plan → check → 4 executors (1 solo + 3 parallel worktrees) → code-review → fixer → verifier; parallel wave-2 executors saved wall-clock with no merge conflicts.
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution

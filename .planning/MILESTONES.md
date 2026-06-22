@@ -1,5 +1,32 @@
 # Milestones
 
+## v3.1 Convention Compliance & Tech-Debt Closure (Shipped: 2026-06-22)
+
+**Phases completed:** 8 phases, 20 plans, 30 tasks
+
+**Key accomplishments:**
+
+- Task 1 — move the three cross-band DTOs + add downward shims
+- 1. [Rule 3 - Blocking] Colocation meta-test broke after deleting `no-leak.ts`
+- Source-read guard test locking the composition-root invariant — exactly one `S3Client` and one `pg.Pool` constructor, zero convenience factories — so any regression fails `pnpm test`.
+- Watch daemon now drains its pg.Pool (`await pool.end()`) and destroys its S3Client exactly once on SIGTERM/SIGINT via a once-guarded `StoreRawResources.dispose()`, after the loop drains and pino flushes — closing the k8s pod-termination connection leak.
+- All 156 `interface` declarations across 53 files converted to `type` via `oxlint --fix`, and `typescript/consistent-type-definitions: ["error","type"]` locked into the local `.oxlintrc.json` so a reintroduced `interface` now fails `verify` — tsc, golden oracles, and 100% V8 coverage all unchanged.
+- oxfmt `sortImports` enabled locally; import order normalized across 56 src files + 1 script and locked in so an unsorted import block now fails `verify`.
+- Decomposed the 1043-line run-once ingest orchestrator into five same-band siblings (all < 300 lines) and removed its oxlint-disable max-lines suppression — a pure structural move with zero behavior change, verified green after each extraction.
+- 1. [Rule 1 / DRY] Merged duplicate fetch-error input types
+- 1. [Rule 3 — Blocking] Lifted `ByteFetchOptions` + `ReplayByteClient` into `replay-byte-client-types.ts`
+- Task 1 — the 8 fences (`.dependency-cruiser.cjs`)
+- Rewrote stage() benign-duplicate detection from insert-and-catch-23505 to a targeted `INSERT ... ON CONFLICT (checksum, object_key) DO NOTHING RETURNING id`, and added a lean `existsBySourceIdentity` boolean existence check — without touching server-2's conflict-routing contract.
+- 1. [Rule 3 - Blocking] countRun signature became an input object instead of a 4th positional param
+- Watch loop now skips the byte download for an already-known replay before fetching it — gated behind a watch-only `prefetchDedup` flag on the shared `ingestPage`, proven data-loss-safe by a cannot-miss property matrix, with the golden-watch oracle flipped to assert zero re-download on idle cycles while run-once stays byte-for-byte unchanged.
+- 1. [Rule 1 - Stale test premise] Updated `should omit replay timestamps for unknown filename formats`
+- 1. [Rule 3 - Blocking] knip orphaned-type + config.ts max-lines after the cast removal
+- payload.test.ts refactored to a typed createStoredEvidence builder + two test.each date-parse tables, with the inline `eslint-disable max-lines` removed by shrinking the suite to the 300-line limit (split, not disable) — 18 tests, 100% coverage held, golden oracle green.
+- None functionally.
+- Tasks 2 and 3 produced no code change
+
+---
+
 ## v3.0 Track C Toolchain Convergence (Shipped: 2026-06-14)
 
 **Phases completed:** 6 phases, 16 plans, 20 tasks
