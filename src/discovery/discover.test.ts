@@ -759,14 +759,15 @@ test("discoverReplaysDryRun should return an empty report for non-fixture non-ta
   expect(report.candidates).toHaveLength(0);
 });
 
-test("discoverReplaysDryRun should warn (under the pino err key) when the fixture JSON is malformed (§AA)", async () => {
-  // Non-JSON source text forces parseSourceFixture into its catch leg; with a
-  // logger threaded in, the swallowed parse error must be recorded instead of
-  // vanishing before the HTML fallback runs.
+test("discoverReplaysDryRun should warn (under the pino err key) when a body looks like JSON but fails to parse (§AA)", async () => {
+  // A body that passes the `{`/`[` JSON sniff but is truncated forces
+  // parseSourceFixture into its catch leg; with a logger threaded in, the
+  // swallowed parse error must be recorded instead of vanishing before the
+  // HTML fallback runs.
   const warn = vi.fn();
   const sourceClient: SourceClient = {
     async fetchText() {
-      return "<html><body>not json at all</body></html>";
+      return '{ "candidates": [ ';
     },
   };
 
@@ -785,6 +786,28 @@ test("discoverReplaysDryRun should warn (under the pino err key) when the fixtur
   expect(message).toBe(
     "fixture JSON parse failed; falling back to HTML discovery",
   );
+});
+
+test("discoverReplaysDryRun should NOT warn and fall through to HTML discovery for a non-JSON (HTML) source body", async () => {
+  // The production source (sg.zone) serves HTML every cycle; an HTML body does
+  // not pass the `{`/`[` JSON sniff, so parseSourceFixture must skip JSON.parse
+  // entirely and return undefined WITHOUT warning — no per-cycle Sentry noise.
+  const warn = vi.fn();
+  const sourceClient: SourceClient = {
+    async fetchText() {
+      return "<html><body>not json at all</body></html>";
+    },
+  };
+
+  const report = await discoverReplaysDryRun({
+    generatedAt: "2026-05-09T00:00:00.000Z",
+    log: { warn } as unknown as Logger,
+    sourceClient,
+    sourceUrl: new URL("https://example.test/replays"),
+  });
+
+  expect(report.candidates).toHaveLength(0);
+  expect(warn).not.toHaveBeenCalled();
 });
 
 const noopOnRetry = (): void => {

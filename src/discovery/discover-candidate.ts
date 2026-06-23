@@ -62,10 +62,23 @@ export const toRawReplayUrl = (filename: string, detailUrl: URL): string => {
 
 const isValidFixtureUrl = (value: string): boolean => URL.parse(value) !== null;
 
+// O(1)-ish sniff run every discovery cycle: a JSON fixture body starts with `{`
+// or `[`. The production source serves HTML, so this gates JSON.parse (and its
+// warn) to genuine JSON bodies and keeps the HTML path silent.
+const looksLikeJson = (text: string): boolean => {
+  const firstChar = text.trim()[0];
+
+  return firstChar === "{" || firstChar === "[";
+};
+
 export const parseSourceFixture = (
   text: string,
   log?: Logger,
 ): SourceFixture | undefined => {
+  if (!looksLikeJson(text)) {
+    return undefined;
+  }
+
   try {
     const parsed = JSON.parse(text) as Partial<SourceFixture>;
 
