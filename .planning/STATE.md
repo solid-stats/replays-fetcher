@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-06-20)
 Phase: Milestone v3.1 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-06-22 — Milestone v3.1 completed and archived
+Last activity: 2026-06-23 — Completed quick task 260623-wh2: silence per-cycle JSON-parse warn in discovery
 
 ## v3.1 Roadmap Summary (Phases 19-26)
 
@@ -159,6 +159,12 @@ Acknowledged and deferred at v3.1 milestone close (2026-06-22) — both are depl
   raw `Error` on a v8-ignored unreachable guard → typed error) and I-01 (`flushLogger` try-scope
   doc). See `.planning/phases/20-*/deferred-items.md`; route into Phase 26 CORR-01. (The Phase 20/22
   §AA re-review findings — swallowed teardown/fixture/checkpoint errors — are already fixed in 5fa86e6.)
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260623-wh2 | Silence per-cycle JSON-parse warn in discovery by sniffing body before JSON.parse | 2026-06-23 | a6bb890 | [260623-wh2-silence-per-cycle-json-parse-warn-in-dis](./quick/260623-wh2-silence-per-cycle-json-parse-warn-in-dis/) |
 
 ## Next Step
 
