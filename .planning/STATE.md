@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-06-20)
 Phase: Milestone v3.1 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-06-23 — Completed quick task 260623-wh2: silence per-cycle JSON-parse warn in discovery
+Last activity: 2026-06-23 — Completed quick task 260623-x57: skip per-row detail fetch in watch discovery for already-staged externalId
 
 ## v3.1 Roadmap Summary (Phases 19-26)
 
@@ -162,9 +162,10 @@ Acknowledged and deferred at v3.1 milestone close (2026-06-22) — both are depl
 
 ### Quick Tasks Completed
 
-| # | Description | Date | Commit | Directory |
-|---|-------------|------|--------|-----------|
-| 260623-wh2 | Silence per-cycle JSON-parse warn in discovery by sniffing body before JSON.parse | 2026-06-23 | a6bb890 | [260623-wh2-silence-per-cycle-json-parse-warn-in-dis](./quick/260623-wh2-silence-per-cycle-json-parse-warn-in-dis/) |
+| # | Description | Date | Commit | Status | Directory |
+|---|-------------|------|--------|--------|-----------|
+| 260623-wh2 | Silence per-cycle JSON-parse warn in discovery by sniffing body before JSON.parse | 2026-06-23 | a6bb890 | | [260623-wh2-silence-per-cycle-json-parse-warn-in-dis](./quick/260623-wh2-silence-per-cycle-json-parse-warn-in-dis/) |
+| 260623-x57 | Skip per-row detail fetch in watch discovery for already-staged trustworthy externalId (move dedup gate ahead of detail fetch) — distinct skippedPreDetail count | 2026-06-23 | aba6a54 | Verified | [260623-x57-skip-per-row-detail-fetch-in-watch-disco](./quick/260623-x57-skip-per-row-detail-fetch-in-watch-disco/) |
 
 ## Next Step
 
