@@ -42,6 +42,9 @@ const appendDiscoveryReport = (
     candidates: target.candidates.length,
     diagnostics: target.diagnostics.length,
     discovered: target.candidates.length,
+    // run-once never passes the pre-detail predicate, so it never skips
+    // pre-detail (260623-x57) — this count is always 0 on the run-once path.
+    skippedPreDetail: 0,
   };
   target.ok &&= pageReport.ok;
 };

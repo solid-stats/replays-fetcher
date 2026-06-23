@@ -89,6 +89,7 @@ const discoveryReport = (
     candidates: 1,
     diagnostics: 0,
     discovered: 1,
+    skippedPreDetail: 0,
   },
   diagnostics: [],
   generatedAt: startedAt,

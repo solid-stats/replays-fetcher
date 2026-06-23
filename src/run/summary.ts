@@ -75,6 +75,7 @@ const emptyCounts: RunSummaryCounts = {
   fetched: 0,
   skipped: 0,
   skippedBySourceId: 0,
+  skippedPreDetail: 0,
   staged: 0,
   stored: 0,
 };
@@ -165,10 +166,18 @@ const collectFailureCategories = (
 // stays byte-identical). It is deliberately distinct from `skipped` (raw
 // skipped + not_stageable) and `duplicate` (already_staged): folding it into
 // either would hide a data-loss-capable skip from operators (T-24-03).
+// `skippedPreDetail` is the watch discovery-level pre-detail skip (260623-x57):
+// a row dropped before any detail fetch. Like `skippedBySourceId` it cannot be
+// derived from the rawStorage/staging arrays (a skipped row never reaches
+// them) — its source of truth is the discovery report's own count, which
+// `buildRunSummary` threads in here. It is kept DISTINCT from
+// `skippedBySourceId` (the ingestPage post-fetch skip) so a discovery skip and
+// an ingest skip stay legible to operators.
 type CountRunInput = {
   readonly discoveryReport: DiscoveryReport;
   readonly rawStorage: readonly StoreRawReplayResult[];
   readonly skippedBySourceId: number;
+  readonly skippedPreDetail: number;
   readonly staging: readonly IngestStagingResult[];
 };
 
@@ -186,6 +195,7 @@ const countRun = (input: CountRunInput): RunSummaryCounts => ({
     countRawStatus(input.rawStorage, "skipped") +
     countStatus(input.staging, "not_stageable"),
   skippedBySourceId: input.skippedBySourceId,
+  skippedPreDetail: input.skippedPreDetail,
   staged: countStatus(input.staging, "staged"),
   stored: countRawStatus(input.rawStorage, "stored"),
 });
@@ -416,6 +426,9 @@ export const buildRunSummary = (input: BuildRunSummaryInput): RunSummary => {
       discoveryReport: input.discoveryReport,
       rawStorage: input.rawStorage,
       skippedBySourceId: input.skippedBySourceId ?? 0,
+      // The discovery report is the source of truth for the discovery-level
+      // pre-detail skip (260623-x57); default 0 so run-once stays byte-identical.
+      skippedPreDetail: input.discoveryReport.counts.skippedPreDetail,
       staging: input.staging,
     }),
     diagnostics: input.discoveryReport.diagnostics,

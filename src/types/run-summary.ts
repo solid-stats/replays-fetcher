@@ -45,6 +45,13 @@ export type RunSummaryCounts = {
   readonly fetched: number;
   readonly skipped: number;
   readonly skippedBySourceId: number;
+  // The watch discovery-level pre-detail skip (260623-x57): a row dropped before
+  // any detail fetch because its trustworthy externalId already had a staging
+  // row. Deliberately distinct from `skippedBySourceId` (the ingestPage
+  // post-fetch skip), `skipped` (raw skipped + not_stageable), and `duplicate`
+  // (already_staged): folding it would hide a data-loss-capable skip from
+  // operators (mirrors the T-24-03 rationale). 0 for run-once (no predicate).
+  readonly skippedPreDetail: number;
   readonly staged: number;
   readonly stored: number;
 };

@@ -53,6 +53,7 @@ const discoveryReport = (
     candidates: 1,
     diagnostics: 0,
     discovered: 1,
+    skippedPreDetail: 0,
   },
   diagnostics: [],
   generatedAt: startedAt,
@@ -130,6 +131,7 @@ test("buildRunSummary should aggregate successful run counts without secrets", (
       fetched: 1,
       skipped: 0,
       skippedBySourceId: 0,
+      skippedPreDetail: 0,
       staged: 1,
       stored: 1,
     },
@@ -204,6 +206,73 @@ test("buildRunSummary should keep skipped and duplicate independent of a zero sk
   expect(summary.counts.skippedBySourceId).toBe(0);
   expect(summary.counts.skipped).toBe(2);
   expect(summary.counts.duplicate).toBe(1);
+});
+
+test("buildRunSummary should surface skippedPreDetail from the discovery report as a distinct count", () => {
+  // The discovery-level pre-detail skip is the source of truth: buildRunSummary
+  // reads it from the report's counts, not from a separate input field.
+  const skipped = Number("2");
+  const summary = buildRunSummary({
+    discoveryReport: discoveryReport({
+      counts: {
+        candidates: 1,
+        diagnostics: 0,
+        discovered: 1,
+        skippedPreDetail: skipped,
+      },
+    }),
+    finishedAt,
+    rawStorage: [raw("stored")],
+    runId,
+    staging: [{ stagingId: "staging-1", status: "staged" }],
+    startedAt,
+  });
+
+  // The new count reflects the discovery report …
+  expect(summary.counts.skippedPreDetail).toBe(skipped);
+  // … and is NOT folded into skippedBySourceId, skipped, or duplicate.
+  expect(summary.counts.skippedBySourceId).toBe(0);
+  expect(summary.counts.skipped).toBe(0);
+  expect(summary.counts.duplicate).toBe(0);
+});
+
+test("buildRunSummary should default skippedPreDetail to 0 for a run-once report", () => {
+  const summary = buildRunSummary({
+    discoveryReport: discoveryReport(),
+    finishedAt,
+    rawStorage: [raw("stored")],
+    runId,
+    staging: [{ stagingId: "staging-1", status: "staged" }],
+    startedAt,
+  });
+
+  expect(summary.counts.skippedPreDetail).toBe(0);
+});
+
+test("buildRunSummary should keep skippedPreDetail distinct from skippedBySourceId", () => {
+  // Both a discovery pre-detail skip AND an ingestPage source-id skip in one run:
+  // each is tallied in its own bucket, never merged.
+  const preDetail = Number("3");
+  const bySourceId = Number("5");
+  const summary = buildRunSummary({
+    discoveryReport: discoveryReport({
+      counts: {
+        candidates: 1,
+        diagnostics: 0,
+        discovered: 1,
+        skippedPreDetail: preDetail,
+      },
+    }),
+    finishedAt,
+    rawStorage: [],
+    runId,
+    skippedBySourceId: bySourceId,
+    staging: [],
+    startedAt,
+  });
+
+  expect(summary.counts.skippedPreDetail).toBe(preDetail);
+  expect(summary.counts.skippedBySourceId).toBe(bySourceId);
 });
 
 test("buildRunSummary should classify source, raw storage, and staging failures", () => {
@@ -607,6 +676,7 @@ test("buildConfigInvalidRunSummary should produce a failed run-once summary", ()
       fetched: 0,
       skipped: 0,
       skippedBySourceId: 0,
+      skippedPreDetail: 0,
       staged: 0,
       stored: 0,
     },
@@ -794,6 +864,7 @@ test("toCompactSummary should omit absent optional keys (Object.hasOwn === false
       fetched: 0,
       skipped: 0,
       skippedBySourceId: 0,
+      skippedPreDetail: 0,
       staged: 0,
       stored: 0,
     },
