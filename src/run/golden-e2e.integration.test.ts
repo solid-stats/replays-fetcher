@@ -42,12 +42,14 @@ type StagingRow = {
     readonly sourceFilename: string;
     readonly sourceUrl: string;
   };
+  readonly replay_timestamp: Date;
   readonly size_bytes: string;
   readonly source_replay_id: string;
   readonly source_system: string;
 };
 
 const bucket = "solid-stats-replays";
+const millisecondsPerSecond = 1000;
 const runId = "run-2026-06-17T00:00:00.000Z-golden";
 const fixedNow = (): Date => new Date("2026-06-17T00:00:00.000Z");
 
@@ -174,7 +176,7 @@ test.skipIf(!goldenFixturesPresent())(
     // ASSERT (run 1) — identity parsed from real HTML matches the corpus.
     const firstRows = await pool.query<StagingRow>(
       `select source_system, source_replay_id, object_key, checksum,
-              size_bytes, promotion_evidence
+              size_bytes, replay_timestamp, promotion_evidence
        from ingest_staging_records
        order by source_replay_id`,
     );
@@ -209,11 +211,19 @@ test.skipIf(!goldenFixturesPresent())(
       expect(row.promotion_evidence.checksum).toBe(row.checksum);
       expect(row.promotion_evidence.objectKey).toBe(row.object_key);
       expect(row.promotion_evidence.byteSize).toBe(Number(row.size_bytes));
-      // Discovery now parses the listing "Game date" column into the discoveredAt
-      // audit evidence, so every staged row carries a concrete UTC value. (The
-      // canonical replay_timestamp stays filename-derived across this corpus —
-      // every fixture filename carries a timestamp — so the listing fallback for
-      // replay_timestamp is proven by the payload unit test, not here.)
+      // The canonical replay_timestamp is now the externalId Unix epoch converted
+      // to ISO UTC (the only true-UTC instant the source gives us). Every corpus
+      // source_replay_id is an in-range numeric epoch, so the expected value is
+      // deterministic per row. The filename/listing fallbacks are NOT exercisable
+      // here (the corpus has no non-epoch id) — they are proven by the payload
+      // unit test.
+      // `replay_timestamp` is a timestamptz column → pg returns a Date.
+      expect(row.replay_timestamp).toStrictEqual(
+        new Date(Number(row.source_replay_id) * millisecondsPerSecond),
+      );
+      // Discovery still parses the listing "Game date" column into the
+      // discoveredAt audit evidence (unchanged by this flip), so every staged row
+      // carries a concrete UTC value.
       const { discoveredAt } = row.promotion_evidence;
       expect(discoveredAt).toBeDefined();
       expect(discoveredAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:00\.000Z$/u);

@@ -88,8 +88,11 @@ test("PostgreSQL staging repository should insert idempotent discovered timestam
   expect(connectivity).toStrictEqual({ status: "passed" });
   expect(first).toMatchObject({ status: "staged" });
   expect(rows.rows).toHaveLength(1);
+  // replay_timestamp is now the externalId epoch (1778269931) converted to ISO
+  // UTC — epoch-primary supersedes the filename/listing dates. The discoveredAt
+  // audit field below is unchanged (still the filename-derived listing value).
   expect(rows.rows[0]?.replay_timestamp).toStrictEqual(
-    new Date("2026-05-09T00:32:44.000Z"),
+    new Date("2026-05-08T19:52:11.000Z"),
   );
   expect(rows.rows[0]?.promotion_evidence.discoveredAt).toBe(
     "2026-05-09T00:32:44.000Z",
