@@ -17,9 +17,10 @@ const filenameTimestamp = "2026-05-09T00:32:44.000Z";
 // canonical replayTimestamp for the default fixture — it WINS over the filename
 // and listing dates. new Date(1778269931 * 1000).toISOString().
 const epochTimestamp = "2026-05-08T19:52:11.000Z";
-// A non-epoch source id reaches the filename/listing fallback rungs (the epoch
-// arm yields undefined for it).
-const nonEpochExternalId = "derived:not-an-epoch";
+// An id-less source (no `externalId`) is the only way the filename/listing
+// fallback rungs fire in production — a real `externalId` is always a numeric
+// `/replays/{epoch}` id, so the epoch arm yields undefined only when it is absent.
+const idlessSource = { page: 1, url: sourceUrl } as const;
 
 // Typed builder — the single place the `RawReplayStorageEvidence` literal
 // lives; tests override only the field under test (std §G).
@@ -127,19 +128,19 @@ test.each([
     epochTimestamp,
   ],
   [
-    "falls back to the filename timestamp for a non-epoch id when both filename and listing are present",
+    "falls back to the filename timestamp for an id-less candidate when both filename and listing are present",
     createStoredEvidence({
       discoveredAt: "2099-01-01T00:00:00.000Z",
-      source: { externalId: nonEpochExternalId, page: 1, url: sourceUrl },
+      source: idlessSource,
       sourceFilename,
     }),
     filenameTimestamp,
   ],
   [
-    "falls back to the listing game-date for a non-epoch id when the filename carries no timestamp",
+    "falls back to the listing game-date for an id-less candidate when the filename carries no timestamp",
     createStoredEvidence({
       discoveredAt: "2026-06-14T19:01:00.000Z",
-      source: { externalId: nonEpochExternalId, page: 1, url: sourceUrl },
+      source: idlessSource,
       sourceFilename: "custom-replay-name.ocap",
     }),
     "2026-06-14T19:01:00.000Z",
@@ -156,9 +157,9 @@ test.each([
   },
 );
 
-// replayTimestamp ABSENT (fourth rung) — a non-epoch id whose filename carries
-// no timestamp and with no listing game-date: all three rungs fall through.
-// A non-epoch externalId is required, else the epoch arm would win.
+// replayTimestamp ABSENT (fourth rung) — an id-less candidate whose filename
+// carries no timestamp and with no listing game-date: all three rungs fall
+// through. An absent externalId is required, else the epoch arm would win.
 test.each([
   [
     "is absent when neither the filename nor the listing game-date carries a timestamp",
@@ -175,7 +176,7 @@ test.each([
 ])("replayTimestamp %s", (_name, filename: string) => {
   const result = toIngestStagingPayload(
     withoutListingDate({
-      source: { externalId: nonEpochExternalId, page: 1, url: sourceUrl },
+      source: idlessSource,
       sourceFilename: filename,
     }),
   );
@@ -188,15 +189,15 @@ test.each([
 test("an out-of-range listing game-date never produces a discoveredAt, so the fallback stages no bogus replayTimestamp", () => {
   // Standalone: asserts the PRODUCER contract — the listing cell is
   // range-validated at `parseGameDateToUtcIso`, so an out-of-range cell yields
-  // no discoveredAt, never reaching the `?? evidence.discoveredAt` fallback. A
-  // non-epoch id keeps the epoch arm out of the way so the listing rung is the
-  // one under test.
+  // no discoveredAt, never reaching the `?? evidence.discoveredAt` fallback. An
+  // id-less candidate keeps the epoch arm out of the way so the listing rung is
+  // the one under test.
   const discoveredAt = parseGameDateToUtcIso("32.13.2026 25:99");
   expect(discoveredAt).toBeUndefined();
 
   const result = toIngestStagingPayload(
     withoutListingDate({
-      source: { externalId: nonEpochExternalId, page: 1, url: sourceUrl },
+      source: idlessSource,
       sourceFilename: "custom-replay-name.ocap",
     }),
   );
