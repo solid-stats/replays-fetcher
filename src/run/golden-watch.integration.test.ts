@@ -43,7 +43,7 @@ afterEach(async () => {
 });
 
 test.skipIf(!goldenFixturesPresent())(
-  "golden watch: drives runWatchLoop via injected seams for N cycles — cycle 1 stores/stages N, later cycles SKIP N pre-fetch (no re-download), clean shutdown, no leaks",
+  "golden watch: drives runWatchLoop via injected seams for N cycles — cycle 1 stores/stages N, later cycles SKIP N pre-detail (no re-fetch, no re-download), clean shutdown, no leaks",
   async () => {
     // ARRANGE — real infra (ephemeral MinIO + Postgres), fixtured source/bytes.
     const fixtures = loadGoldenFixtures();
@@ -185,19 +185,22 @@ test.skipIf(!goldenFixturesPresent())(
     expect(stagedCycleOne).toBeGreaterThan(0);
     expect(firstSummary.counts.stored).toBe(stagedCycleOne);
 
-    // Cycles ≥2 SKIP N pre-fetch: each known candidate's source identity already
-    // has a staging row, so it is skipped BEFORE any byte download — nothing is
-    // stored, staged, or duplicated, and the skip lands in the distinct
-    // skippedBySourceId counter (DEDUP-01).
+    // Cycles ≥2 SKIP N pre-DETAIL: each known candidate's source identity already
+    // has a staging row, so discovery skips it BEFORE fetching the detail page
+    // (and therefore before any byte download) — nothing is stored, staged, or
+    // duplicated, and the skip lands in the distinct skippedPreDetail counter. The
+    // post-fetch skippedBySourceId gate (DEDUP-01) sees no candidates and stays 0.
     for (const summary of summaries.slice(1)) {
       expect(summary.counts.stored).toBe(0);
       expect(summary.counts.staged).toBe(0);
       expect(summary.counts.duplicate).toBe(0);
-      expect(summary.counts.skippedBySourceId).toBe(stagedCycleOne);
+      expect(summary.counts.skippedPreDetail).toBe(stagedCycleOne);
+      expect(summary.counts.skippedBySourceId).toBe(0);
     }
 
-    // fetchBytes is called ONLY in cycle 1 — cycles ≥2 skip before the download,
-    // so the total call count is stagedCycleOne, NOT stagedCycleOne * cycleCount.
+    // fetchBytes is called ONLY in cycle 1 — cycles ≥2 skip before the detail
+    // fetch (and thus before the download), so the total call count is
+    // stagedCycleOne, NOT stagedCycleOne * cycleCount.
     expect(fetchBytes.mock.calls.length).toBe(stagedCycleOne);
 
     // Pacing respected: the inter-cycle pacer floor is awaited once per cycle
