@@ -1,6 +1,7 @@
 import { calculateSha256 } from "../storage/checksum.js";
 import type { RawReplayStorageEvidence } from "../storage/types.js";
 import { componentsToUtcIso } from "../time/components-to-utc-iso.js";
+import { epochToUtcIso } from "../time/epoch-to-utc-iso.js";
 import type {
   IngestStagingPayload,
   StagingPayloadResult,
@@ -93,7 +94,17 @@ const basePayload = (
     sourceSystem,
     status: "pending",
   };
+  // Precedence: the externalId Unix epoch is the only true-UTC instant the
+  // source gives us, so it is PRIMARY. The filename timestamp and the listing
+  // game-date are known server-local-TZ values (≈UTC+1, the filename being the
+  // wrong event entirely) and only fire for id-less / non-epoch candidates —
+  // they are NOT corrected with an offset here; the epoch supersedes them.
+  const epochTimestamp =
+    evidence.source.externalId === undefined
+      ? undefined
+      : epochToUtcIso(evidence.source.externalId);
   const replayTimestamp =
+    epochTimestamp ??
     replayTimestampFromFilename(evidence.sourceFilename) ??
     evidence.discoveredAt;
 

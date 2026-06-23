@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- payload precedence + evidence + userinfo + non-stageable scenarios are kept together for payload-contract readability. */
 import { expect, test } from "vitest";
 
 import { parseGameDateToUtcIso } from "../discovery/html.js";
@@ -12,6 +13,13 @@ const sourceExternalId = "1778269931";
 const sourceUrl = "https://sg.zone/replays/1778269931";
 const sourceFilename = "2026_05_09__00_32_44__1_ocap";
 const filenameTimestamp = "2026-05-09T00:32:44.000Z";
+// `sourceExternalId` is an in-range Unix epoch, so under epoch-primary it is the
+// canonical replayTimestamp for the default fixture — it WINS over the filename
+// and listing dates. new Date(1778269931 * 1000).toISOString().
+const epochTimestamp = "2026-05-08T19:52:11.000Z";
+// A non-epoch source id reaches the filename/listing fallback rungs (the epoch
+// arm yields undefined for it).
+const nonEpochExternalId = "derived:not-an-epoch";
 
 // Typed builder — the single place the `RawReplayStorageEvidence` literal
 // lives; tests override only the field under test (std §G).
@@ -65,7 +73,7 @@ test("toIngestStagingPayload should map stored raw evidence to a pending server-
         sourceFilename: evidence.sourceFilename,
         sourceUrl: evidence.source.url,
       },
-      replayTimestamp: filenameTimestamp,
+      replayTimestamp: epochTimestamp,
       sizeBytes: evidence.byteSize,
       sourceReplayId: sourceExternalId,
       sourceSystem: "sg-zone",
@@ -105,26 +113,33 @@ test("toIngestStagingPayload should omit absent discovered timestamp evidence", 
   expect(JSON.stringify(result)).not.toContain("discoveredAt");
 });
 
-// replayTimestamp PRESENT — filename-primary vs listing-fallback precedence
-// (test.each, mirrors src/discovery/html.test.ts).
+// replayTimestamp PRESENT — the four-rung precedence matrix: epoch (externalId)
+// FIRST, then filename, then listing game-date. The epoch is the only true-UTC
+// instant; filename and listing are known server-local-TZ fallbacks.
 test.each([
   [
-    "keeps the filename-derived value when both filename and listing game-date are present",
+    "uses the externalId epoch even when both a filename timestamp and a listing game-date are present (epoch wins both)",
     createStoredEvidence({
       discoveredAt: "2099-01-01T00:00:00.000Z",
+      source: { externalId: sourceExternalId, page: 1, url: sourceUrl },
+      sourceFilename,
+    }),
+    epochTimestamp,
+  ],
+  [
+    "falls back to the filename timestamp for a non-epoch id when both filename and listing are present",
+    createStoredEvidence({
+      discoveredAt: "2099-01-01T00:00:00.000Z",
+      source: { externalId: nonEpochExternalId, page: 1, url: sourceUrl },
       sourceFilename,
     }),
     filenameTimestamp,
   ],
   [
-    "derives from the filename when no listing game-date is present",
-    withoutListingDate(),
-    filenameTimestamp,
-  ],
-  [
-    "falls back to the listing game-date when the filename carries no timestamp",
+    "falls back to the listing game-date for a non-epoch id when the filename carries no timestamp",
     createStoredEvidence({
       discoveredAt: "2026-06-14T19:01:00.000Z",
+      source: { externalId: nonEpochExternalId, page: 1, url: sourceUrl },
       sourceFilename: "custom-replay-name.ocap",
     }),
     "2026-06-14T19:01:00.000Z",
@@ -141,7 +156,9 @@ test.each([
   },
 );
 
-// replayTimestamp ABSENT — filename-format + range-validation arms (test.each).
+// replayTimestamp ABSENT (fourth rung) — a non-epoch id whose filename carries
+// no timestamp and with no listing game-date: all three rungs fall through.
+// A non-epoch externalId is required, else the epoch arm would win.
 test.each([
   [
     "is absent when neither the filename nor the listing game-date carries a timestamp",
@@ -157,7 +174,10 @@ test.each([
   ],
 ])("replayTimestamp %s", (_name, filename: string) => {
   const result = toIngestStagingPayload(
-    withoutListingDate({ sourceFilename: filename }),
+    withoutListingDate({
+      source: { externalId: nonEpochExternalId, page: 1, url: sourceUrl },
+      sourceFilename: filename,
+    }),
   );
 
   // Assert stageability so a future flip to stageable: false fails loudly.
@@ -168,12 +188,17 @@ test.each([
 test("an out-of-range listing game-date never produces a discoveredAt, so the fallback stages no bogus replayTimestamp", () => {
   // Standalone: asserts the PRODUCER contract — the listing cell is
   // range-validated at `parseGameDateToUtcIso`, so an out-of-range cell yields
-  // no discoveredAt, never reaching the `?? evidence.discoveredAt` fallback.
+  // no discoveredAt, never reaching the `?? evidence.discoveredAt` fallback. A
+  // non-epoch id keeps the epoch arm out of the way so the listing rung is the
+  // one under test.
   const discoveredAt = parseGameDateToUtcIso("32.13.2026 25:99");
   expect(discoveredAt).toBeUndefined();
 
   const result = toIngestStagingPayload(
-    withoutListingDate({ sourceFilename: "custom-replay-name.ocap" }),
+    withoutListingDate({
+      source: { externalId: nonEpochExternalId, page: 1, url: sourceUrl },
+      sourceFilename: "custom-replay-name.ocap",
+    }),
   );
 
   // Assert stageability so a future flip to stageable: false fails loudly.
