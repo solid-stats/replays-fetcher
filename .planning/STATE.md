@@ -5,9 +5,9 @@ milestone_name: Convention Compliance & Tech-Debt Closure
 current_phase: 1
 status: Awaiting next milestone
 stopped_at: "Milestone v3.1 complete (8/8 phases, 20 plans). Phase 26 (Test-Quality + Correctness Hygiene) shipped 2026-06-22: CORR-01 typed InvariantViolationError + validated SourceTransport + §AA traceback; TEST-01..05 builders/RITE/test.each/deterministic-ordering. verify green (567 tests, 100% coverage), golden e2e oracle green. Audit 23/23 requirements (tech_debt: 2 deployment ship-gates T-24-04, T-25-03). Archived + tagged v3.1. Note: out-of-band `fallow` enable (commit 8540649 + uncommitted package.json/pnpm-lock) left untouched per user."
-last_updated: "2026-06-22T15:17:01.376Z"
-last_activity: 2026-06-22
-last_activity_desc: Milestone v3.1 completed and archived
+last_updated: "2026-06-23"
+last_activity: 2026-06-23
+last_activity_desc: "Post-milestone quick task qj5 (epoch-primary replay_timestamp) executed + reviewed; pending merge to master + server-2 cross-app hand-off"
 progress:
   total_phases: 8
   completed_phases: 8
@@ -107,6 +107,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 24-01, DEDUP-02/03]: Staging benign-duplicate detection rewritten from insert-and-catch-23505 to `INSERT ... ON CONFLICT (checksum, object_key) DO NOTHING RETURNING id`; zero RETURNING rows = benign skip → resolve existing id → `already_staged`. ON CONFLICT target is `(checksum, object_key)` ONLY — the `(source_system, source_replay_id)` violation still throws 23505 → `classifyExistingStaging` → `conflict` (server-2 manual-review feed NOT swallowed, integration-proven).
 - [Phase 24-01, DEDUP-03]: `existsBySourceIdentity(sourceSystem, sourceReplayId): Promise<boolean>` added as a lean `SELECT 1 ... LIMIT 1` (not a reuse of the 6-column findBySourceIdentity) — the pre-fetch existence primitive Plan 24-03 will call.
 - [Phase 25-01, DISC-01/02]: Listing "Game date" (DD.MM.YYYY HH:MM) is parsed in discovery by `parseGameDateToUtcIso` — an anchored day-first named-group regex mirroring `replayTimestampFromFilename`, NO date library. Threaded via the existing `discoveredAt` key end to end (zero cross-band type changes). Staging `replayTimestamp` = `replayTimestampFromFilename(...) ?? evidence.discoveredAt`: filename strictly PRIMARY, listing a strict fallback that never overrides it. Golden-e2e oracle flipped to a concrete UTC-shape match (replay_timestamp stays filename-derived in the corpus, so the fallback is proven by the payload unit test). Listing timezone (T-25-03) is a manual-only ship-gate, not auto-closed.
+- [quick-260623-qj5, SUPERSEDES the Phase 25-01 precedence above]: Staging `replayTimestamp` is now epoch-PRIMARY — `epochToUtcIso(externalId) ?? replayTimestampFromFilename(...) ?? evidence.discoveredAt`. The `/replays/{id}` `externalId` is a Unix epoch (seconds) = the only true-UTC instant the source gives us; the filename and listing dates are known server-local-TZ (≈UTC+1, the filename being the wrong *event* — file-write/game-end) and now fire ONLY for id-less / non-epoch candidates. New `src/time/epoch-to-utc-iso.ts` (range-guarded 2015-01-01..2035-01-01, strict canonical-integer guard, never throws). Golden oracle flipped to assert the concrete epoch-derived `replay_timestamp` per corpus row (UPDATE, not loosen). Value-only change — same field/type, NOT a schema change; `discoveredAt`/`sourceExternalId` audit fields byte-for-byte unchanged. `verify` green (100% cov), golden integration green. Cross-app server-2 follow-up (backfill of already-staged rows + read-path UTC confirmation) is maintainer-owned — see Blockers/Concerns.
 
 > Older per-phase decision log (Phases 1-18) is retained in PROJECT.md Key Decisions and the v1.0/v2.0/v3.0 milestone archives. Trimmed here per the STATE.md digest size constraint at the v3.1 boundary.
 
@@ -131,7 +132,7 @@ Acknowledged and deferred at v3.1 milestone close (2026-06-22) — both are depl
 | Category | Item | Status |
 |----------|------|--------|
 | ship-gate | T-24-04 — production-staging data-loss sign-off before the watch pre-fetch dedup ships to a real production staging target | deferred |
-| ship-gate | T-25-03 — listing-timezone confirmation before production ship (filename timestamp stays primary; bounded risk) | deferred |
+| ship-gate | T-25-03 — listing-timezone confirmation before production ship | SUPERSEDED by quick-260623-qj5 — epoch (true UTC) is now the primary `replay_timestamp`; the wrong-TZ filename/listing values are demoted to rare id-less-candidate fallbacks. Residual: the fallback path is still server-local TZ (bounded, rare). New cross-app item replaces it (see Blockers/Concerns). |
 
 ### Blockers/Concerns
 
@@ -140,6 +141,14 @@ Acknowledged and deferred at v3.1 milestone close (2026-06-22) — both are depl
   disk). Verify subagent disk writes before trusting their summaries on later phases.
 
 - **DISC-02 server-2 dependency (v3.1):** see Open Gates above — hard blocker, may slip DISC-02 to v3.2.
+
+- **Cross-app — server-2 (quick-260623-qj5, OPEN, maintainer-owned):** qj5 changed the *semantics*
+  of the staged `replays.replay_timestamp` value — was server-local-TZ-as-UTC (≈UTC+1, file-write
+  event), now true-UTC epoch game-start. Same field/type (not a schema change), but already-staged
+  rows keep the old wrong-TZ values → the column is a **mix of two conventions** until server-2
+  backfills. Server-2 owns: (a) backfill of existing rows from the `externalId` epoch, (b)
+  confirming the read-path / `web` display treats the column as true UTC. Out of scope for the
+  fetcher; handed off — see the qj5 handoff brief in the quick-task dir.
 
 - **RESOLVED (Phase 20 → §AA fix 5fa86e6):** `src/commands/shared.ts` had hit the 300-line
   `max-lines` limit after the pool-ownership move. The §AA teardown-logging fix split
@@ -153,17 +162,20 @@ Acknowledged and deferred at v3.1 milestone close (2026-06-22) — both are depl
 
 ## Next Step
 
-1. Plan Phase 24 (Watch Pre-Fetch Dedup + ON CONFLICT Staging — DEDUP-01, DEDUP-02, DEDUP-03).
-   First INTENTIONAL behavior change of the milestone: skip already-staged replays BEFORE the byte
-   fetch, and make the staging insert `ON CONFLICT DO NOTHING`. The golden run-once oracle is
-   UPDATED (not loosened) to encode the new skip behavior.
+Milestone v3.1 is complete, tagged `v3.1`, and on `master`. The Phase 19-26 planning notes above are
+retained as the milestone record; they are NOT pending work.
 
-2. **Cross-app gate (DEDUP-03, load-bearing):** confirm `ON CONFLICT` benign-vs-conflicting
-   semantics match the server-2 poller's expectations BEFORE the phase is planned (staging-schema
-   contract — adjacent-app evidence or a user question required).
+1. **Land quick-260623-qj5 on `master`.** The `gsd/v3.1-milestone` branch is 6 commits ahead of
+   `master` — all of them the qj5 epoch-primary `replay_timestamp` quick task (planned, executed,
+   reviewed, verify + integration green). Merge to `master` (fast-forward; `master` has diverged 0
+   commits) and push.
 
-3. **Human-in-the-loop (DEDUP-01):** pre-fetch `source_replay_id` dedup is data-loss-capable —
-   TECH-DEBT-explicit human review required before shipping to staging. Surface in discuss/plan.
+2. **Cross-app server-2 hand-off (qj5, maintainer-owned).** The staged `replay_timestamp` semantics
+   changed (true-UTC epoch, was server-local-TZ). Server-2 must backfill existing rows from the
+   `externalId` epoch and confirm its read-path / `web` display treats the column as UTC. See the
+   qj5 handoff brief in `.planning/quick/260623-qj5-fix-replay-timestamp-source-use-external/`.
+
+3. **Next milestone:** start with `/gsd-new-milestone` when ready (see Operator Next Steps).
 
 ## Reviewer skill-chain note (process) — RESOLVED via hook
 
@@ -180,8 +192,11 @@ hand-spawned reviewer/fixer prompts.
 
 ## Session
 
-**Last session:** 2026-06-20T15:23:41.461Z
-**Stopped at:** Phase 23 complete (1/1 plan; eight depcruise band fences locked in as a no-op; planted-violation proof + review clean via full skill-chain). Out-of-band: §AA re-review findings fixed (5fa86e6) + gsd-skill-chain-guard hook added. Autonomous run at 63% (5/8), continuing to Phase 24.
+**Last session:** 2026-06-23
+**Stopped at:** Milestone v3.1 complete + tagged (`v3.1`, on master). Post-milestone quick task
+quick-260623-qj5 (epoch-primary `replay_timestamp`) planned, executed, reviewed (APPROVE) and its
+one review nit fixed on `gsd/v3.1-milestone`; `verify` green (100% cov), golden integration green.
+Pending: merge qj5 → master + push; server-2 cross-app hand-off (see Next Step).
 **Resume file:** None
 
 ## Performance Metrics
