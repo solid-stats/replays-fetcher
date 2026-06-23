@@ -44,12 +44,16 @@ const candidate = (externalId: string): ReplayCandidate => ({
   },
 });
 
-const report = (candidates: readonly ReplayCandidate[]): DiscoveryReport => ({
+const report = (
+  candidates: readonly ReplayCandidate[],
+  skippedPreDetail = 0,
+): DiscoveryReport => ({
   candidates,
   counts: {
     candidates: candidates.length,
     diagnostics: 0,
     discovered: candidates.length,
+    skippedPreDetail,
   },
   diagnostics: [],
   generatedAt: fetchedAt,
@@ -98,6 +102,10 @@ type BuildInputOptions = {
 
 const defaultDiscover = async (): Promise<DiscoveryReport> =>
   report([candidate("100")]);
+
+// Module-scoped no-op predicate (captures nothing) so the threading assertion
+// can compare by reference without an inner closure.
+const neverStaged = async (): Promise<boolean> => false;
 
 const buildInput = (options: BuildInputOptions): WatchLoopInput => {
   const sleepCalls = options.sleepCalls ?? [];
@@ -272,6 +280,65 @@ test("runWatchLoop skips a known candidate pre-fetch and reports it via skippedB
     staged: 0,
     stored: 0,
   });
+});
+
+test("runWatchLoop threads existsBySourceIdentity + sourceSystem into discovery on the watch path", async () => {
+  // 260623-x57: the watch buildDiscoverInput must hand the staging repository's
+  // existsBySourceIdentity predicate and the defaultSourceSystem to discovery so
+  // the pre-detail gate can fire. run-once never does this.
+  const discoverReplays: ReturnType<
+    typeof vi.fn<WatchLoopInput["discoverReplays"]>
+  > = vi.fn(defaultDiscover);
+
+  await runWatchLoop(
+    buildInput({
+      discoverReplays,
+      existsBySourceIdentity: neverStaged,
+      shouldStop: stopAfter(1),
+    }),
+  );
+
+  const discoverArguments = discoverReplays.mock.calls[0]?.[0] as
+    | (Record<string, unknown> & {
+        existsBySourceIdentity?: unknown;
+        sourceSystem?: unknown;
+      })
+    | undefined;
+  expect(discoverArguments?.existsBySourceIdentity).toBe(neverStaged);
+  // The pre-detail SELECT keys on the SAME defaultSourceSystem the staging
+  // INSERT uses (Pitfall 3) — sg-zone.
+  expect(discoverArguments?.sourceSystem).toBe("sg-zone");
+});
+
+test("runWatchLoop surfaces the discovery report's skippedPreDetail in the compact run summary", async () => {
+  // The pre-detail skip count flows discovery report → buildRunSummary →
+  // compact summary as a DISTINCT counts.skippedPreDetail.
+  const lines: string[] = [];
+  const log = createLogger({
+    destination: new Writable({
+      write(chunk: Buffer, _encoding, callback) {
+        lines.push(chunk.toString("utf8"));
+        callback();
+      },
+    }),
+    level: "info",
+  });
+  const discoverReplays = vi.fn(async () =>
+    report([candidate("100")], Number("2")),
+  );
+
+  await runWatchLoop(
+    buildInput({ discoverReplays, log, shouldStop: stopAfter(1) }),
+  );
+
+  const cycleComplete = lines
+    .join("")
+    .split("\n")
+    .filter((line) => line.length > 0)
+    .map((line) => JSON.parse(line) as Record<string, unknown>)
+    .find((entry) => entry["event"] === "watch_cycle_complete");
+  const summary = cycleComplete?.["summary"] as Record<string, unknown>;
+  expect(summary["counts"]).toMatchObject({ skippedPreDetail: 2 });
 });
 
 test("runWatchLoop runs exactly N cycles sleeping the configured interval between them, then stops", async () => {

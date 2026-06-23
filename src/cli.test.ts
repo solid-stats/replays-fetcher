@@ -177,6 +177,7 @@ const createDiscoveryReport = (
     candidates: candidates.length,
     diagnostics: 0,
     discovered: candidates.length,
+    skippedPreDetail: 0,
   },
   diagnostics: [],
   generatedAt: "2026-05-09T12:00:00.000Z",
@@ -255,6 +256,7 @@ const createRunSummary = (overrides: Partial<RunSummary> = {}): RunSummary => ({
     fetched: 0,
     skipped: 0,
     skippedBySourceId: 0,
+    skippedPreDetail: 0,
     staged: 0,
     stored: 0,
   },
@@ -686,7 +688,12 @@ test("buildCli dry-run should emit one stderr warn per retry round without distu
 
       return {
         candidates: [],
-        counts: { candidates: 0, diagnostics: 0, discovered: 0 },
+        counts: {
+          candidates: 0,
+          diagnostics: 0,
+          discovered: 0,
+          skippedPreDetail: 0,
+        },
         diagnostics: [],
         generatedAt: "2026-05-09T12:00:00.000Z",
         mode: "dry-run",
@@ -1120,7 +1127,12 @@ test("buildCli run-once should keep checkpoint warn logs on stderr while stdout 
     async discoverReplaysDryRun(input) {
       return {
         candidates: [],
-        counts: { candidates: 0, diagnostics: 0, discovered: 0 },
+        counts: {
+          candidates: 0,
+          diagnostics: 0,
+          discovered: 0,
+          skippedPreDetail: 0,
+        },
         diagnostics: [],
         generatedAt: "2026-05-09T12:00:00.000Z",
         mode: "dry-run",
@@ -1161,6 +1173,7 @@ test("buildCli run-once should execute one scheduled cycle and write a structure
         fetched: 1,
         skipped: 0,
         skippedBySourceId: 0,
+        skippedPreDetail: 0,
         staged: 1,
         stored: 1,
       },
@@ -1254,6 +1267,7 @@ test("buildCli run-once should thread the optional max-pages safety-valve cap in
         fetched: 1,
         skipped: 0,
         skippedBySourceId: 0,
+        skippedPreDetail: 0,
         staged: 1,
         stored: 1,
       },
@@ -1626,7 +1640,12 @@ const buildRealRunOnceDeps = (
   async discoverReplaysDryRun(input) {
     return {
       candidates: [],
-      counts: { candidates: 0, diagnostics: 0, discovered: 0 },
+      counts: {
+        candidates: 0,
+        diagnostics: 0,
+        discovered: 0,
+        skippedPreDetail: 0,
+      },
       diagnostics: [],
       generatedAt: "2026-05-09T12:00:00.000Z",
       mode: "dry-run",
@@ -1919,6 +1938,7 @@ test('buildRetryWarnEmitter emits event:"retry" discriminator with static "retry
             fetched: 0,
             skipped: 0,
             skippedBySourceId: 0,
+            skippedPreDetail: 0,
             staged: 0,
             stored: 0,
           },

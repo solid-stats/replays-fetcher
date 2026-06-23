@@ -62,11 +62,16 @@ export type WatchLoopInput = {
   readonly createRunId: (now: Date) => string;
   readonly discoverReplays: (input: {
     readonly attempts?: number;
+    // Watch-only pre-detail dedup gate (260623-x57): the staging existence
+    // predicate + the sourceSystem it keys on, threaded into discovery so an
+    // already-staged trustworthy externalId is skipped BEFORE its detail fetch.
+    readonly existsBySourceIdentity?: ExistsBySourceIdentity;
     readonly log?: Logger;
     readonly maxPages?: number;
     readonly onRetry?: (event: RetryAttemptEvent) => void;
     readonly requestDelayMs?: number;
     readonly sourceClient: SourceClient;
+    readonly sourceSystem?: string;
     readonly sourceUrl: URL;
   }) => Promise<DiscoveryReport>;
   readonly heartbeatPath: string;
@@ -105,10 +110,12 @@ const buildDiscoverInput = (
   input: WatchLoopInput,
 ): {
   readonly attempts?: number;
+  readonly existsBySourceIdentity: ExistsBySourceIdentity;
   readonly log: Logger;
   readonly maxPages: number;
   readonly requestDelayMs: number;
   readonly sourceClient: SourceClient;
+  readonly sourceSystem: string;
   readonly sourceUrl: URL;
 } => {
   // PAGE 1 ONLY: maxPages is pinned to 1 and the sourceUrl is the unmodified
@@ -119,22 +126,31 @@ const buildDiscoverInput = (
   // inter-request floor inside `discoverReplays`, never compounded with retry
   // backoff). Combined with the inter-cycle pacer floor in `runWatchLoop`, this
   // makes EVERY page-1 source request respect `requestSpacingMs`.
+  //
+  // existsBySourceIdentity + sourceSystem opt discovery into the watch-only
+  // pre-detail dedup gate (260623-x57): run-once never threads these, so its
+  // discovery path is byte-for-byte unchanged. sourceSystem is the SAME
+  // defaultSourceSystem the staging INSERT keys on (Pitfall 3).
   if (input.attempts === undefined) {
     return {
+      existsBySourceIdentity: input.stagingRepository.existsBySourceIdentity,
       log: input.log,
       maxPages: WATCH_PAGE,
       requestDelayMs: input.requestSpacingMs,
       sourceClient: input.sourceClient,
+      sourceSystem: defaultSourceSystem,
       sourceUrl: input.sourceUrl,
     };
   }
 
   return {
     attempts: input.attempts,
+    existsBySourceIdentity: input.stagingRepository.existsBySourceIdentity,
     log: input.log,
     maxPages: WATCH_PAGE,
     requestDelayMs: input.requestSpacingMs,
     sourceClient: input.sourceClient,
+    sourceSystem: defaultSourceSystem,
     sourceUrl: input.sourceUrl,
   };
 };

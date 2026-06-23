@@ -69,6 +69,9 @@ export const discoverReplaysDryRun = async (
   const maxPages = options.maxPages ?? 1;
   const candidates: ReplayCandidate[] = [];
   const diagnostics: DiscoveryDiagnostic[] = [];
+  // Running total of rows skipped before their detail fetch by the watch
+  // pre-detail gate, accumulated across pages and carried into the report.
+  let skippedPreDetail = 0;
   const sourceClient = createPacedSourceClient(options);
   // Tracks the page being read when a source failure throws, so the terminal
   // diagnostic can re-attach `page` even if the thrown error's details somehow
@@ -83,7 +86,9 @@ export const discoverReplaysDryRun = async (
       // Source requests are intentionally sequential to preserve source order.
       const sourceText = await sourceClient.fetchText(pageUrl, listReadOptions);
       const fixture = parseSourceFixture(sourceText, options.log);
-      // Page detail fetches are part of the same source-order sequence.
+      // Page detail fetches are part of the same source-order sequence. The
+      // pre-detail predicate + sourceSystem are threaded only when supplied (the
+      // watch path); run-once / discover omit both, leaving the gate inert.
       const pageCandidates = await discoverPageCandidates({
         detailReadOptions: buildReadOptions(options, page, "detail"),
         fixture,
@@ -91,9 +96,16 @@ export const discoverReplaysDryRun = async (
         pageUrl,
         sourceClient,
         sourceText,
+        ...(options.existsBySourceIdentity === undefined
+          ? {}
+          : { existsBySourceIdentity: options.existsBySourceIdentity }),
+        ...(options.sourceSystem === undefined
+          ? {}
+          : { sourceSystem: options.sourceSystem }),
       });
       candidates.push(...pageCandidates.candidates);
       diagnostics.push(...pageCandidates.diagnostics);
+      skippedPreDetail += pageCandidates.skippedPreDetail;
     }
   } catch (error) {
     if (!(error instanceof SourceFetchError)) {
@@ -104,8 +116,20 @@ export const discoverReplaysDryRun = async (
       buildSourceFailureDiagnostic(error, options.sourceUrl, failedPage),
     );
 
-    return buildReport({ candidates, diagnostics, ok: false, options });
+    return buildReport({
+      candidates,
+      diagnostics,
+      ok: false,
+      options,
+      skippedPreDetail,
+    });
   }
 
-  return buildReport({ candidates, diagnostics, ok: true, options });
+  return buildReport({
+    candidates,
+    diagnostics,
+    ok: true,
+    options,
+    skippedPreDetail,
+  });
 };

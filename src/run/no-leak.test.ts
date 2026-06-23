@@ -130,7 +130,7 @@ const baseDiscoveryReport = (): DiscoveryReport => ({
       },
     },
   ],
-  counts: { candidates: 1, diagnostics: 0, discovered: 1 },
+  counts: { candidates: 1, diagnostics: 0, discovered: 1, skippedPreDetail: 0 },
   diagnostics: [],
   generatedAt: startedAt,
   mode: "dry-run",
@@ -140,7 +140,7 @@ const baseDiscoveryReport = (): DiscoveryReport => ({
 
 const emptyDiscoveryReport = (): DiscoveryReport => ({
   candidates: [],
-  counts: { candidates: 0, diagnostics: 0, discovered: 0 },
+  counts: { candidates: 0, diagnostics: 0, discovered: 0, skippedPreDetail: 0 },
   diagnostics: [],
   generatedAt: finishedAt,
   mode: "dry-run",

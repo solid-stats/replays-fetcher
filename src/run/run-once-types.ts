@@ -120,6 +120,7 @@ export const emptyDiscoveryReport = (
     candidates: 0,
     diagnostics: 0,
     discovered: 0,
+    skippedPreDetail: 0,
   },
   diagnostics: [],
   generatedAt: new Date().toISOString(),
