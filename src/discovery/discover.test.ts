@@ -1069,6 +1069,211 @@ test("discoverReplaysDryRun should ignore malformed source-failure evidence type
   });
 });
 
+// ---------------------------------------------------------------------------
+// Pre-detail dedup gate (260623-x57) — watch-path only, predicate-gated.
+// ---------------------------------------------------------------------------
+
+const twoTrustworthyRowsHtml = `
+  <table class="common-table">
+    <tbody>
+      <tr><td><a href="/replays/100">first</a></td><td>Altis</td><td>1</td></tr>
+      <tr><td><a href="/replays/101">second</a></td><td>Altis</td><td>1</td></tr>
+    </tbody>
+  </table>
+`;
+
+const detailResponses = (): Map<string, string> =>
+  new Map([
+    ["https://example.test/replays", twoTrustworthyRowsHtml],
+    [
+      "https://example.test/replays/100",
+      `<html><body data-ocap="first.json"></body></html>`,
+    ],
+    [
+      "https://example.test/replays/101",
+      `<html><body data-ocap="second.json"></body></html>`,
+    ],
+  ]);
+
+test("discoverReplaysDryRun should skip the detail fetch for an already-staged trustworthy externalId", async () => {
+  // The predicate marks externalId "100" as already staged → its detail HTML is
+  // never fetched, no candidate is emitted for it, and skippedPreDetail tallies 1.
+  const requestedUrls: string[] = [];
+  const responses = detailResponses();
+  const sourceClient: SourceClient = {
+    async fetchText(url) {
+      requestedUrls.push(url.toString());
+
+      return responses.get(url.toString()) ?? "";
+    },
+  };
+  const stagedIds = new Set(["100"]);
+
+  const report = await discoverReplaysDryRun({
+    existsBySourceIdentity: (_sourceSystem, id) =>
+      Promise.resolve(stagedIds.has(id)),
+    requestDelayMs: 0,
+    sourceClient,
+    sourceSystem: "sg.zone",
+    sourceUrl: new URL("https://example.test/replays"),
+  });
+
+  // Only the surviving row's detail is fetched; row 100's detail URL is absent.
+  expect(requestedUrls).toStrictEqual([
+    "https://example.test/replays",
+    "https://example.test/replays/101",
+  ]);
+  expect(
+    report.candidates.map((candidate) => candidate.identity.filename),
+  ).toStrictEqual(["second.json"]);
+  expect(report.counts.skippedPreDetail).toBe(1);
+});
+
+test("discoverReplaysDryRun should still fetch the detail for an absent/empty/whitespace externalId (cannot-miss guard)", async () => {
+  // The predicate would return true for ANY id, but a row whose href has no
+  // trustworthy id ("/replays/" → no id, "/replays/   " → whitespace) must NOT
+  // be skipped — its source identity is a derived: form needing the checksum.
+  const requestedUrls: string[] = [];
+  const responses = new Map([
+    [
+      "https://example.test/replays",
+      `
+        <table class="common-table">
+          <tbody>
+            <tr><td><a href="/replays/">no id</a></td></tr>
+          </tbody>
+        </table>
+      `,
+    ],
+    [
+      "https://example.test/replays/",
+      `<html><body data-ocap="no-id.json"></body></html>`,
+    ],
+  ]);
+  const sourceClient: SourceClient = {
+    async fetchText(url) {
+      requestedUrls.push(url.toString());
+
+      return responses.get(url.toString()) ?? "";
+    },
+  };
+
+  const report = await discoverReplaysDryRun({
+    existsBySourceIdentity: () => Promise.resolve(true),
+    requestDelayMs: 0,
+    sourceClient,
+    sourceSystem: "sg.zone",
+    sourceUrl: new URL("https://example.test/replays"),
+  });
+
+  // The id-less row still fetched its detail (cannot-miss guard).
+  expect(requestedUrls).toStrictEqual([
+    "https://example.test/replays",
+    "https://example.test/replays/",
+  ]);
+  expect(
+    report.candidates.map((candidate) => candidate.identity.filename),
+  ).toStrictEqual(["no-id.json"]);
+  expect(report.counts.skippedPreDetail).toBe(0);
+});
+
+test("discoverReplaysDryRun should fetch the detail for a trustworthy externalId that is NOT yet staged", async () => {
+  const requestedUrls: string[] = [];
+  const responses = detailResponses();
+  const sourceClient: SourceClient = {
+    async fetchText(url) {
+      requestedUrls.push(url.toString());
+
+      return responses.get(url.toString()) ?? "";
+    },
+  };
+
+  const report = await discoverReplaysDryRun({
+    // Nothing is staged yet → every row fetches its detail normally.
+    existsBySourceIdentity: () => Promise.resolve(false),
+    requestDelayMs: 0,
+    sourceClient,
+    sourceSystem: "sg.zone",
+    sourceUrl: new URL("https://example.test/replays"),
+  });
+
+  expect(requestedUrls).toStrictEqual([
+    "https://example.test/replays",
+    "https://example.test/replays/100",
+    "https://example.test/replays/101",
+  ]);
+  expect(
+    report.candidates.map((candidate) => candidate.identity.filename),
+  ).toStrictEqual(["first.json", "second.json"]);
+  expect(report.counts.skippedPreDetail).toBe(0);
+});
+
+test("discoverReplaysDryRun should report skippedPreDetail 0 when no predicate is supplied (run-once shape)", async () => {
+  // run-once / discover --dry-run pass no predicate, so the gate is inert and
+  // every row fetches its detail exactly as before.
+  const requestedUrls: string[] = [];
+  const responses = detailResponses();
+  const sourceClient: SourceClient = {
+    async fetchText(url) {
+      requestedUrls.push(url.toString());
+
+      return responses.get(url.toString()) ?? "";
+    },
+  };
+
+  const report = await discoverReplaysDryRun({
+    requestDelayMs: 0,
+    sourceClient,
+    sourceUrl: new URL("https://example.test/replays"),
+  });
+
+  expect(requestedUrls).toStrictEqual([
+    "https://example.test/replays",
+    "https://example.test/replays/100",
+    "https://example.test/replays/101",
+  ]);
+  expect(
+    report.candidates.map((candidate) => candidate.identity.filename),
+  ).toStrictEqual(["first.json", "second.json"]);
+  expect(report.counts.skippedPreDetail).toBe(0);
+});
+
+test("discoverReplaysDryRun should consume no spacing slot for a pre-detail-skipped row", async () => {
+  // Pacing oracle (mirrors the :738-742 sleeps-array test): one of two
+  // trustworthy rows is already staged, so only ONE detail fetch survives. The
+  // sequence is 1 list read + 1 surviving detail read → a SINGLE inter-request
+  // gap. The skipped row never calls fetchText, so it consumes no spacing slot.
+  const sleeps: number[] = [];
+  const responses = detailResponses();
+  const sourceClient: SourceClient = {
+    async fetchText(url) {
+      return responses.get(url.toString()) ?? "";
+    },
+  };
+  const stagedIds = new Set(["100"]);
+
+  const report = await discoverReplaysDryRun({
+    existsBySourceIdentity: (_sourceSystem, id) =>
+      Promise.resolve(stagedIds.has(id)),
+    requestDelayMs: Number("500"),
+    sleep(milliseconds: number) {
+      sleeps.push(milliseconds);
+
+      return Promise.resolve();
+    },
+    sourceClient,
+    sourceSystem: "sg.zone",
+    sourceUrl: new URL("https://example.test/replays"),
+  });
+
+  expect(
+    report.candidates.map((candidate) => candidate.identity.filename),
+  ).toStrictEqual(["second.json"]);
+  // 1 list + 1 surviving detail = 2 requests → exactly one inter-request gap.
+  expect(sleeps).toStrictEqual([Number("500")]);
+  expect(report.counts.skippedPreDetail).toBe(1);
+});
+
 test("discoverReplaysDryRun should keep one outer pacing delay per request after retry threading", async () => {
   const sleeps: number[] = [];
   const responses = new Map([

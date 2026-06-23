@@ -13,6 +13,7 @@ export const buildReport = (input: BuildReportOptions): DiscoveryReport => {
       candidates: input.candidates.length,
       diagnostics: input.diagnostics.length,
       discovered: input.candidates.length,
+      skippedPreDetail: input.skippedPreDetail,
     },
     diagnostics: input.diagnostics,
     generatedAt: input.options.generatedAt ?? new Date().toISOString(),

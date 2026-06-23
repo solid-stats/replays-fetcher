@@ -18,6 +18,9 @@ export type DiscoveryReport = {
     readonly candidates: number;
     readonly diagnostics: number;
     readonly discovered: number;
+    // Rows skipped before any detail fetch by the watch pre-detail dedup gate
+    // (260623-x57). 0 for run-once / discover (they pass no predicate).
+    readonly skippedPreDetail: number;
   };
   readonly diagnostics: readonly DiscoveryDiagnostic[];
   readonly generatedAt: string;
