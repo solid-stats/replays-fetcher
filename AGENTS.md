@@ -12,19 +12,16 @@ moderation); publish RabbitMQ messages; calculate stats, bounty, canonical ident
 moderation decisions. See the cross-app boundary map in
 `solidstats-shared-project-standards` §D.
 
-Shared engineering standards for every SolidStats repo live in the
+Cross-repo rules (skills-first, git, security, docs language, MCP lookup) live in
+`solid-stats/agent-instructions`, imported below. Stack-specific skills live in the
 [`skills`](https://github.com/solid-stats/skills) repo (`solidstats-shared-project-standards`
-and the per-stack `solidstats-fetcher-ts-*` skills). Read them before changing code here.
+and the per-stack `solidstats-fetcher-ts-*` skills).
+
+@.agent-instructions/AGENTS.md
 
 ---
 
 # AGENTS instructions
-
-## Skills First
-
-Before acting on any user request in this repository, scan available skills by name and description. If any skill has even a small chance of helping any part of the task, use it and read only the relevant instructions before proceeding.
-
-When in doubt, prefer enabling the skill briefly and filtering it out over skipping it.
 
 ## Project
 
