@@ -1,5 +1,7 @@
 /* eslint-disable max-lines -- CLI command scenarios are kept together for command-surface readability. */
 import { readdir, readFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { Writable } from "node:stream";
 
 import type { S3Client } from "@aws-sdk/client-s3";
@@ -2180,7 +2182,10 @@ test("buildCli run-once default writeEvidenceFile seam writes the body to the gi
   }).parseAsync(["node", "replays-fetcher", "run-once"]);
 
   // Exercise the default seam against the real filesystem (tmp path).
-  const temporaryPath = `/tmp/cli-seam-test-${String(Date.now())}.json`;
+  const temporaryPath = join(
+    tmpdir(),
+    `cli-seam-test-${String(Date.now())}.json`,
+  );
   const evidenceBody = JSON.stringify({ seam: "test" });
   await capturedSeam.fn(temporaryPath, evidenceBody);
 
@@ -2492,7 +2497,10 @@ test("buildCli watch default writeHeartbeat seam writes the body to the given pa
     }) as never,
   }).parseAsync(["node", "replays-fetcher", "watch"]);
 
-  const temporaryPath = `/tmp/watch-seam-test-${String(Date.now())}.heartbeat`;
+  const temporaryPath = join(
+    tmpdir(),
+    `watch-seam-test-${String(Date.now())}.heartbeat`,
+  );
   const heartbeatBody = JSON.stringify({
     timestamp: "2026-06-16T12:00:00.000Z",
   });

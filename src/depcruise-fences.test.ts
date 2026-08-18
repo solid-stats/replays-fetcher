@@ -89,7 +89,13 @@ const runDepcruise = async (): Promise<DepcruiseOutcome> => {
     const result = await execFileAsync(
       "dependency-cruiser",
       ["src", "--config", ".dependency-cruiser.cjs"],
-      { cwd: repoRoot },
+      // shell: true — on Windows the installed binary resolves to a `.CMD` shim, and
+      // execFile without a shell does not apply PATHEXT resolution, so the process
+      // fails with ENOENT (exit code non-zero, but empty stdout) instead of actually
+      // running dependency-cruiser. Linux CI has no extension to resolve, so this was
+      // invisible there. Args are static repo-relative strings, not user input, so
+      // shell interpolation is not a risk here.
+      { cwd: repoRoot, shell: true },
     );
     return { exitCode: 0, stdout: result.stdout };
   } catch (error) {
